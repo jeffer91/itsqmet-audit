@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AUDIT - Escaneo</title>
+  <!--
+  Nombre completo: scan.index.html
+  Ruta o ubicación: /screens/scan/scan.index.html
+  Función o funciones:
+  - Definir la estructura visual compacta de la pantalla Escaneo
+  - Permitir escanear carpeta local e importar ZIP/RAR para UGPA y UTET
+  - Mostrar resumen global, historial JSON y exportación PDF
+  - Mantener compatibilidad con la inicialización actual del módulo scan
+  -->
+  <link rel="stylesheet" href="./scan.styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="page__header">
+      <div class="page__intro">
+        <h1>AUDIT</h1>
+        <p class="subtitle">
+          Escaneo local de carpetas e importación de archivos ZIP/RAR para UGPA y UTET.
+        </p>
+      </div>
+
+      <nav class="header-nav">
+        <button id="btnOpenDashboard" class="btn btn--ghost" type="button">
+          Dashboard
+        </button>
+        <button id="btnOpenRules" class="btn btn--ghost" type="button">
+          Reglas
+        </button>
+      </nav>
+    </header>
+
+    <div id="globalMessage" class="global-message" aria-live="polite"></div>
+
+    <section class="section section--compact">
+      <div class="section__head">
+        <h2>Resumen global</h2>
+      </div>
+      <div id="summaryGrid" class="summary-grid"></div>
+    </section>
+
+    <section class="layout-grid">
+      <article class="card">
+        <div class="card__head card__head--tight">
+          <div>
+            <h2>UGPA</h2>
+            <p class="muted">
+              Puede escanear una carpeta local o importar un archivo ZIP/RAR.
+            </p>
+          </div>
+        </div>
+
+        <div class="card__toolbar">
+          <button id="btnScanFolderUgpa" class="btn btn--primary" type="button">
+            Escanear carpeta UGPA
+          </button>
+          <button id="btnImportUgpa" class="btn btn--secondary" type="button">
+            Importar ZIP/RAR UGPA
+          </button>
+          <button id="btnClearUgpa" class="btn btn--ghost" type="button">
+            Limpiar UGPA
+          </button>
+        </div>
+
+        <div id="ugpaCardBody" class="scan-card"></div>
+      </article>
+
+      <article class="card">
+        <div class="card__head card__head--tight">
+          <div>
+            <h2>UTET</h2>
+            <p class="muted">
+              Puede escanear una carpeta local o importar un archivo ZIP/RAR.
+            </p>
+          </div>
+        </div>
+
+        <div class="card__toolbar">
+          <button id="btnScanFolderUtet" class="btn btn--primary" type="button">
+            Escanear carpeta UTET
+          </button>
+          <button id="btnImportUtet" class="btn btn--secondary" type="button">
+            Importar ZIP/RAR UTET
+          </button>
+          <button id="btnClearUtet" class="btn btn--ghost" type="button">
+            Limpiar UTET
+          </button>
+        </div>
+
+        <div id="utetCardBody" class="scan-card"></div>
+      </article>
+    </section>
+
+    <section class="layout-grid layout-grid--secondary">
+      <article class="card">
+        <div class="card__head card__head--tight">
+          <div>
+            <h2>Historial JSON</h2>
+            <p class="muted">
+              Archivo histórico único donde se persisten los resultados.
+            </p>
+          </div>
+          <div class="inline-actions">
+            <button id="btnOpenHistory" class="btn btn--ghost" type="button">
+              Abrir historial
+            </button>
+          </div>
+        </div>
+
+        <div id="historyInfo" class="history-box"></div>
+      </article>
+
+      <article class="card">
+        <div class="card__head card__head--tight">
+          <div>
+            <h2>Exportación PDF</h2>
+            <p class="muted">
+              Genere el reporte PDF usando UGPA, UTET o ambos.
+            </p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="exportMode">Modo</label>
+          <select id="exportMode" class="select">
+            <option value="single-ugpa">Solo UGPA</option>
+            <option value="single-utet">Solo UTET</option>
+            <option value="both" selected>UGPA + UTET</option>
+          </select>
+        </div>
+
+        <div class="inline-actions inline-actions--vertical">
+          <button id="btnExportPdf" class="btn btn--primary" type="button">
+            Exportar PDF
+          </button>
+        </div>
+
+        <div id="exportResultBox" class="export-box"></div>
+      </article>
+    </section>
+  </main>
+
+<!-- Corrección: defer asegura que el DOM y preload estén listos antes de ejecutar -->
+<script src="../shared/app.store.js" defer></script>
+<script src="./scan.state.js" defer></script>
+<script src="./scan.service.js" defer></script>
+<script src="./scan.ui.js" defer></script>
+<script src="./scan.app.js" defer></script>
+</body>
+</html>

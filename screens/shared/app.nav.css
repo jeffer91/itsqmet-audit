@@ -1,0 +1,117 @@
+/*
+Nombre completo: app.nav.css
+Ruta o ubicación: /screens/shared/app.nav.css
+Función o funciones:
+- Estilizar la navegación superior compartida
+- Soportar visualmente tres pantallas: Escaneo, Dashboard y Reglas
+*/
+:root {
+  --nav-bg: #ffffff;
+  --nav-line: #dbe4f0;
+  --nav-text: #17375d;
+  --nav-muted: #58708f;
+  --nav-primary: #2463eb;
+  --nav-primary-strong: #1748b4;
+  --nav-shadow: 0 8px 22px rgba(18, 38, 63, 0.06);
+}
+
+#appTopNav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(246, 248, 251, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(219, 228, 240, 0.75);
+}
+
+.app-nav {
+  width: min(1440px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 14px 0;
+}
+
+.app-nav__inner {
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-line);
+  border-radius: 18px;
+  box-shadow: var(--nav-shadow);
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+}
+
+.app-nav__brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #edf4ff;
+  color: var(--nav-primary-strong);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.app-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--nav-text);
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  transition: 0.18s ease;
+}
+
+.app-nav__link:hover {
+  color: var(--nav-primary-strong);
+  background: #f8fbff;
+  border-color: var(--nav-line);
+}
+
+.app-nav__link.is-active {
+  color: #ffffff;
+  background: var(--nav-primary);
+  border-color: var(--nav-primary);
+}
+
+.app-nav__link.is-active:hover {
+  background: var(--nav-primary-strong);
+  border-color: var(--nav-primary-strong);
+}
+
+@media (max-width: 760px) {
+  .app-nav__inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .app-nav__brand {
+    justify-content: center;
+  }
+
+  .app-nav__links {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .app-nav__link {
+    width: 100%;
+  }
+}

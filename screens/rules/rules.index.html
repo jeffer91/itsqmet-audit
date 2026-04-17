@@ -1,0 +1,66 @@
+<!--
+Nombre completo: rules.index.html
+Ruta o ubicación: /screens/rules/rules.index.html
+Función o funciones:
+- Mostrar la pantalla de reglas
+- Priorizar filtros, resumen y novedades activas
+- Permitir exportación Excel de novedades
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';"
+  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reglas</title>
+  <link rel="stylesheet" href="./shared/app.nav.css" />
+  <link rel="stylesheet" href="./rules.styles.css" />
+</head>
+<body>
+  <div id="appTopNav"></div>
+
+  <main class="page">
+    <header class="page__header page__header--compact">
+      <div class="page__title-wrap">
+        <p class="eyebrow">Validación documental</p>
+        <h1>Reglas</h1>
+        <p class="subtitle">
+          Revise las novedades detectadas y descargue el detalle en Excel.
+        </p>
+      </div>
+
+      <div class="header__actions">
+        <button id="btnRefreshRules" class="btn btn--ghost" type="button">
+          Actualizar
+        </button>
+        <button id="btnExportExcel" class="btn btn--primary" type="button">
+          Descargar Excel
+        </button>
+      </div>
+    </header>
+
+    <section id="globalMessage" class="global-message" aria-live="polite"></section>
+    <section id="noScanNotice" class="notice"></section>
+
+    <section class="section section--filters">
+      <div class="section__head section__head--compact">
+        <h2>Filtros</h2>
+      </div>
+
+      <div class="filters-grid">
+        <div class="field">
+          <label for="ruleFilter">Regla</label>
+          <select id="ruleFilter" class="select"></select>
+        </div>
+
+        <div class="field">
+          <label for="scopeFilter">Tipo</label>
+          <select id="scopeFilter" class="select"></select>
+        </div>
+
+        <div class="field">
+          <label for="statusFilter">Estado</label>
+          <select id="status

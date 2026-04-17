@@ -1,0 +1,118 @@
+<!--
+Nombre completo: dashboard.index.html
+Ruta o ubicación: /screens/dashboard/dashboard.index.html
+Función o funciones:
+- Mostrar la pantalla Dashboard
+- Priorizar filtros, resumen y novedades en ese orden
+- Mantener una visualización compacta, limpia y fácil de entender
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';"
+  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="./shared/app.nav.css" />
+  <link rel="stylesheet" href="./dashboard.styles.css" />
+</head>
+<body>
+  <div id="appTopNav"></div>
+
+  <main class="page">
+    <header class="page__header page__header--compact">
+      <div class="page__title-wrap">
+        <p class="eyebrow">Vista rápida</p>
+        <h1>Dashboard</h1>
+        <p class="subtitle">Filtros, resumen y novedades en una sola pantalla.</p>
+      </div>
+
+      <div class="header__actions">
+        <button id="btnRefreshDashboard" class="btn btn--primary" type="button">
+          Actualizar
+        </button>
+      </div>
+    </header>
+
+    <section id="globalMessage" class="global-message" aria-live="polite"></section>
+    <section id="noScanNotice" class="notice"></section>
+
+    <section class="section section--filters">
+      <div class="section__head section__head--compact">
+        <h2>Filtros</h2>
+      </div>
+
+      <div class="filters-grid">
+        <div class="field">
+          <label for="filterScope">Tipo</label>
+          <select id="filterScope" class="select"></select>
+        </div>
+
+        <div class="field">
+          <label for="filterStatus">Estado</label>
+          <select id="filterStatus" class="select"></select>
+        </div>
+
+        <div class="field">
+          <label for="filterRule">Regla</label>
+          <select id="filterRule" class="select"></select>
+        </div>
+
+        <div class="field">
+          <label for="sortBy">Orden</label>
+          <select id="sortBy" class="select"></select>
+        </div>
+
+        <div class="field field--search">
+          <label for="filterSearch">Buscar</label>
+          <input
+            id="filterSearch"
+            class="input"
+            type="text"
+            placeholder="Regla, ruta o texto"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field field--actions">
+          <label>&nbsp;</label>
+          <button id="btnResetFilters" class="btn btn--ghost" type="button">
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--summary">
+      <div class="section__head section__head--compact">
+        <h2>Resumen</h2>
+      </div>
+      <div id="summaryGrid" class="summary-grid"></div>
+    </section>
+
+    <section class="section">
+      <div class="section__head section__head--compact">
+        <h2>Errores y novedades</h2>
+      </div>
+      <div id="rulesBoard" class="rules-board"></div>
+    </section>
+  </main>
+
+  <script src="./shared/app.store.js"></script>
+  <script src="./shared/app.nav.js"></script>
+  <!-- Comentario técnico: se carga rules.types.js antes del motor y del catálogo
+       porque expone buildScanIndex y otros helpers compartidos usados por las reglas. -->
+  <script src="../rules/rules.types.js"></script>
+  <script src="../rules/rules.state.js"></script>
+  <script src="../rules/rules.config.js"></script>
+  <script src="../rules/rules.catalog.js"></script>
+  <script src="../rules/rules.engine.js"></script>
+  <script src="./dashboard.state.js"></script>
+  <script src="./dashboard.service.js"></script>
+  <script src="./dashboard.ui.js"></script>
+  <script src="./dashboard.app.js"></script>
+</body>
+</html>
