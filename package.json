@@ -1,7 +1,7 @@
 {
   "name": "audit",
   "version": "2.0.0",
-  "description": "Aplicación Electron para auditoría local de UGPA y UTET mediante importación de archivos ZIP/RAR e historial JSON.",
+  "description": "Aplicación Electron para auditoría local de carpetas UGPA y UTET sincronizadas desde SharePoint/OneDrive.",
   "main": "core/main.js",
   "author": "",
   "license": "UNLICENSED",
