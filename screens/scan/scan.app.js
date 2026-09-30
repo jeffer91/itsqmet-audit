@@ -34,10 +34,6 @@
 
     const exportMode = byId("exportMode");
     if (exportMode) exportMode.disabled = !!isBusy;
-    const includeUgpa = byId("includeUgpa");
-    const includeUtet = byId("includeUtet");
-    if (includeUgpa) includeUgpa.disabled = !!isBusy;
-    if (includeUtet) includeUtet.disabled = !!isBusy;
   }
 
   function render() {
