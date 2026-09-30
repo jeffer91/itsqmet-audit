@@ -4,9 +4,10 @@
   Nombre completo: scan.service.js
   Ruta o ubicación: /screens/scan/scan.service.js
   Función o funciones:
-  - Interactuar con la API local para escaneo de carpetas, importación ZIP/RAR, historial, PDF y navegación
-  - Construir el viewModel de la pantalla Escaneo
-  - Ejecutar carga inicial, escaneo, limpieza, apertura del historial y exportación PDF
+  - Seleccionar una única carpeta institucional
+  - Auditar automáticamente UGPA y UTET
+  - Construir el viewModel de Escaneo
+  - Gestionar historial, apertura de rutas y exportación PDF
   */
 
   const REQUIRED_PROCESS_FOLDERS = [
@@ -19,9 +20,12 @@
     return String(value == null ? "" : value).trim();
   }
 
-  function normalizeType(type) {
-    const value = safeText(type).toUpperCase();
-    return value === "UGPA" || value === "UTET" ? value : "";
+  function normalizeObject(value) {
+    return value && typeof value === "object" ? value : {};
+  }
+
+  function normalizeArray(value) {
+    return Array.isArray(value) ? value : [];
   }
 
   function mustScanState() {
@@ -31,11 +35,11 @@
     return window.ScanState;
   }
 
-  function mustArchiveApi() {
-    if (!window.api || !window.api.archive) {
-      throw new Error("La API de escaneo/importación no está disponible.");
+  function mustInstitutionApi() {
+    if (!window.api || !window.api.institution) {
+      throw new Error("La API de auditoría institucional no está disponible.");
     }
-    return window.api.archive;
+    return window.api.institution;
   }
 
   function mustHistoryApi() {
@@ -59,97 +63,65 @@
     return window.api.shell;
   }
 
-  function normalizeObject(value) {
-    return value && typeof value === "object" ? value : {};
-  }
-
-  function normalizeArray(value) {
-    return Array.isArray(value) ? value : [];
-  }
-
   function normalizeSummary(summary) {
-    const safeSummary = normalizeObject(summary);
+    const safe = normalizeObject(summary);
     return {
-      totalFolders: Number(safeSummary.totalFolders || 0),
-      totalFiles: Number(safeSummary.totalFiles || 0),
-      totalSizeBytes: Number(safeSummary.totalSizeBytes || 0),
+      totalFolders: Number(safe.totalFolders || 0),
+      totalFiles: Number(safe.totalFiles || 0),
+      totalSizeBytes: Number(safe.totalSizeBytes || 0),
       byExtension:
-        safeSummary.byExtension && typeof safeSummary.byExtension === "object"
-          ? safeSummary.byExtension
+        safe.byExtension && typeof safe.byExtension === "object"
+          ? safe.byExtension
           : {}
     };
   }
 
   function normalizeValidation(validation) {
-    const safeValidation = normalizeObject(validation);
-    const requiredProcessFolders = normalizeArray(
-      safeValidation.requiredProcessFolders
-    ).length
-      ? normalizeArray(safeValidation.requiredProcessFolders)
+    const safe = normalizeObject(validation);
+    const required = normalizeArray(safe.requiredProcessFolders).length
+      ? normalizeArray(safe.requiredProcessFolders)
       : REQUIRED_PROCESS_FOLDERS.slice();
-
-    const foundProcessFolders = normalizeArray(
-      safeValidation.foundProcessFolders
-    );
-
-    const missingProcessFolders = normalizeArray(
-      safeValidation.missingProcessFolders
-    ).length
-      ? normalizeArray(safeValidation.missingProcessFolders)
-      : requiredProcessFolders.filter(function keep(requiredFolder) {
-          return foundProcessFolders.indexOf(requiredFolder) === -1;
+    const found = normalizeArray(safe.foundProcessFolders);
+    const missing = normalizeArray(safe.missingProcessFolders).length
+      ? normalizeArray(safe.missingProcessFolders)
+      : required.filter(function keep(item) {
+          return !found.includes(item);
         });
 
     return {
-      requiredProcessFolders: requiredProcessFolders,
-      foundProcessFolders: foundProcessFolders,
-      missingProcessFolders: missingProcessFolders,
+      requiredProcessFolders: required,
+      foundProcessFolders: found,
+      missingProcessFolders: missing,
       hasAllRequiredFolders:
-        safeValidation.hasAllRequiredFolders === true ||
-        missingProcessFolders.length === 0
-    };
-  }
-
-  function normalizeSource(source, rootPath) {
-    const safeSource = normalizeObject(source);
-    const sourceKind = safeText(safeSource.kind).toLowerCase();
-
-    return {
-      kind: sourceKind === "folder" ? "folder" : "archive",
-      selectedFolderPath: safeText(safeSource.selectedFolderPath),
-      originalArchivePath: safeText(safeSource.originalArchivePath),
-      storedArchivePath: safeText(safeSource.storedArchivePath),
-      extractionRootPath: safeText(safeSource.extractionRootPath),
-      effectiveRootPath: safeText(safeSource.effectiveRootPath || rootPath),
-      archiveExtension: safeText(safeSource.archiveExtension),
-      extractor: safeText(safeSource.extractor)
+        safe.hasAllRequiredFolders === true || missing.length === 0
     };
   }
 
   function normalizeScanResult(scanResult, fallbackType) {
-    const safeScanResult = normalizeObject(scanResult);
-    const type = normalizeType(safeScanResult.type || fallbackType);
+    const safe = normalizeObject(scanResult);
+    const type = safeText(safe.type || fallbackType).toUpperCase();
+
+    if (!safe || (type !== "UGPA" && type !== "UTET")) {
+      return null;
+    }
 
     return {
-      ok: safeScanResult.ok === true,
+      ok: safe.ok === true,
       type: type,
-      rootPath: safeText(safeScanResult.rootPath),
-      rootName: safeText(safeScanResult.rootName),
-      scannedAt: safeScanResult.scannedAt || null,
-      folders: normalizeArray(safeScanResult.folders),
-      files: normalizeArray(safeScanResult.files),
-      summary: normalizeSummary(safeScanResult.summary),
-      validation: normalizeValidation(safeScanResult.validation),
-      source: normalizeSource(safeScanResult.source, safeScanResult.rootPath)
+      rootPath: safeText(safe.rootPath),
+      rootName: safeText(safe.rootName),
+      scannedAt: safe.scannedAt || null,
+      folders: normalizeArray(safe.folders),
+      files: normalizeArray(safe.files),
+      summary: normalizeSummary(safe.summary),
+      validation: normalizeValidation(safe.validation),
+      source: normalizeObject(safe.source)
     };
   }
 
   function formatBytes(bytes) {
     const size = Number(bytes || 0);
-
-    if (!Number.isFinite(size) || size <= 0) {
-      return "0 B";
-    }
+    if (!Number.isFinite(size) || size <= 0) return "0 B";
 
     const units = ["B", "KB", "MB", "GB", "TB"];
     let current = size;
@@ -168,134 +140,60 @@
   }
 
   function formatDateTime(iso) {
-    if (!iso) {
-      return "Sin fecha";
-    }
+    if (!iso) return "Sin fecha";
 
     const date = new Date(iso);
-
-    if (Number.isNaN(date.getTime())) {
-      return "Sin fecha";
-    }
+    if (Number.isNaN(date.getTime())) return "Sin fecha";
 
     return date.toLocaleString("es-EC", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
+      minute: "2-digit"
     });
   }
 
   function syncAppStore(history) {
     try {
-      const store = window.AppStore;
-      const safeHistory = normalizeObject(history);
-
-      if (!store || typeof store !== "object") {
-        return;
+      if (window.AppStore && typeof window.AppStore.setHistory === "function") {
+        window.AppStore.setHistory(history || {});
       }
-
-      const payload = {
-        ugpaResult: safeHistory.ugpaResult || null,
-        utetResult: safeHistory.utetResult || null,
-        discardedFindings: Array.isArray(safeHistory.discardedFindings)
-          ? safeHistory.discardedFindings
-          : []
-      };
-
-      if (typeof store.setHistory === "function") {
-        store.setHistory(safeHistory);
-        return;
-      }
-
-      if (typeof store.set === "function") {
-        store.set(payload);
-        return;
-      }
-
-      if (typeof store.update === "function") {
-        store.update(payload);
-      }
-    } catch (_error) {
-      // Mantener estable la pantalla si AppStore no está listo
-    }
+    } catch (_error) {}
   }
 
-  function buildValidationLabel(scanResult) {
-    const validation =
-      scanResult && scanResult.validation && typeof scanResult.validation === "object"
-        ? scanResult.validation
-        : null;
+  function buildValidationLabel(result) {
+    const validation = result && result.validation ? result.validation : null;
 
     if (!validation) {
       return {
         status: "neutral",
-        text: "Sin validación estructural."
+        text: "Todavía no se ha ejecutado la auditoría."
       };
     }
 
     if (validation.hasAllRequiredFolders) {
       return {
         status: "success",
-        text: "Se encontraron las carpetas estructurales requeridas."
+        text: "Estructura principal completa: Apoyo, Estratégicos y Misionales."
       };
     }
 
-    const missing = Array.isArray(validation.missingProcessFolders)
-      ? validation.missingProcessFolders
-      : [];
-
-    if (!missing.length) {
-      return {
-        status: "neutral",
-        text: "No se detectaron carpetas estructurales requeridas."
-      };
-    }
+    const missing = normalizeArray(validation.missingProcessFolders);
 
     return {
       status: "warning",
-      text: "Faltan carpetas requeridas: " + missing.join(", ")
-    };
-  }
-
-  function buildSourceLabel(scanResult) {
-    const source =
-      scanResult && scanResult.source && typeof scanResult.source === "object"
-        ? scanResult.source
-        : null;
-
-    if (!source) {
-      return {
-        kind: "neutral",
-        title: "Origen no disponible",
-        detail: ""
-      };
-    }
-
-    if (safeText(source.kind).toLowerCase() === "folder") {
-      return {
-        kind: "success",
-        title: "Escaneo desde carpeta",
-        detail: safeText(source.selectedFolderPath || source.effectiveRootPath)
-      };
-    }
-
-    return {
-      kind: "neutral",
-      title: "Importación desde archivo comprimido",
-      detail: safeText(source.originalArchivePath || source.storedArchivePath)
+      text: missing.length
+        ? "Faltan carpetas principales: " + missing.join(", ")
+        : "La estructura principal está incompleta."
     };
   }
 
   function buildEmptyCardModel(type) {
-    const safeType = normalizeType(type);
-
     return {
-      type: safeType,
+      type: type,
       loaded: false,
-      title: safeType,
+      title: type,
       summary: {
         totalFolders: 0,
         totalFiles: 0,
@@ -303,51 +201,36 @@
       },
       rootName: "",
       rootPath: "",
-      scannedAtLabel: "Sin fecha",
+      scannedAtLabel: "Sin auditoría",
       validationLabel: {
         status: "neutral",
-        text: "No existe información cargada."
+        text: "Ejecute la auditoría institucional."
       },
-      sourceLabel: {
-        kind: "neutral",
-        title: "Sin origen cargado",
-        detail: ""
-      },
-      sourcePath: "",
-      effectiveRootPath: "",
-      result: null
+      effectiveRootPath: ""
     };
   }
 
-  function buildCardModel(type, scanResult) {
-    const safeType = normalizeType(type);
-    const normalized = scanResult ? normalizeScanResult(scanResult, safeType) : null;
+  function buildCardModel(type, rawResult) {
+    const result = normalizeScanResult(rawResult, type);
 
-    if (!normalized || normalized.ok !== true) {
-      return buildEmptyCardModel(safeType);
+    if (!result || result.ok !== true) {
+      return buildEmptyCardModel(type);
     }
 
-    const sourceLabel = buildSourceLabel(normalized);
-
     return {
-      type: safeType,
+      type: type,
       loaded: true,
-      title: safeType,
-      summary: {
-        totalFolders: Number(normalized.summary.totalFolders || 0),
-        totalFiles: Number(normalized.summary.totalFiles || 0),
-        totalSizeBytes: Number(normalized.summary.totalSizeBytes || 0)
-      },
-      rootName: safeText(normalized.rootName),
-      rootPath: safeText(normalized.rootPath),
-      scannedAtLabel: formatDateTime(normalized.scannedAt),
-      validationLabel: buildValidationLabel(normalized),
-      sourceLabel: sourceLabel,
-      sourcePath: sourceLabel.detail,
+      title: type,
+      summary: result.summary,
+      rootName: result.rootName,
+      rootPath: result.rootPath,
+      scannedAtLabel: formatDateTime(result.scannedAt),
+      validationLabel: buildValidationLabel(result),
       effectiveRootPath: safeText(
-        normalized.source.effectiveRootPath || normalized.rootPath
-      ),
-      result: normalized
+        result.source && result.source.effectiveRootPath
+          ? result.source.effectiveRootPath
+          : result.rootPath
+      )
     };
   }
 
@@ -355,61 +238,43 @@
     const totalFolders =
       Number(ugpaCard.summary.totalFolders || 0) +
       Number(utetCard.summary.totalFolders || 0);
-
     const totalFiles =
       Number(ugpaCard.summary.totalFiles || 0) +
       Number(utetCard.summary.totalFiles || 0);
-
     const totalBytes =
       Number(ugpaCard.summary.totalSizeBytes || 0) +
       Number(utetCard.summary.totalSizeBytes || 0);
 
     return [
-      {
-        label: "Carpetas",
-        value: String(totalFolders)
-      },
-      {
-        label: "Archivos",
-        value: String(totalFiles)
-      },
-      {
-        label: "Peso total",
-        value: formatBytes(totalBytes)
-      },
-      {
-        label: "Descartadas",
-        value: String(Number(discardedCount || 0))
-      }
+      { label: "Unidades auditadas", value: String((ugpaCard.loaded ? 1 : 0) + (utetCard.loaded ? 1 : 0)) + "/2" },
+      { label: "Carpetas", value: String(totalFolders) },
+      { label: "Archivos", value: String(totalFiles) },
+      { label: "Peso total", value: formatBytes(totalBytes) },
+      { label: "Descartadas", value: String(Number(discardedCount || 0)) }
     ];
   }
 
   function getViewModel() {
-    const scanState = mustScanState();
-    const state = scanState.get();
+    const state = mustScanState().get();
     const ugpaCard = buildCardModel("UGPA", state.ugpaResult);
     const utetCard = buildCardModel("UTET", state.utetResult);
-
     const appStore =
       window.AppStore && typeof window.AppStore.get === "function"
         ? window.AppStore.get()
         : {};
-
-    const discardedCount = Array.isArray(appStore && appStore.discardedFindings)
+    const discardedCount = Array.isArray(appStore.discardedFindings)
       ? appStore.discardedFindings.length
       : 0;
 
     return {
       loading: !!state.loading,
       message: state.message || { type: "neutral", text: "" },
+      institutionalRootPath: safeText(state.institutionalRootPath),
+      rootSelected: !!safeText(state.institutionalRootPath),
+      detection: state.detection || null,
       exportMode: safeText(state.exportMode) || "both",
       historyFilePath: safeText(state.historyFilePath),
-      exportResult: state.exportResult || {
-        ok: false,
-        filePath: "",
-        fileName: "",
-        error: ""
-      },
+      exportResult: state.exportResult || {},
       summaryCards: buildSummaryCards(ugpaCard, utetCard, discardedCount),
       ugpaCard: ugpaCard,
       utetCard: utetCard
@@ -417,50 +282,47 @@
   }
 
   async function initializeFromHistory() {
-    const scanState = mustScanState();
-    scanState.set({ loading: true });
+    const state = mustScanState();
+    state.set({ loading: true });
 
     try {
       const response = await mustHistoryApi().get();
 
       if (!response || response.ok !== true) {
         throw new Error(
-          response && response.error
-            ? response.error
-            : "No se pudo cargar el historial."
+          response && response.error ? response.error : "No se pudo cargar el historial."
         );
       }
 
       const history = normalizeObject(response.history);
-
-      scanState.hydrateFromHistory(history, response.filePath || "");
-      scanState.patchMessage("success", "Historial cargado correctamente.");
+      state.hydrateFromHistory(history, response.historyFilePath || "");
       syncAppStore(history);
+
+      if (safeText(history.institutionalRootPath)) {
+        state.patchMessage(
+          "neutral",
+          "Carpeta institucional recuperada. Puede ejecutar una nueva auditoría."
+        );
+      }
     } catch (error) {
-      scanState.patchMessage(
+      state.patchMessage(
         "error",
         error && error.message ? error.message : "No se pudo cargar el historial."
       );
     } finally {
-      scanState.set({ loading: false });
+      state.set({ loading: false });
     }
   }
 
-  async function importArchive(type) {
-    const safeType = normalizeType(type);
-    const scanState = mustScanState();
-
-    if (!safeType) {
-      throw new Error("Tipo no válido para importación.");
-    }
-
-    scanState.set({ loading: true });
+  async function selectInstitutionRoot() {
+    const state = mustScanState();
+    state.set({ loading: true });
 
     try {
-      const response = await mustArchiveApi().pickAndImport(safeType);
+      const response = await mustInstitutionApi().pickRoot();
 
       if (response && response.cancelled) {
-        scanState.patchMessage("neutral", "Importación cancelada por el usuario.");
+        state.patchMessage("neutral", "Selección cancelada.");
         return;
       }
 
@@ -468,148 +330,90 @@
         throw new Error(
           response && response.error
             ? response.error
-            : "No se pudo importar el archivo comprimido."
+            : "La carpeta seleccionada no es válida."
         );
       }
 
-      const normalized = normalizeScanResult(response.result, safeType);
-
-      scanState.setResult(safeType, normalized);
-      scanState.set({
-        historyFilePath: safeText(response.historyFilePath),
-        exportResult: {
-          ok: false,
-          filePath: "",
-          fileName: "",
-          error: ""
-        }
+      state.set({
+        institutionalRootPath: safeText(response.rootPath),
+        detection: response.detection || null
       });
-      scanState.patchMessage(
-        "success",
-        safeType + " importado correctamente desde ZIP/RAR."
-      );
 
-      syncAppStore(response.history || {});
+      state.patchMessage(
+        "success",
+        "Carpeta institucional válida. Se detectaron UGPA y UTET."
+      );
     } catch (error) {
-      scanState.patchMessage(
+      state.patchMessage(
         "error",
         error && error.message
           ? error.message
-          : "No se pudo importar el archivo comprimido."
+          : "No se pudo seleccionar la carpeta institucional."
       );
     } finally {
-      scanState.set({ loading: false });
+      state.set({ loading: false });
     }
   }
 
-  async function scanFolder(type) {
-    const safeType = normalizeType(type);
-    const scanState = mustScanState();
+  async function auditInstitution() {
+    const state = mustScanState();
+    const current = state.get();
+    const rootPath = safeText(current.institutionalRootPath);
 
-    if (!safeType) {
-      throw new Error("Tipo no válido para escaneo.");
+    if (!rootPath) {
+      throw new Error("Primero seleccione la carpeta institucional.");
     }
 
-    scanState.set({ loading: true });
+    state.set({ loading: true });
 
     try {
-      const response = await mustArchiveApi().pickAndScanFolder(safeType);
-
-      if (response && response.cancelled) {
-        scanState.patchMessage("neutral", "Escaneo cancelado por el usuario.");
-        return;
-      }
+      const response = await mustInstitutionApi().scanRoot(rootPath);
 
       if (!response || response.ok !== true) {
         throw new Error(
           response && response.error
             ? response.error
-            : "No se pudo escanear la carpeta."
-        );
-      }
-
-      const normalized = normalizeScanResult(response.result, safeType);
-
-      scanState.setResult(safeType, normalized);
-      scanState.set({
-        historyFilePath: safeText(response.historyFilePath),
-        exportResult: {
-          ok: false,
-          filePath: "",
-          fileName: "",
-          error: ""
-        }
-      });
-      scanState.patchMessage(
-        "success",
-        safeType + " escaneado correctamente desde carpeta local."
-      );
-
-      syncAppStore(response.history || {});
-    } catch (error) {
-      scanState.patchMessage(
-        "error",
-        error && error.message ? error.message : "No se pudo escanear la carpeta."
-      );
-    } finally {
-      scanState.set({ loading: false });
-    }
-  }
-
-  async function clearScan(type) {
-    const safeType = normalizeType(type);
-    const scanState = mustScanState();
-
-    if (!safeType) {
-      throw new Error("Tipo no válido para limpiar.");
-    }
-
-    scanState.set({ loading: true });
-
-    try {
-      const response = await mustHistoryApi().clearScan(safeType);
-
-      if (!response || response.ok !== true) {
-        throw new Error(
-          response && response.error ? response.error : "No se pudo limpiar el escaneo."
+            : "No se pudo completar la auditoría."
         );
       }
 
       const history = normalizeObject(response.history);
 
-      scanState.hydrateFromHistory(history, response.filePath || "");
-      scanState.patchMessage("success", safeType + " limpiado correctamente.");
+      state.hydrateFromHistory(history, response.historyFilePath || "");
+      state.set({
+        detection: response.detection || null,
+        exportResult: {
+          ok: false,
+          filePath: "",
+          fileName: "",
+          error: ""
+        }
+      });
+
       syncAppStore(history);
+      state.patchMessage(
+        "success",
+        "Auditoría completada. UGPA y UTET fueron analizadas correctamente."
+      );
     } catch (error) {
-      scanState.patchMessage(
+      state.patchMessage(
         "error",
-        error && error.message ? error.message : "No se pudo limpiar el escaneo."
+        error && error.message ? error.message : "No se pudo completar la auditoría."
       );
     } finally {
-      scanState.set({ loading: false });
+      state.set({ loading: false });
     }
   }
 
   async function openHistoryFile() {
-    const scanState = mustScanState();
-    const state = scanState.get();
-    const historyFilePath = safeText(state.historyFilePath);
+    const state = mustScanState().get();
+    const filePath = safeText(state.historyFilePath);
 
-    if (!historyFilePath) {
+    if (!filePath) {
       throw new Error("No existe una ruta de historial disponible.");
     }
 
-    const response = await mustShellApi().openPath(historyFilePath);
-
-    if (!response || response.ok !== true) {
-      throw new Error(
-        response && response.error
-          ? response.error
-          : "No se pudo abrir el historial."
-      );
-    }
-
-    return response;
+    return openPath(filePath);
   }
 
   async function openPath(targetPath) {
@@ -632,54 +436,35 @@
 
   function buildExportPayload(mode, state) {
     const safeMode = safeText(mode).toLowerCase();
-    const safeState = normalizeObject(state);
 
     if (safeMode === "single-ugpa") {
-      if (!safeState.ugpaResult || safeState.ugpaResult.ok !== true) {
+      if (!state.ugpaResult || state.ugpaResult.ok !== true) {
         throw new Error("No existe un resultado UGPA para exportar.");
       }
-
-      return {
-        mode: "single",
-        type: "UGPA",
-        scanData: safeState.ugpaResult
-      };
+      return { mode: "single", type: "UGPA", scanData: state.ugpaResult };
     }
 
     if (safeMode === "single-utet") {
-      if (!safeState.utetResult || safeState.utetResult.ok !== true) {
+      if (!state.utetResult || state.utetResult.ok !== true) {
         throw new Error("No existe un resultado UTET para exportar.");
       }
-
-      return {
-        mode: "single",
-        type: "UTET",
-        scanData: safeState.utetResult
-      };
+      return { mode: "single", type: "UTET", scanData: state.utetResult };
     }
 
     if (
-      !safeState.ugpaResult ||
-      safeState.ugpaResult.ok !== true ||
-      !safeState.utetResult ||
-      safeState.utetResult.ok !== true
+      !state.ugpaResult ||
+      state.ugpaResult.ok !== true ||
+      !state.utetResult ||
+      state.utetResult.ok !== true
     ) {
-      throw new Error(
-        "Para exportar ambas carpetas deben existir resultados UGPA y UTET."
-      );
+      throw new Error("Debe auditar UGPA y UTET antes de exportar ambas unidades.");
     }
 
     return {
       mode: "both",
       items: [
-        {
-          type: "UGPA",
-          scanData: safeState.ugpaResult
-        },
-        {
-          type: "UTET",
-          scanData: safeState.utetResult
-        }
+        { type: "UGPA", scanData: state.ugpaResult },
+        { type: "UTET", scanData: state.utetResult }
       ]
     };
   }
@@ -690,14 +475,13 @@
 
     try {
       const state = scanState.get();
-      const payload = buildExportPayload(state.exportMode, state);
-      const response = await mustPdfApi().export(payload);
+      const response = await mustPdfApi().export(
+        buildExportPayload(state.exportMode, state)
+      );
 
       if (!response || response.ok !== true) {
         throw new Error(
-          response && response.error
-            ? response.error
-            : "No se pudo exportar el PDF."
+          response && response.error ? response.error : "No se pudo exportar el PDF."
         );
       }
 
@@ -709,7 +493,6 @@
           error: ""
         }
       });
-
       scanState.patchMessage("success", "PDF generado correctamente.");
     } catch (error) {
       scanState.set({
@@ -720,7 +503,6 @@
           error: error && error.message ? error.message : "No se pudo exportar el PDF."
         }
       });
-
       scanState.patchMessage(
         "error",
         error && error.message ? error.message : "No se pudo exportar el PDF."
@@ -731,10 +513,7 @@
   }
 
   function setExportMode(mode) {
-    const scanState = mustScanState();
-    scanState.set({
-      exportMode: safeText(mode) || "both"
-    });
+    mustScanState().set({ exportMode: safeText(mode) || "both" });
   }
 
   function goToDashboard() {
@@ -748,9 +527,8 @@
   window.ScanService = {
     getViewModel: getViewModel,
     initializeFromHistory: initializeFromHistory,
-    importArchive: importArchive,
-    scanFolder: scanFolder,
-    clearScan: clearScan,
+    selectInstitutionRoot: selectInstitutionRoot,
+    auditInstitution: auditInstitution,
     openHistoryFile: openHistoryFile,
     openPath: openPath,
     exportPdf: exportPdf,
