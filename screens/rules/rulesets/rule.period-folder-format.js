@@ -4,7 +4,7 @@
   const Types = window.RulesTypes;
 
   function safeText(value) {
-    return String(value || "").trim();
+    return String(value == null ? "" : value).trim();
   }
 
   function createFinding(payload) {
@@ -21,25 +21,13 @@
       absolutePath: safeText(payload.absolutePath),
       actualValue: safeText(payload.actualValue),
       expectedValue: safeText(payload.expectedValue),
-      exampleValue: safeText(payload.exampleValue)
+      exampleValue: safeText(payload.exampleValue),
+      primaryActionLabel: safeText(payload.primaryActionLabel),
+      primaryActionPath: safeText(payload.primaryActionPath)
     };
+
     finding.id = Types.buildFindingId(finding);
     return finding;
-  }
-
-  function getProcessFolders(index) {
-    const exceptionList = window.RulesConfig
-      && Array.isArray(window.RulesConfig.ROOT_EXCEPTION_FOLDERS)
-      ? window.RulesConfig.ROOT_EXCEPTION_FOLDERS
-      : [];
-
-    const exceptionFolders = new Set(
-      exceptionList.map((item) => safeText(item).toUpperCase())
-    );
-
-    return (index.childFoldersMap[""] || []).filter((folder) => {
-      return !exceptionFolders.has(safeText(folder.name).toUpperCase());
-    });
   }
 
   function addFinding(findings, rule, scope, scanData, folder, validation) {
@@ -47,35 +35,54 @@
       createFinding({
         ruleId: rule.id,
         ruleName: rule.name,
-        scope,
+        scope: scope,
         severity: rule.severity,
         title: "Carpeta de período mal nombrada",
-        description: validation.reason,
+        description:
+          validation.message ||
+          "La carpeta parece representar un período, pero no usa un formato oficial.",
         rootName: scanData.rootName || "",
         rootPath: scanData.rootPath || "",
         relativePath: folder.relativePath,
         absolutePath: folder.path || scanData.rootPath || "",
         actualValue: folder.name,
-        expectedValue: validation.expectedValue,
-        exampleValue: validation.exampleValue
+        expectedValue:
+          validation.expected || "Usar un formato oficial de período",
+        exampleValue:
+          validation.example || "Octubre 2025–Marzo 2026",
+        primaryActionLabel: "Abrir carpeta",
+        primaryActionPath: folder.path || scanData.rootPath || ""
       })
     );
   }
 
   function run(scope, scanData, rule) {
     if (!scanData || scanData.ok !== true) return [];
+    if (!Types || typeof Types.findProcessFolders !== "function") return [];
 
     const index = Types.buildScanIndex(scanData);
     const findings = [];
-    const processFolders = getProcessFolders(index);
+    const processFolders = Types.findProcessFolders(index, scope);
 
-    processFolders.forEach((processFolder) => {
-      const processValidation = Types.parseProcessFolderName(processFolder.name, scope);
-      if (!processValidation.valid) return;
+    processFolders.forEach(function eachProcess(processFolder) {
+      const processValidation =
+        processFolder.processValidation ||
+        Types.parseProcessFolderName(processFolder.name, scope);
 
-      const directChildren = index.childFoldersMap[processFolder.relativePath] || [];
-      directChildren.forEach((folder) => {
-        const validation = Types.parsePeriodFolderName(folder.name, processValidation.processCode);
+      if (!processValidation || !processValidation.valid) return;
+
+      index.folders.forEach(function eachFolder(folder) {
+        if (folder.relativePath === processFolder.relativePath) return;
+        if (!Types.isDescendantOf(folder.relativePath, processFolder.relativePath)) {
+          return;
+        }
+
+        const validation = Types.parsePeriodFolderName(
+          folder.name,
+          processValidation.processCode,
+          scope
+        );
+
         if (validation.shouldEvaluate && !validation.valid) {
           addFinding(findings, rule, scope, scanData, folder, validation);
         }
@@ -90,8 +97,9 @@
     name: "Formato de carpetas de período",
     scope: "BOTH",
     severity: "warning",
-    description: "Valida que las carpetas de período usen el código del proceso, meses completos y el separador oficial –.",
-    run(context) {
+    description:
+      "Valida períodos dentro de los procesos aunque la estructura incluya carpetas contenedoras de SharePoint.",
+    run: function runRule(context) {
       return run(context.scope, context.scanData, this);
     }
   };
