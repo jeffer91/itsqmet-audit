@@ -4,9 +4,8 @@ Nombre completo: history.store.js
 Ruta o ubicación: /core/history/history.store.js
 Función o funciones:
 - Administrar lectura y escritura del historial JSON único
-- Guardar resultados de UGPA y UTET
+- Guardar la raíz institucional y los resultados de UGPA/UTET
 - Guardar descartes y limpiar resultados individuales
-- Apoyarse en el esquema central para mantener consistencia
 */
 
 const fsp = require("fs").promises;
@@ -89,6 +88,24 @@ async function saveHistory(history) {
   return await writeHistory(nextHistory);
 }
 
+async function saveInstitutionAudit(rootPath, ugpaResult, utetResult) {
+  if (!ugpaResult || typeof ugpaResult !== "object") {
+    throw new Error("El resultado UGPA no es válido.");
+  }
+
+  if (!utetResult || typeof utetResult !== "object") {
+    throw new Error("El resultado UTET no es válido.");
+  }
+
+  const history = await loadHistory();
+  history.institutionalRootPath = safeText(rootPath);
+  history.ugpaResult = clone(ugpaResult);
+  history.utetResult = clone(utetResult);
+  history.updatedAt = new Date().toISOString();
+
+  return await writeHistory(history);
+}
+
 async function upsertScanResult(type, result) {
   const safeType = normalizeType(type);
 
@@ -142,6 +159,7 @@ module.exports = {
   getHistoryFilePath,
   loadHistory,
   saveHistory,
+  saveInstitutionAudit,
   upsertScanResult,
   clearScanResult,
   saveDiscardedFindings
