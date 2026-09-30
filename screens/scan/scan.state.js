@@ -25,6 +25,8 @@
       utetSourcePath: "",
       ugpaValidation: null,
       utetValidation: null,
+      auditUgpa: false,
+      auditUtet: false,
       ugpaResult: null,
       utetResult: null,
       exportResult: {
@@ -70,10 +72,20 @@
     const safe = history && typeof history === "object" ? history : {};
     const ugpaResult = safe.ugpaResult || null;
     const utetResult = safe.utetResult || null;
+    const nextUgpaPath = safeText(safe.ugpaSourcePath);
+    const nextUtetPath = safeText(safe.utetSourcePath);
+    const keepUgpaChoice =
+      !!state.ugpaSourcePath &&
+      state.ugpaSourcePath.toLowerCase() === nextUgpaPath.toLowerCase();
+    const keepUtetChoice =
+      !!state.utetSourcePath &&
+      state.utetSourcePath.toLowerCase() === nextUtetPath.toLowerCase();
 
     return set({
-      ugpaSourcePath: safeText(safe.ugpaSourcePath),
-      utetSourcePath: safeText(safe.utetSourcePath),
+      ugpaSourcePath: nextUgpaPath,
+      utetSourcePath: nextUtetPath,
+      auditUgpa: keepUgpaChoice ? state.auditUgpa : !!nextUgpaPath,
+      auditUtet: keepUtetChoice ? state.auditUtet : !!nextUtetPath,
       ugpaValidation:
         ugpaResult && ugpaResult.validation ? ugpaResult.validation : null,
       utetValidation:
