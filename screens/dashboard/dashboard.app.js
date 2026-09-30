@@ -1,221 +1,103 @@
 (function (window, document) {
   "use strict";
 
-  /*
-  Nombre completo: dashboard.app.js
-  Ruta o ubicación: /screens/dashboard/dashboard.app.js
-  Función o funciones:
-  - Inicializar la pantalla Dashboard
-  - Cargar dinámicamente las reglas disponibles
-  - Coordinar eventos de filtros, navegación y apertura de rutas
-  - Refrescar la vista a partir del estado global y del estado local
-  */
-
-  let currentViewModel = null;
   let rulesetsLoaded = false;
 
   function safeText(value) {
     return String(value == null ? "" : value).trim();
   }
 
-  function hasRuleObject(globalName) {
-    const safeName = safeText(globalName);
-    return !!(safeName && Object.prototype.hasOwnProperty.call(window, safeName));
-  }
-
-  function normalizeRuleDescriptor(entry) {
-    if (!entry || typeof entry !== "object") return null;
-
-    const id = safeText(entry.id);
-    if (!id) return null;
-
-    return {
-      id: id,
-      type: safeText(entry.type) || "legacy",
-      folderName: safeText(entry.folderName),
-      globalName: safeText(entry.globalName),
-      scripts: Array.isArray(entry.scripts)
-        ? entry.scripts.map((item) => safeText(item)).filter(Boolean)
-        : [],
-      manifestFile: safeText(entry.manifestFile)
-    };
-  }
-
   function buildRuleScriptUrl(relativePath) {
-    const safeRelativePath = safeText(relativePath).replace(/^\/+/, "");
-    return `../rules/rulesets/${safeRelativePath}`;
+    return "../rules/rulesets/" + safeText(relativePath).replace(/^\/+/, "");
   }
 
   function loadScript(src) {
-    return new Promise(function executor(resolve, reject) {
+    return new Promise(function (resolve, reject) {
       const script = document.createElement("script");
       script.src = src;
       script.async = false;
-      script.onload = function onLoad() {
-        resolve();
-      };
-      script.onerror = function onError() {
-        reject(new Error("No se pudo cargar el script de regla: " + src));
+      script.onload = resolve;
+      script.onerror = function () {
+        reject(new Error("No se pudo cargar: " + src));
       };
       document.head.appendChild(script);
     });
   }
 
-  async function loadRuleDescriptor(descriptor) {
-    const loadedScripts = [];
-
-    if (descriptor.globalName && hasRuleObject(descriptor.globalName)) {
-      return loadedScripts;
-    }
-
-    for (const relativePath of descriptor.scripts) {
-      const src = buildRuleScriptUrl(relativePath);
-      await loadScript(src);
-      loadedScripts.push(relativePath);
-    }
-
-    return loadedScripts;
-  }
-
   async function ensureRulesetsLoaded() {
-    if (rulesetsLoaded) {
-      return { ok: true, loaded: [] };
-    }
-
-    if (!window.api || !window.api.rules || typeof window.api.rules.listFiles !== "function") {
-      throw new Error("La API de reglas no está disponible. Abre esta pantalla desde Electron.");
-    }
-
+    if (rulesetsLoaded) return;
     const response = await window.api.rules.listFiles();
+
     if (!response || response.ok !== true) {
       throw new Error(
-        response && response.error
-          ? response.error
-          : "No se pudo obtener el listado de reglas."
+        response && response.error ? response.error : "No se pudieron cargar las reglas."
       );
     }
 
-    const rawFiles = Array.isArray(response.files) ? response.files : [];
-    const descriptors = rawFiles.map(normalizeRuleDescriptor).filter(Boolean);
-    const loaded = [];
+    for (const descriptor of Array.isArray(response.files) ? response.files : []) {
+      const globalName = safeText(descriptor.globalName);
+      if (globalName && Object.prototype.hasOwnProperty.call(window, globalName)) {
+        continue;
+      }
 
-    for (const descriptor of descriptors) {
-      const scripts = await loadRuleDescriptor(descriptor);
-      if (scripts.length) {
-        loaded.push(descriptor.id);
+      for (const relativePath of Array.isArray(descriptor.scripts) ? descriptor.scripts : []) {
+        await loadScript(buildRuleScriptUrl(relativePath));
       }
     }
 
     rulesetsLoaded = true;
-
-    return {
-      ok: true,
-      loaded: loaded
-    };
   }
 
   function refresh(message, type) {
-    currentViewModel = window.DashboardService.buildViewModel();
-    window.DashboardUI.render(currentViewModel);
-
-    if (message) {
-      window.DashboardUI.setGlobalMessage(message, type || "success");
-    }
-  }
-
-  async function handleOpenPath(targetPath) {
-    try {
-      if (!targetPath) {
-        throw new Error("No se recibió una ruta válida.");
-      }
-
-      await window.DashboardService.openPath(targetPath);
-      window.DashboardUI.setGlobalMessage("Ruta abierta correctamente.", "success");
-    } catch (error) {
-      window.DashboardUI.setGlobalMessage(
-        error && error.message ? error.message : "No se pudo abrir la ruta.",
-        "error"
-      );
-    }
-  }
-
-  function handleGoRules(ruleId, findingId) {
-    window.DashboardService.goToRules(ruleId, findingId);
-  }
-
-  function handleFiltersChange(filters) {
-    window.DashboardState.setFilters(filters);
-  }
-
-  function handleResetFilters() {
-    window.DashboardState.reset();
-    window.DashboardUI.setGlobalMessage("Filtros reiniciados.", "success");
-  }
-
-  function handleToggleExpand(ruleId) {
-    window.DashboardState.toggleExpandedRule(ruleId);
+    const vm = window.DashboardService.buildViewModel();
+    window.DashboardUI.render(vm);
+    if (message) window.DashboardUI.setGlobalMessage(message, type || "success");
   }
 
   async function init() {
-    if (window.AppNav) {
-      window.AppNav.render("dashboard");
-    }
-
+    if (window.AppNav) window.AppNav.render("dashboard");
     await ensureRulesetsLoaded();
 
     window.DashboardUI.bindEvents({
-      onRefresh: function onRefresh() {
+      onRefresh: function () {
         refresh("Dashboard actualizado.", "success");
       },
-      onFiltersChange: function onFiltersChange(filters) {
-        handleFiltersChange(filters);
+      onFiltersChange: function (filters) {
+        window.DashboardState.setFilters(filters);
       },
-      onResetFilters: function onResetFilters() {
-        handleResetFilters();
+      onResetFilters: function () {
+        window.DashboardState.reset();
       },
-      onOpenPath: function onOpenPath(targetPath) {
-        handleOpenPath(targetPath);
+      onCategory: function (category) {
+        window.DashboardState.setCategory(category);
       },
-      onGoRules: function onGoRules(ruleId, findingId) {
-        handleGoRules(ruleId, findingId);
+      onOpenPath: async function (path) {
+        try {
+          await window.DashboardService.openPath(path);
+        } catch (error) {
+          window.DashboardUI.setGlobalMessage(
+            error && error.message ? error.message : "No se pudo abrir la carpeta.",
+            "error"
+          );
+        }
       },
-      onToggleExpand: function onToggleExpand(ruleId) {
-        handleToggleExpand(ruleId);
+      onGoRules: function (ruleId, findingId) {
+        window.DashboardService.goToRules(ruleId, findingId);
       }
     });
 
-    window.DashboardState.subscribe(function onDashboardStateChange() {
-      refresh();
-    });
-
-    window.AppStore.subscribe(function onSharedStateChange() {
-      refresh();
-    });
-
+    window.DashboardState.subscribe(function () { refresh(); });
+    window.AppStore.subscribe(function () { refresh(); });
     refresh();
-
-    if (!window.api || !window.api.shell) {
-      window.DashboardUI.setGlobalMessage(
-        "La API para abrir rutas no está disponible. Abre esta pantalla desde Electron.",
-        "error"
-      );
-    }
   }
 
-  document.addEventListener("DOMContentLoaded", function onReady() {
-    init().catch(function onError(error) {
-      const message =
-        error && error.message
-          ? error.message
-          : "No se pudo inicializar la pantalla Dashboard.";
-
-      if (
-        window.DashboardUI &&
-        typeof window.DashboardUI.setGlobalMessage === "function"
-      ) {
-        window.DashboardUI.setGlobalMessage(message, "error");
-      } else {
-        console.error(message);
+  document.addEventListener("DOMContentLoaded", function () {
+    init().catch(function (error) {
+      if (window.DashboardUI) {
+        window.DashboardUI.setGlobalMessage(
+          error && error.message ? error.message : "No se pudo iniciar Dashboard.",
+          "error"
+        );
       }
     });
   });
