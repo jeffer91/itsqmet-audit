@@ -161,15 +161,34 @@ async function detectInstitutionFolders(rootPath) {
 async function scanInstitutionRoot(rootPath) {
   const detection = await detectInstitutionFolders(rootPath);
 
-  const ugpaResult = await scanFolderDirectory({
-    type: "UGPA",
-    folderPath: detection.ugpa.path
-  });
+  let ugpaResult = null;
+  let utetResult = null;
 
-  const utetResult = await scanFolderDirectory({
-    type: "UTET",
-    folderPath: detection.utet.path
-  });
+  try {
+    ugpaResult = await scanFolderDirectory({
+      type: "UGPA",
+      folderPath: detection.ugpa.path
+    });
+  } catch (error) {
+    throw new Error(
+      "No se pudo leer completamente la carpeta UGPA. " +
+        "Verifique que esté disponible en este dispositivo desde OneDrive/SharePoint. " +
+        (error && error.message ? "Detalle: " + error.message : "")
+    );
+  }
+
+  try {
+    utetResult = await scanFolderDirectory({
+      type: "UTET",
+      folderPath: detection.utet.path
+    });
+  } catch (error) {
+    throw new Error(
+      "No se pudo leer completamente la carpeta UTET. " +
+        "Verifique que esté disponible en este dispositivo desde OneDrive/SharePoint. " +
+        (error && error.message ? "Detalle: " + error.message : "")
+    );
+  }
 
   return {
     ok: true,
