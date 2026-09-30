@@ -139,9 +139,23 @@ async function upsertScanResult(type, result) {
   );
 
   if (safeType === "UGPA") {
+    if (
+      selectedPath &&
+      history.utetSourcePath &&
+      selectedPath.toLowerCase() === history.utetSourcePath.toLowerCase()
+    ) {
+      throw new Error("La misma carpeta no puede asignarse a UGPA y UTET.");
+    }
     history.ugpaResult = clone(result);
     if (selectedPath) history.ugpaSourcePath = selectedPath;
   } else {
+    if (
+      selectedPath &&
+      history.ugpaSourcePath &&
+      selectedPath.toLowerCase() === history.ugpaSourcePath.toLowerCase()
+    ) {
+      throw new Error("La misma carpeta no puede asignarse a UGPA y UTET.");
+    }
     history.utetResult = clone(result);
     if (selectedPath) history.utetSourcePath = selectedPath;
   }
