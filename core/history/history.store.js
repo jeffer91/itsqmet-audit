@@ -97,6 +97,12 @@ async function setSourcePath(type, sourcePath) {
     ) {
       throw new Error("La misma carpeta no puede asignarse a UGPA y UTET.");
     }
+    if (
+      history.ugpaSourcePath &&
+      history.ugpaSourcePath.toLowerCase() !== safePath.toLowerCase()
+    ) {
+      history.ugpaResult = null;
+    }
     history.ugpaSourcePath = safePath;
   } else {
     if (
@@ -105,6 +111,12 @@ async function setSourcePath(type, sourcePath) {
       safePath.toLowerCase() === history.ugpaSourcePath.toLowerCase()
     ) {
       throw new Error("La misma carpeta no puede asignarse a UGPA y UTET.");
+    }
+    if (
+      history.utetSourcePath &&
+      history.utetSourcePath.toLowerCase() !== safePath.toLowerCase()
+    ) {
+      history.utetResult = null;
     }
     history.utetSourcePath = safePath;
   }
