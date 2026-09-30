@@ -1,17 +1,26 @@
 /*
 Nombre completo: dashboard.service.js
-Ruta o ubicación: /screens/dashboard/dashboard.service.js
-Función o funciones:
-- Construir el viewModel del dashboard
-- Agrupar novedades activas y descartadas por regla
-- Aplicar filtros y orden
-- Abrir rutas locales o enlaces de SharePoint
-- Navegar hacia la pantalla de reglas con foco sobre una regla o hallazgo
+Ruta: /screens/dashboard/dashboard.service.js
+Función:
+- Construir un dashboard operativo y compacto por tipo de novedad.
+- Mostrar nombre, ubicación y acceso directo a la carpeta contenedora.
 */
 (function (window) {
   "use strict";
 
-  const PREVIEW_LIMIT = 2;
+  const CATEGORY_DEFS = [
+    { id: "empty-folders", label: "Vacías" },
+    { id: "folders-without-pdf", label: "Sin PDF" },
+    { id: "non-pdf", label: "No PDF" },
+    { id: "names", label: "Nombres" },
+    { id: "required-documents", label: "Faltantes" },
+    { id: "root-files", label: "Raíz" }
+  ];
+
+  function safeText(value, fallback) {
+    const text = String(value == null ? "" : value).trim();
+    return text || String(fallback == null ? "" : fallback).trim();
+  }
 
   function mustShellApi() {
     if (!window.api || !window.api.shell) {
@@ -20,324 +29,202 @@ Función o funciones:
     return window.api.shell;
   }
 
-  function normalizeText(value) {
-    return String(value == null ? "" : value).trim();
+  function mapLegacyCategory(finding) {
+    const explicit = safeText(finding && finding.category);
+    if (explicit) return explicit;
+
+    const ruleId = safeText(finding && finding.ruleId);
+    if (ruleId === "empty-folders") return "empty-folders";
+    if (ruleId === "folders-without-pdf") return "folders-without-pdf";
+    if (ruleId === "non-pdf-files") return "non-pdf";
+    if (
+      ruleId === "standardized-names" ||
+      ruleId === "naming-structure" ||
+      ruleId === "period-folder-format"
+    ) return "names";
+    if (
+      ruleId === "required-documents" ||
+      ruleId === "plan-individual-requires-sponsorship" ||
+      ruleId === "training-complete-with-4-evidences"
+    ) return "required-documents";
+    if (ruleId === "root-pdf-policy") return "root-files";
+    return "other";
   }
 
-  function containsText(haystack, needle) {
-    const safeHaystack = String(haystack || "").toLowerCase();
-    const safeNeedle = normalizeText(needle).toLowerCase();
-    if (!safeNeedle) return true;
-    return safeHaystack.includes(safeNeedle);
-  }
-
-  function buildSearchHaystack(card) {
-    return [
-      card.name,
-      card.description,
-      card.detail,
-      card.scope,
-      card.status,
-      (card.previewFindings || [])
-        .map(function mapFinding(finding) {
-          return [
-            finding.ruleName,
-            finding.title,
-            finding.description,
-            finding.rootName,
-            finding.relativePath,
-            finding.actualValue,
-            finding.expectedValue,
-            finding.scope,
-            finding.personLabel,
-            finding.periodLabel
-          ].join(" ");
-        })
-        .join(" ")
-    ]
-      .join(" ")
-      .toLowerCase();
-  }
-
-  function matchesScope(card, selectedScope) {
-    const safeScope = normalizeText(selectedScope).toUpperCase();
-    if (!safeScope || safeScope === "ALL") return true;
-
-    const cardScope = normalizeText(card && card.scope).toUpperCase();
-    if (cardScope === safeScope) return true;
-
-    if (cardScope === "BOTH") {
-      const available = Array.isArray(card.availableScopes) ? card.availableScopes : [];
-      const missing = Array.isArray(card.missingScopes) ? card.missingScopes : [];
-      return available.includes(safeScope) || missing.includes(safeScope);
-    }
-
-    return false;
-  }
-
-  function matchesStatus(card, selectedStatus) {
-    const safeStatus = normalizeText(selectedStatus).toLowerCase();
-    if (!safeStatus || safeStatus === "all") return true;
-    return normalizeText(card && card.status).toLowerCase() === safeStatus;
-  }
-
-  function matchesRule(card, selectedRuleId) {
-    const safeRuleId = normalizeText(selectedRuleId);
-    if (!safeRuleId || safeRuleId === "all") return true;
-    return normalizeText(card && card.id) === safeRuleId;
-  }
-
-  function matchesSearch(card, searchText) {
-    return containsText(card && card.searchHaystack, searchText);
-  }
-
-  function buildBaseData() {
-const sharedState = window.AppStore.get();
-// Corrección técnica: AppStore expone get(), no getState().
-const analysis = window.RulesEngine.analyze(sharedState) || {};
-const analysisFindings = Array.isArray(analysis.findings) ? analysis.findings : [];
-const analysisRuleResults = Array.isArray(analysis.ruleResults) ? analysis.ruleResults : [];
-const discardedEntries = Array.isArray(sharedState.discardedFindings)
-  ? sharedState.discardedFindings
-  : [];
-// Corrección técnica: las descartadas se leen desde el estado global.
-// Esto evita llamar getDiscardedEntries(), que no existe en AppStore.
-    const discardedMap = new Map(
-      discardedEntries.map(function mapEntry(entry) {
-        return [entry.id, entry];
+  function getBaseData() {
+    const sharedState = window.AppStore.get();
+    const analysis = window.RulesEngine.analyze(sharedState) || {};
+    const findings = Array.isArray(analysis.findings) ? analysis.findings : [];
+    const discarded = new Set(
+      (Array.isArray(sharedState.discardedFindings)
+        ? sharedState.discardedFindings
+        : []
+      ).map(function map(item) {
+        return safeText(item && item.id);
       })
     );
 
-    const activeFindings = [];
-    const discardedFindings = [];
-
-    analysisFindings.forEach(function eachFinding(finding) {
-      if (!finding || typeof finding !== "object") return;
-
-      if (discardedMap.has(finding.id)) {
-        const entry = discardedMap.get(finding.id);
-        discardedFindings.push({
-          ...finding,
-          discardedAt: entry && entry.discardedAt ? entry.discardedAt : ""
-        });
-      } else {
-        activeFindings.push(finding);
-      }
-    });
-
     return {
-      sharedState,
-      analysis: {
-        ...analysis,
-        findings: analysisFindings,
-        ruleResults: analysisRuleResults
-      },
+      sharedState: sharedState,
       allRules: window.RulesCatalog.getAll(),
-      activeFindings,
-      discardedFindings
+      activeFindings: findings
+        .filter(function keep(item) {
+          return item && !discarded.has(safeText(item.id));
+        })
+        .map(function map(item) {
+          return {
+            ...item,
+            category: mapLegacyCategory(item)
+          };
+        })
     };
   }
 
-  function sortCards(cards, sortBy) {
-    const safeSort = normalizeText(sortBy) || "findings_desc";
+  function haystack(finding) {
+    return [
+      finding.ruleName,
+      finding.title,
+      finding.description,
+      finding.scope,
+      finding.relativePath,
+      finding.actualValue,
+      finding.expectedValue,
+      finding.foundFileName,
+      finding.missingFileName,
+      finding.missingExpectedPath,
+      finding.periodLabel
+    ].join(" ").toLowerCase();
+  }
 
-    cards.sort(function compare(a, b) {
-      if (safeSort === "name_asc") {
-        return String(a.name || "").localeCompare(String(b.name || ""), "es", {
-          sensitivity: "base"
-        });
+  function applyCommonFilters(findings, state) {
+    const search = safeText(state.searchText).toLowerCase();
+
+    return findings.filter(function keep(finding) {
+      if (
+        state.selectedScope !== "all" &&
+        safeText(finding.scope).toUpperCase() !== safeText(state.selectedScope).toUpperCase()
+      ) return false;
+
+      if (
+        state.selectedRuleId !== "all" &&
+        safeText(finding.ruleId) !== safeText(state.selectedRuleId)
+      ) return false;
+
+      if (search && !haystack(finding).includes(search)) return false;
+
+      return true;
+    });
+  }
+
+  function sortFindings(findings, sortBy) {
+    const safeSort = safeText(sortBy, "category");
+
+    findings.sort(function compare(a, b) {
+      if (safeSort === "name") {
+        return safeText(a.title).localeCompare(safeText(b.title), "es", { sensitivity: "base" });
       }
 
-      if (safeSort === "name_desc") {
-        return String(b.name || "").localeCompare(String(a.name || ""), "es", {
-          sensitivity: "base"
-        });
+      if (safeSort === "scope") {
+        const byScope = safeText(a.scope).localeCompare(safeText(b.scope), "es");
+        if (byScope) return byScope;
       }
 
-      if (safeSort === "status") {
-        const rank = {
-          issues: 0,
-          partial: 1,
-          waiting: 2,
-          ok: 3
-        };
+      const byCategory = safeText(a.category).localeCompare(safeText(b.category), "es");
+      if (byCategory) return byCategory;
 
-        const left = rank[String(a.status || "").toLowerCase()] ?? 99;
-        const right = rank[String(b.status || "").toLowerCase()] ?? 99;
-
-        if (left !== right) return left - right;
-      }
-
-      if (safeSort === "discarded_desc" && b.discardedCount !== a.discardedCount) {
-        return b.discardedCount - a.discardedCount;
-      }
-
-      if (b.activeCount !== a.activeCount) {
-        return b.activeCount - a.activeCount;
-      }
-
-      return String(a.name || "").localeCompare(String(b.name || ""), "es", {
+      return safeText(a.relativePath).localeCompare(safeText(b.relativePath), "es", {
         sensitivity: "base"
       });
     });
+
+    return findings;
   }
 
-  function buildRuleCards(baseData, dashboardState) {
-    const expandedRuleIds = Array.isArray(dashboardState.expandedRuleIds)
-      ? dashboardState.expandedRuleIds
-      : [];
-
-    const ruleResults = Array.isArray(baseData.analysis.ruleResults)
-      ? baseData.analysis.ruleResults
-      : [];
-
-    const cards = ruleResults.map(function mapRule(rule) {
-      const activeFindings = baseData.activeFindings.filter(function keepFinding(finding) {
-        return finding.ruleId === rule.id;
-      });
-
-      const discardedFindings = baseData.discardedFindings.filter(function keepFinding(finding) {
-        return finding.ruleId === rule.id;
-      });
-
-      const isExpanded = expandedRuleIds.includes(rule.id);
-      const previewFindings = isExpanded
-        ? activeFindings.slice()
-        : activeFindings.slice(0, PREVIEW_LIMIT);
-
-      const card = {
-        id: normalizeText(rule.id),
-        name: normalizeText(rule.name, "Regla"),
-        description: normalizeText(rule.description),
-        detail: normalizeText(rule.detail),
-        status: normalizeText(rule.status).toLowerCase() || "waiting",
-        scope: normalizeText(rule.scope).toUpperCase() || "BOTH",
-        availableScopes: Array.isArray(rule.availableScopes) ? rule.availableScopes.slice() : [],
-        missingScopes: Array.isArray(rule.missingScopes) ? rule.missingScopes.slice() : [],
-        activeCount: activeFindings.length,
-        discardedCount: discardedFindings.length,
-        totalCount: activeFindings.length + discardedFindings.length,
-        isExpanded,
-        previewFindings,
-        hiddenActiveCount: Math.max(0, activeFindings.length - previewFindings.length),
-        activeFindings,
-        discardedFindings
+  function buildCategoryCounts(findings) {
+    return CATEGORY_DEFS.map(function map(def) {
+      return {
+        id: def.id,
+        label: def.label,
+        count: findings.filter(function keep(item) {
+          return item.category === def.id;
+        }).length
       };
-
-      card.searchHaystack = buildSearchHaystack(card);
-      return card;
     });
-
-    return cards;
   }
 
   function buildViewModel() {
-    const baseData = buildBaseData();
-    const dashboardState = window.DashboardState.get();
+    const base = getBaseData();
+    const state = window.DashboardState.get();
 
-    const allCards = buildRuleCards(baseData, dashboardState);
+    const commonFiltered = applyCommonFilters(base.activeFindings, state);
+    const categoryCounts = buildCategoryCounts(commonFiltered);
 
-    const filteredCards = allCards.filter(function keepCard(card) {
-      if (!matchesScope(card, dashboardState.selectedScope)) return false;
-      if (!matchesStatus(card, dashboardState.selectedStatus)) return false;
-      if (!matchesRule(card, dashboardState.selectedRuleId)) return false;
-      if (!matchesSearch(card, dashboardState.searchText)) return false;
-      return true;
+    const visibleFindings = commonFiltered.filter(function keep(finding) {
+      return state.selectedCategory === "all" ||
+        finding.category === state.selectedCategory;
     });
 
-    sortCards(filteredCards, dashboardState.sortBy);
+    sortFindings(visibleFindings, state.sortBy);
 
     return {
-      sharedState: baseData.sharedState,
-      dashboardState,
       noScan:
-        !(baseData.sharedState.ugpaResult && baseData.sharedState.ugpaResult.ok) &&
-        !(baseData.sharedState.utetResult && baseData.sharedState.utetResult.ok),
-      ruleCards: filteredCards,
-      visibleRuleResults: filteredCards,
+        !(base.sharedState.ugpaResult && base.sharedState.ugpaResult.ok) &&
+        !(base.sharedState.utetResult && base.sharedState.utetResult.ok),
+      dashboardState: state,
+      categoryCounts: categoryCounts,
+      findings: visibleFindings,
       summary: {
-        ugpaLoaded: !!(baseData.sharedState.ugpaResult && baseData.sharedState.ugpaResult.ok),
-        utetLoaded: !!(baseData.sharedState.utetResult && baseData.sharedState.utetResult.ok),
-        totalRulesCount: allCards.length,
-        visibleRulesCount: filteredCards.length,
-        activeFindingsCount: filteredCards.reduce(function sum(acc, item) {
-          return acc + Number(item.activeCount || 0);
-        }, 0),
-        discardedFindingsCount: filteredCards.reduce(function sum(acc, item) {
-          return acc + Number(item.discardedCount || 0);
-        }, 0),
-        rulesWithIssuesCount: filteredCards.filter(function keep(item) {
-          return item.status === "issues";
-        }).length
+        ugpaLoaded: !!(base.sharedState.ugpaResult && base.sharedState.ugpaResult.ok),
+        utetLoaded: !!(base.sharedState.utetResult && base.sharedState.utetResult.ok),
+        activeFindingsCount: commonFiltered.length
       },
       filters: {
-        selectedScope: dashboardState.selectedScope,
-        selectedStatus: dashboardState.selectedStatus,
-        selectedRuleId: dashboardState.selectedRuleId,
-        searchText: dashboardState.searchText,
-        sortBy: dashboardState.sortBy,
         scopeOptions: [
           { value: "all", label: "Todos" },
           { value: "UGPA", label: "UGPA" },
           { value: "UTET", label: "UTET" }
         ],
         statusOptions: [
-          { value: "all", label: "Todos" },
           { value: "issues", label: "Con novedades" },
-          { value: "partial", label: "Parcial" },
-          { value: "waiting", label: "Pendiente" },
-          { value: "ok", label: "Cumple" }
+          { value: "all", label: "Todos" }
         ],
         ruleOptions: [{ value: "all", label: "Todas las reglas" }].concat(
-          baseData.allRules.map(function mapRule(rule) {
-            return {
-              value: rule.id,
-              label: rule.name
-            };
+          base.allRules.map(function map(rule) {
+            return { value: rule.id, label: rule.name };
           })
         ),
         sortOptions: [
-          { value: "findings_desc", label: "Más novedades" },
-          { value: "discarded_desc", label: "Más descartadas" },
-          { value: "status", label: "Estado" },
-          { value: "name_asc", label: "Nombre A-Z" },
-          { value: "name_desc", label: "Nombre Z-A" }
+          { value: "category", label: "Tipo de novedad" },
+          { value: "scope", label: "UGPA / UTET" },
+          { value: "name", label: "Nombre" }
         ]
       }
     };
   }
 
   async function openPath(targetPath) {
-    const api = mustShellApi();
-    const response = await api.openPath(targetPath);
-
+    const response = await mustShellApi().openPath(targetPath);
     if (!response || response.ok !== true) {
       throw new Error(
-        response && response.error ? response.error : "No se pudo abrir la ruta."
+        response && response.error ? response.error : "No se pudo abrir la carpeta."
       );
     }
-
     return response;
   }
 
   function goToRules(ruleId, findingId) {
-    const safeRuleId = normalizeText(ruleId);
-    const safeFindingId = normalizeText(findingId);
-
-    if (safeRuleId) {
-      sessionStorage.setItem("audit_rules_focus_rule_id", safeRuleId);
+    if (safeText(ruleId)) {
+      sessionStorage.setItem("audit_rules_focus_rule_id", safeText(ruleId));
     }
-
-    if (safeFindingId) {
-      sessionStorage.setItem("audit_rules_focus_finding_id", safeFindingId);
+    if (safeText(findingId)) {
+      sessionStorage.setItem("audit_rules_focus_finding_id", safeText(findingId));
     }
-
     window.location.href = "../rules/rules.index.html";
   }
 
   window.DashboardService = {
-    buildViewModel,
-    openPath,
-    goToRules
+    buildViewModel: buildViewModel,
+    openPath: openPath,
+    goToRules: goToRules
   };
 })(window);
