@@ -118,6 +118,16 @@
     renderSummary(vm && vm.summaryCards);
     renderUnit(vm && vm.ugpaCard, "ugpaSourceBody");
     renderUnit(vm && vm.utetCard, "utetSourceBody");
+    const includeUgpa = byId("includeUgpa");
+    const includeUtet = byId("includeUtet");
+    if (includeUgpa) {
+      includeUgpa.checked = !!(vm && vm.auditUgpa);
+      includeUgpa.disabled = !(vm && vm.ugpaCard && vm.ugpaCard.selected);
+    }
+    if (includeUtet) {
+      includeUtet.checked = !!(vm && vm.auditUtet);
+      includeUtet.disabled = !(vm && vm.utetCard && vm.utetCard.selected);
+    }
     renderExport(vm);
 
     const history = byId("historyInfo");
