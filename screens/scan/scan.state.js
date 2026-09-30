@@ -1,13 +1,5 @@
 (function (window) {
   "use strict";
-  /*
-  Nombre completo: scan.state.js
-  Ruta o ubicación: /screens/scan/scan.state.js
-  Función o funciones:
-  - Administrar el estado de la auditoría institucional
-  - Mantener la raíz institucional y los resultados UGPA/UTET
-  - Gestionar mensajes, carga, historial y exportación
-  */
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -29,8 +21,10 @@
       loading: false,
       exportMode: "both",
       historyFilePath: "",
-      institutionalRootPath: "",
-      detection: null,
+      ugpaSourcePath: "",
+      utetSourcePath: "",
+      ugpaValidation: null,
+      utetValidation: null,
       ugpaResult: null,
       utetResult: null,
       exportResult: {
@@ -73,14 +67,20 @@
   }
 
   function hydrateFromHistory(history, historyFilePath) {
-    const safeHistory = history && typeof history === "object" ? history : {};
+    const safe = history && typeof history === "object" ? history : {};
+    const ugpaResult = safe.ugpaResult || null;
+    const utetResult = safe.utetResult || null;
 
     return set({
-      institutionalRootPath: safeText(safeHistory.institutionalRootPath),
-      ugpaResult: safeHistory.ugpaResult || null,
-      utetResult: safeHistory.utetResult || null,
+      ugpaSourcePath: safeText(safe.ugpaSourcePath),
+      utetSourcePath: safeText(safe.utetSourcePath),
+      ugpaValidation:
+        ugpaResult && ugpaResult.validation ? ugpaResult.validation : null,
+      utetValidation:
+        utetResult && utetResult.validation ? utetResult.validation : null,
+      ugpaResult: ugpaResult,
+      utetResult: utetResult,
       historyFilePath: safeText(historyFilePath),
-      detection: null,
       exportResult: {
         ok: false,
         filePath: "",
@@ -98,7 +98,7 @@
 
   function subscribe(listener) {
     if (typeof listener !== "function") {
-      return function unsubscribeNoop() {};
+      return function noop() {};
     }
 
     listeners.add(listener);
