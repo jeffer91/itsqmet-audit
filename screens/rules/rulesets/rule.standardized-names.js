@@ -1,14 +1,16 @@
+/*
+Nombre completo: rule.standardized-names.js
+Ruta: /screens/rules/rulesets/rule.standardized-names.js
+Función:
+- Detectar anomalías seguras de nomenclatura sin eliminar tildes ni palabras válidas del manual.
+- Proponer el nombre corregido sin renombrar archivos ni carpetas.
+*/
 (function (window) {
   "use strict";
 
   const Types = window.RulesTypes || {};
-
-  const TECHNICAL_FILE_NAMES = new Set([
-    "desktop.ini",
-    "thumbs.db"
-  ]);
-
-  const REMOVABLE_FILE_SUFFIXES = [
+  const TECHNICAL_FILE_NAMES = new Set(["desktop.ini", "thumbs.db"]);
+  const REMOVABLE_SUFFIXES = [
     "signed_firmado",
     "firmado_signed",
     "signed-firmado",
@@ -19,101 +21,33 @@
     "scan",
     "scanner",
     "copia",
-    "copy",
-    "draft",
-    "borrador",
-    "final"
-  ];
-
-  const COMMON_REPLACEMENTS = [
-    { regex: /\bPRO(?=\d{2,4}\b)/gi, replacement: "PRO-" },
-    { regex: /\bViodejuegos\b/gi, replacement: "Videojuegos" },
-    { regex: /\bCompensancion\b/gi, replacement: "Compensacion" },
-    { regex: /\bComuputacion\b/gi, replacement: "Computacion" },
-    { regex: /\bNesesidades\b/gi, replacement: "Necesidades" },
-    { regex: /\bMazo\b/gi, replacement: "Marzo" },
-    { regex: /\bEduFin\b/gi, replacement: "Educacion Financiera" },
-    { regex: /\bVyHB\b/gi, replacement: "Valores y Habilidades Blandas" },
-    { regex: /\bFdG\b/gi, replacement: "Facilitador de Grupos" },
-    { regex: /\bMhdla\b/gi, replacement: "Manejo Higienico de los Alimentos" },
-    { regex: /\bMPcI\b/gi, replacement: "Marca Personal IA" },
-    { regex: /\bMPIA\b/gi, replacement: "Marca Personal IA" }
+    "copy"
   ];
 
   function safeText(value) {
     return String(value == null ? "" : value).trim();
   }
 
-  function normalizeScope(value) {
-    if (Types && typeof Types.normalizeScope === "function") {
-      return Types.normalizeScope(value);
-    }
-    const scope = safeText(value).toUpperCase();
-    return scope === "UGPA" || scope === "UTET" || scope === "BOTH" ? scope : "BOTH";
-  }
-
-  function normalizeSeverity(value) {
-    if (Types && typeof Types.normalizeSeverity === "function") {
-      return Types.normalizeSeverity(value);
-    }
-    const severity = safeText(value).toLowerCase();
-    return severity === "error" ? "error" : "warning";
-  }
-
   function normalizeRelativePath(value) {
-    if (Types && typeof Types.normalizeRelativePath === "function") {
-      return Types.normalizeRelativePath(value);
-    }
-    return safeText(value).replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
-  }
-
-  function buildFindingId(finding) {
-    if (Types && typeof Types.buildFindingId === "function") {
-      return Types.buildFindingId(finding);
-    }
-    return [
-      safeText(finding.ruleId),
-      safeText(finding.scope),
-      normalizeRelativePath(finding.relativePath),
-      safeText(finding.title),
-      safeText(finding.actualValue)
-    ].join("|");
-  }
-
-  function normalizeWhitespace(value) {
-    return safeText(value).replace(/\s+/g, " ");
-  }
-
-  function stripAccents(value) {
-    return safeText(value)
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-  }
-
-  function hasAccents(value) {
-    return stripAccents(value) !== safeText(value);
+    return Types.normalizeRelativePath
+      ? Types.normalizeRelativePath(value)
+      : safeText(value).replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
   }
 
   function escapeRegExp(value) {
-    return safeText(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return safeText(value).replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
   }
 
   function getParentAbsolutePath(absolutePath) {
-    const safePath = safeText(absolutePath);
-    if (!safePath) return "";
-    return safePath.replace(/[\\/][^\\/]+$/, "");
-  }
-
-  function isTechnicalFile(fileName) {
-    return TECHNICAL_FILE_NAMES.has(safeText(fileName).toLowerCase());
+    return safeText(absolutePath).replace(/[\\/][^\\/]+$/, "");
   }
 
   function removeDuplicateExtension(fileName) {
-    let previous = safeText(fileName);
-    let current = previous.replace(/(\.[a-z0-9]+)(?:\1)+$/i, "$1");
+    let current = safeText(fileName);
+    let previous = "";
     while (current !== previous) {
       previous = current;
-      current = previous.replace(/(\.[a-z0-9]+)(?:\1)+$/i, "$1");
+      current = current.replace(/(\.[a-z0-9]+)(?:\1)+$/i, "$1");
     }
     return current;
   }
@@ -122,10 +56,7 @@
     const clean = removeDuplicateExtension(fileName);
     const lastDot = clean.lastIndexOf(".");
     if (lastDot <= 0 || lastDot === clean.length - 1) {
-      return {
-        base: clean,
-        extension: ""
-      };
+      return { base: clean, extension: "" };
     }
     return {
       base: clean.slice(0, lastDot),
@@ -133,293 +64,141 @@
     };
   }
 
-  function capitalizeMonth(value) {
-    const clean = safeText(value).toLowerCase();
-    if (!clean) return "";
-    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  function normalizeCommon(value) {
+    return safeText(value)
+      .replace(/\bPRO(?=\d{2,4}\b)/gi, "PRO-")
+      .replace(/\s{2,}/g, " ")
+      .trim();
   }
 
-  function standardizePeriodSegments(value) {
-    return safeText(value).replace(
-      /\b(Octubre|Abril)\s+(\d{4})\s*[-–—]\s*(Marzo|Septiembre)\s+(\d{4})\b/gi,
-      function (_match, startMonth, startYear, endMonth, endYear) {
-        return (
-          capitalizeMonth(startMonth) +
-          " " +
-          startYear +
-          "–" +
-          capitalizeMonth(endMonth) +
-          " " +
-          endYear
-        );
-      }
-    );
-  }
-
-  function removeTrailingCopyMarker(value) {
+  function removeCopyMarker(value) {
     return safeText(value).replace(/\s*\((\d+)\)\s*$/i, "");
   }
 
-  function removeRemovableSuffixes(baseName) {
-    let next = safeText(baseName);
+  function removeUnsafeSuffixes(value) {
+    let next = safeText(value);
     let changed = true;
 
     while (changed) {
       changed = false;
       const before = next;
+      next = removeCopyMarker(next);
 
-      next = removeTrailingCopyMarker(next);
-
-      REMOVABLE_FILE_SUFFIXES.forEach(function eachSuffix(suffix) {
+      REMOVABLE_SUFFIXES.forEach(function each(suffix) {
         const regex = new RegExp("(?:[\\s_-]+)" + escapeRegExp(suffix) + "$", "i");
         next = next.replace(regex, "");
       });
 
       next = next.replace(/[\s_-]+$/g, "").trim();
-
-      if (next !== before) {
-        changed = true;
-      }
+      changed = next !== before;
     }
-
-    return next;
-  }
-
-  function applyCommonReplacements(value) {
-    let next = safeText(value);
-    COMMON_REPLACEMENTS.forEach(function eachReplacement(item) {
-      next = next.replace(item.regex, item.replacement);
-    });
-    return next;
-  }
-
-  function normalizeStructuralSpacing(value) {
-    let next = safeText(value);
-
-    next = next.replace(/_/g, " ");
-    next = next.replace(/\s*–\s*/g, "–");
-    next = next.replace(/\s*-\s*/g, "-");
-    next = next.replace(/-{2,}/g, "-");
-    next = next.replace(/^\-+/g, "");
-    next = next.replace(/\.+\s*$/g, "");
-    next = normalizeWhitespace(next);
 
     return next;
   }
 
   function sanitizeFolderName(folderName) {
-    let next = safeText(folderName);
-    if (!next) return "";
-
-    next = standardizePeriodSegments(next);
-    next = stripAccents(next);
-    next = applyCommonReplacements(next);
-    next = standardizePeriodSegments(next);
-    next = normalizeStructuralSpacing(next);
-    next = next.replace(/^[-\s]+|[-\s]+$/g, "");
-
-    return next;
+    return normalizeCommon(folderName);
   }
 
   function sanitizeFileName(fileName) {
     const parts = splitFileName(fileName);
-    let base = safeText(parts.base);
-    let extension = safeText(parts.extension).toLowerCase();
-
-    base = removeRemovableSuffixes(base);
-    base = sanitizeFolderName(base);
-    extension = stripAccents(extension).toLowerCase();
-
-    if (!base) {
-      base = "Documento";
-    }
-
+    let base = removeUnsafeSuffixes(parts.base);
+    base = normalizeCommon(base);
+    const extension = safeText(parts.extension).toLowerCase();
     return extension ? base + "." + extension : base;
   }
 
-  function buildFolderExample(suggestedName) {
-    if (/\b(Octubre|Abril) \d{4}–(Marzo|Septiembre) \d{4}\b/.test(suggestedName)) {
-      return "UGPA-PRO-134-Octubre 2025–Marzo 2026";
-    }
-    if (/^(UGPA|UTET)-PRO-\d+-/i.test(suggestedName)) {
-      return "UGPA-PRO-134-Nombre del proceso";
-    }
-    return suggestedName;
-  }
-
-  function buildFileExample(suggestedName) {
-    const extension = safeText(suggestedName).toLowerCase().endsWith(".docx")
-      ? "docx"
-      : "pdf";
-    return "UGPA-RGI2-01-PRO-134-2026-03-Nombre Apellido." + extension;
-  }
-
-  function detectReasons(originalName, suggestedName, isFile) {
+  function detectReason(original, suggested, isFile) {
     const reasons = [];
-    const original = safeText(originalName);
-    const plainOriginal = stripAccents(original);
-
-    if (hasAccents(original)) {
-      reasons.push("contiene tildes");
-    }
 
     if (isFile && /(\.[a-z0-9]+)(?:\1)+$/i.test(original)) {
-      reasons.push("repite la extension");
+      reasons.push("extensión duplicada");
     }
 
     if (isFile && /\(\d+\)(?=\.[^.]+$|$)/i.test(original)) {
-      reasons.push("incluye marcador de copia");
+      reasons.push("marcador de copia");
     }
 
     if (
       isFile &&
-      /(?:^|[\s_-])(signed_firmado|firmado_signed|signed|firmado|escaneado|scan|scanner|copia|copy|draft|borrador|final)(?:$|[\s_-])/i.test(original)
+      /(?:^|[\s_-])(signed_firmado|firmado_signed|signed|firmado|escaneado|scan|scanner|copia|copy)(?=$|[\s_.-])/i.test(original)
     ) {
-      reasons.push("incluye sufijos de firma o copia");
-    }
-
-    if (/\b(Octubre|Abril)\s+\d{4}\s*-\s*(Marzo|Septiembre)\s+\d{4}\b/i.test(original)) {
-      reasons.push("usa guion simple en el periodo");
+      reasons.push("sufijo de copia/firma");
     }
 
     if (/\bPRO\d{2,4}\b/i.test(original)) {
-      reasons.push("omite el guion en el codigo del proceso");
+      reasons.push("código PRO sin guion");
     }
 
-    if (applyCommonReplacements(plainOriginal) !== plainOriginal) {
-      reasons.push("usa abreviaturas o errores frecuentes");
+    if (/\s{2,}/.test(original)) {
+      reasons.push("espacios duplicados");
     }
 
-    if (!reasons.length && safeText(original) !== safeText(suggestedName)) {
-      reasons.push("no cumple el formato limpio definido para nombres");
-    }
-
-    return reasons;
+    return reasons.length
+      ? reasons.join(", ")
+      : original !== suggested
+      ? "formato no estandarizado"
+      : "";
   }
 
-  function createFinding(payload) {
+  function createFinding(rule, scope, scanData, item, suggestedName, isFile) {
+    const reason = detectReason(item.name, suggestedName, isFile);
     const finding = {
-      ruleId: safeText(payload.ruleId),
-      ruleName: safeText(payload.ruleName),
-      scope: normalizeScope(payload.scope),
-      severity: normalizeSeverity(payload.severity),
-      title: safeText(payload.title),
-      description: safeText(payload.description),
-      rootName: safeText(payload.rootName),
-      rootPath: safeText(payload.rootPath),
-      relativePath: normalizeRelativePath(payload.relativePath),
-      absolutePath: safeText(payload.absolutePath),
-      actualValue: safeText(payload.actualValue),
-      expectedValue: safeText(payload.expectedValue),
-      exampleValue: safeText(payload.exampleValue),
-      foundLabel: safeText(payload.foundLabel),
-      missingLabel: safeText(payload.missingLabel),
-      primaryActionLabel: safeText(payload.primaryActionLabel),
-      primaryActionPath: safeText(payload.primaryActionPath)
+      ruleId: rule.id,
+      ruleName: rule.name,
+      category: "names",
+      scope: scope,
+      severity: rule.severity,
+      title: isFile ? "Nombre de PDF incorrecto" : "Nombre de carpeta incorrecto",
+      description:
+        "Se detectó " + reason + ". AUDIT solo propone el cambio; no renombra automáticamente.",
+      rootName: scanData.rootName || "",
+      rootPath: scanData.rootPath || "",
+      relativePath: normalizeRelativePath(item.relativePath),
+      absolutePath: item.path || scanData.rootPath || "",
+      actualLabel: "Actual",
+      actualValue: item.name,
+      expectedLabel: "Debe ser",
+      expectedValue: suggestedName,
+      foundFileName: isFile ? item.name : "",
+      primaryActionLabel: "Abrir carpeta",
+      primaryActionPath: isFile
+        ? getParentAbsolutePath(item.path || "") || scanData.rootPath || ""
+        : item.path || scanData.rootPath || ""
     };
 
-    finding.id = buildFindingId(finding);
+    finding.id = Types.buildFindingId
+      ? Types.buildFindingId(finding)
+      : [rule.id, scope, finding.relativePath, suggestedName].join("|");
+
     return finding;
   }
 
-  function buildDescription(originalName, suggestedName, isFile) {
-    const reasons = detectReasons(originalName, suggestedName, isFile);
-    const prefix = isFile
-      ? "El archivo no cumple el estandar de nombres definido."
-      : "La carpeta no cumple el estandar de nombres definido.";
-
-    if (!reasons.length) {
-      return prefix + " Se propone una version limpia y uniforme del nombre.";
-    }
-
-    return (
-      prefix +
-      " Se detecto que " +
-      reasons.join(", ") +
-      ". La propuesta ya entrega el nombre corregido."
-    );
-  }
-
-  function addFolderFinding(findings, rule, scope, scanData, folder, suggestedName) {
-    const title = /\b(Octubre|Abril) \d{4}–(Marzo|Septiembre) \d{4}\b/.test(suggestedName)
-      ? "Carpeta de periodo no estandarizada"
-      : "Carpeta no estandarizada";
-
-    findings.push(
-      createFinding({
-        ruleId: rule.id,
-        ruleName: rule.name,
-        scope: scope,
-        severity: rule.severity,
-        title: title,
-        description: buildDescription(folder.name, suggestedName, false),
-        rootName: scanData.rootName || "",
-        rootPath: scanData.rootPath || "",
-        relativePath: folder.relativePath,
-        absolutePath: folder.path || scanData.rootPath || "",
-        actualValue: folder.name,
-        expectedValue: suggestedName,
-        exampleValue: buildFolderExample(suggestedName),
-        foundLabel: "Carpeta detectada",
-        missingLabel: "Nombre estandar",
-        primaryActionLabel: "Abrir carpeta del documento encontrado",
-        primaryActionPath: folder.path || scanData.rootPath || ""
-      })
-    );
-  }
-
-  function addFileFinding(findings, rule, scope, scanData, file, suggestedName) {
-    findings.push(
-      createFinding({
-        ruleId: rule.id,
-        ruleName: rule.name,
-        scope: scope,
-        severity: rule.severity,
-        title: "Archivo no estandarizado",
-        description: buildDescription(file.name, suggestedName, true),
-        rootName: scanData.rootName || "",
-        rootPath: scanData.rootPath || "",
-        relativePath: file.relativePath,
-        absolutePath: file.path || scanData.rootPath || "",
-        actualValue: file.name,
-        expectedValue: suggestedName,
-        exampleValue: buildFileExample(suggestedName),
-        foundLabel: "Archivo detectado",
-        missingLabel: "Nombre estandar",
-        primaryActionLabel: "Abrir carpeta del documento encontrado",
-        primaryActionPath: getParentAbsolutePath(file.path || "")
-      })
-    );
-  }
-
   function run(scope, scanData, rule) {
-    if (!scanData || scanData.ok !== true) {
-      return [];
-    }
+    if (!scanData || scanData.ok !== true) return [];
 
     const findings = [];
     const folders = Array.isArray(scanData.folders) ? scanData.folders : [];
     const files = Array.isArray(scanData.files) ? scanData.files : [];
 
     folders.forEach(function eachFolder(folder) {
-      const currentName = safeText(folder && folder.name);
-      if (!currentName) return;
-
-      const suggestedName = sanitizeFolderName(currentName);
-      if (!suggestedName || suggestedName === currentName) return;
-
-      addFolderFinding(findings, rule, scope, scanData, folder, suggestedName);
+      const current = safeText(folder && folder.name);
+      if (!current) return;
+      const suggested = sanitizeFolderName(current);
+      if (suggested && suggested !== current) {
+        findings.push(createFinding(rule, scope, scanData, folder, suggested, false));
+      }
     });
 
     files.forEach(function eachFile(file) {
-      const currentName = safeText(file && file.name);
-      if (!currentName) return;
-      if (isTechnicalFile(currentName)) return;
+      const current = safeText(file && file.name);
+      if (!current || TECHNICAL_FILE_NAMES.has(current.toLowerCase())) return;
+      if (safeText(file && file.extension).toLowerCase() !== ".pdf") return;
 
-      const suggestedName = sanitizeFileName(currentName);
-      if (!suggestedName || suggestedName === currentName) return;
-
-      addFileFinding(findings, rule, scope, scanData, file, suggestedName);
+      const suggested = sanitizeFileName(current);
+      if (suggested && suggested !== current) {
+        findings.push(createFinding(rule, scope, scanData, file, suggested, true));
+      }
     });
 
     return findings;
@@ -427,11 +206,11 @@
 
   window.RuleStandardizedNames = {
     id: "standardized-names",
-    name: "Nombres estandar",
+    name: "Nombres a corregir",
     scope: "BOTH",
     severity: "warning",
     description:
-      "Valida que archivos y carpetas usen nombres limpios: sin tildes, sin sufijos de firma, con periodos estandarizados y con propuesta exacta de correccion.",
+      "Corrige únicamente anomalías seguras: copias, extensiones duplicadas, sufijos de firma, espacios duplicados y códigos PRO sin guion.",
     run: function runRule(context) {
       return run(context.scope, context.scanData, this);
     }
