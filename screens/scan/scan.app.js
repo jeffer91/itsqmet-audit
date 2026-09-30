@@ -1,14 +1,5 @@
 (function (window, document) {
   "use strict";
-  /*
-  Nombre completo: scan.app.js
-  Ruta o ubicación: /screens/scan/scan.app.js
-  Función o funciones:
-  - Inicializar la pantalla Escaneo
-  - Conectar eventos de importación, limpieza, historial y exportación PDF
-  - Coordinar el flujo entre ScanState, AppStore, ScanService y ScanUI
-  - Mantener la pantalla sincronizada con los cambios del estado local y global
-  */
 
   function getElement(id) {
     return document.getElementById(id);
@@ -16,40 +7,34 @@
 
   function setBusyState(isBusy) {
     const disabled = !!isBusy;
-    const buttonIds = [
-      "btnScanFolderUgpa",
-      "btnImportUgpa",
-      "btnClearUgpa",
-      "btnScanFolderUtet",
-      "btnImportUtet",
-      "btnClearUtet",
+
+    [
+      "btnSelectInstitutionRoot",
+      "btnAuditInstitution",
       "btnOpenHistory",
       "btnExportPdf",
       "btnOpenDashboard",
       "btnOpenRules"
-    ];
-
-    buttonIds.forEach(function each(id) {
+    ].forEach(function each(id) {
       const element = getElement(id);
-      if (element) {
-        element.disabled = disabled;
-      }
+      if (element) element.disabled = disabled;
     });
 
     const exportMode = getElement("exportMode");
-    if (exportMode) {
-      exportMode.disabled = disabled;
-    }
+    if (exportMode) exportMode.disabled = disabled;
 
     document.body.dataset.loading = disabled ? "true" : "false";
   }
 
   function render() {
     const viewModel = window.ScanService.getViewModel();
-    // Corrección técnica: scan.ui.js expone window.ScanUi, no window.ScanUI.
-    // Esto evita el fallo de render por referencia global inexistente.
     window.ScanUi.renderViewModel(viewModel);
     setBusyState(viewModel.loading);
+
+    const auditButton = getElement("btnAuditInstitution");
+    if (auditButton && !viewModel.loading) {
+      auditButton.disabled = !viewModel.rootSelected;
+    }
   }
 
   function safeRun(task) {
@@ -57,140 +42,83 @@
       try {
         await task();
       } catch (error) {
-        window.ScanState.set({
-          message: {
-            type: "error",
-            text:
-              error && error.message
-                ? error.message
-                : "Se produjo un error inesperado."
-          }
-        });
+        window.ScanState.patchMessage(
+          "error",
+          error && error.message ? error.message : "Se produjo un error inesperado."
+        );
       }
     };
   }
 
   function bindEvents() {
-    const btnScanFolderUgpa = getElement("btnScanFolderUgpa");
-    const btnScanFolderUtet = getElement("btnScanFolderUtet");
-    const btnImportUgpa = getElement("btnImportUgpa");
-    const btnImportUtet = getElement("btnImportUtet");
-    const btnClearUgpa = getElement("btnClearUgpa");
-    const btnClearUtet = getElement("btnClearUtet");
-    const btnOpenHistory = getElement("btnOpenHistory");
-    const btnExportPdf = getElement("btnExportPdf");
-    const btnOpenDashboard = getElement("btnOpenDashboard");
-    const btnOpenRules = getElement("btnOpenRules");
+    const selectRoot = getElement("btnSelectInstitutionRoot");
+    const audit = getElement("btnAuditInstitution");
+    const history = getElement("btnOpenHistory");
+    const exportPdf = getElement("btnExportPdf");
+    const dashboard = getElement("btnOpenDashboard");
+    const rules = getElement("btnOpenRules");
     const exportMode = getElement("exportMode");
 
-    if (btnScanFolderUgpa) {
-      btnScanFolderUgpa.addEventListener(
+    if (selectRoot) {
+      selectRoot.addEventListener(
         "click",
-        safeRun(async function onScanFolderUgpa() {
-          await window.ScanService.scanFolder("UGPA");
-          // Corrección técnica: conecta el botón de escaneo local de UGPA.
-          // Esto evita que el control exista en pantalla pero no ejecute ninguna acción.
+        safeRun(function onSelectRoot() {
+          return window.ScanService.selectInstitutionRoot();
         })
       );
     }
 
-    if (btnScanFolderUtet) {
-      btnScanFolderUtet.addEventListener(
+    if (audit) {
+      audit.addEventListener(
         "click",
-        safeRun(async function onScanFolderUtet() {
-          await window.ScanService.scanFolder("UTET");
-          // Corrección técnica: conecta el botón de escaneo local de UTET.
-          // Esto evita que el control exista en pantalla pero no ejecute ninguna acción.
+        safeRun(function onAudit() {
+          return window.ScanService.auditInstitution();
         })
       );
     }
 
-    if (btnImportUgpa) {
-      btnImportUgpa.addEventListener(
+    if (history) {
+      history.addEventListener(
         "click",
-        safeRun(async function onImportUgpa() {
-          await window.ScanService.importArchive("UGPA");
+        safeRun(function onHistory() {
+          return window.ScanService.openHistoryFile();
         })
       );
     }
 
-    if (btnImportUtet) {
-      btnImportUtet.addEventListener(
+    if (exportPdf) {
+      exportPdf.addEventListener(
         "click",
-        safeRun(async function onImportUtet() {
-          await window.ScanService.importArchive("UTET");
+        safeRun(function onExport() {
+          return window.ScanService.exportPdf();
         })
       );
     }
 
-    if (btnClearUgpa) {
-      btnClearUgpa.addEventListener(
-        "click",
-        safeRun(async function onClearUgpa() {
-          await window.ScanService.clearScan("UGPA");
-        })
-      );
-    }
-
-    if (btnClearUtet) {
-      btnClearUtet.addEventListener(
-        "click",
-        safeRun(async function onClearUtet() {
-          await window.ScanService.clearScan("UTET");
-        })
-      );
-    }
-
-    if (btnOpenHistory) {
-      btnOpenHistory.addEventListener(
-        "click",
-        safeRun(async function onOpenHistory() {
-          await window.ScanService.openHistoryFile();
-        })
-      );
-    }
-
-    if (btnExportPdf) {
-      btnExportPdf.addEventListener(
-        "click",
-        safeRun(async function onExportPdf() {
-          await window.ScanService.exportPdf();
-        })
-      );
-    }
-
-    if (btnOpenDashboard) {
-      btnOpenDashboard.addEventListener("click", function onOpenDashboard() {
+    if (dashboard) {
+      dashboard.addEventListener("click", function onDashboard() {
         window.ScanService.goToDashboard();
       });
     }
 
-    if (btnOpenRules) {
-      btnOpenRules.addEventListener("click", function onOpenRules() {
+    if (rules) {
+      rules.addEventListener("click", function onRules() {
         window.ScanService.goToRules();
       });
     }
 
     if (exportMode) {
-      exportMode.addEventListener("change", function onChangeExportMode(event) {
-        const value =
-          event && event.target ? String(event.target.value || "") : "both";
-        window.ScanService.setExportMode(value);
+      exportMode.addEventListener("change", function onExportMode(event) {
+        window.ScanService.setExportMode(event.target.value);
       });
     }
   }
 
   function subscribeToStores() {
-    if (window.ScanState && typeof window.ScanState.subscribe === "function") {
-      window.ScanState.subscribe(function onStateChange() {
-        render();
-      });
-    }
+    window.ScanState.subscribe(render);
 
     if (window.AppStore && typeof window.AppStore.subscribe === "function") {
-      window.AppStore.subscribe(function onGlobalStoreChange() {
-        render();
-      });
+      window.AppStore.subscribe(render);
     }
   }
 
@@ -203,15 +131,12 @@
 
   document.addEventListener("DOMContentLoaded", function onReady() {
     boot().catch(function onBootError(error) {
-      window.ScanState.set({
-        message: {
-          type: "error",
-          text:
-            error && error.message
-              ? error.message
-              : "No se pudo inicializar la pantalla de escaneo."
-        }
-      });
+      window.ScanState.patchMessage(
+        "error",
+        error && error.message
+          ? error.message
+          : "No se pudo inicializar la pantalla de auditoría."
+      );
       render();
     });
   });
