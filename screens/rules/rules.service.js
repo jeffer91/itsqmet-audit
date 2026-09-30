@@ -34,6 +34,13 @@
     return window.RulesState;
   }
 
+  function mustHistoryApi() {
+    if (!window.api || !window.api.history) {
+      throw new Error("La API de historial no está disponible.");
+    }
+    return window.api.history;
+  }
+
   function getSharedState() {
     if (window.AppStore && typeof window.AppStore.get === "function") {
       return window.AppStore.get();
@@ -290,18 +297,49 @@
     return response;
   }
 
-  function discardFinding(finding) {
-    if (window.AppStore && typeof window.AppStore.addDiscardedFinding === "function") {
-      window.AppStore.addDiscardedFinding(finding);
+  async function persistDiscardedFindings() {
+    if (!window.AppStore || typeof window.AppStore.get !== "function") {
+      return;
+    }
+
+    const current = window.AppStore.get();
+    const entries = Array.isArray(current.discardedFindings)
+      ? current.discardedFindings
+      : [];
+
+    const response = await mustHistoryApi().saveDiscardedFindings(entries);
+
+    if (!response || response.ok !== true) {
+      throw new Error(
+        response && response.error
+          ? response.error
+          : "No se pudieron guardar las novedades descartadas."
+      );
+    }
+
+    if (
+      window.AppStore &&
+      typeof window.AppStore.setHistory === "function" &&
+      response.history
+    ) {
+      window.AppStore.setHistory(response.history);
     }
   }
 
-  function restoreFinding(id) {
+  async function discardFinding(finding) {
+    if (window.AppStore && typeof window.AppStore.addDiscardedFinding === "function") {
+      window.AppStore.addDiscardedFinding(finding);
+      await persistDiscardedFindings();
+    }
+  }
+
+  async function restoreFinding(id) {
     if (
       window.AppStore &&
       typeof window.AppStore.removeDiscardedFinding === "function"
     ) {
       window.AppStore.removeDiscardedFinding(id);
+      await persistDiscardedFindings();
     }
   }
 
