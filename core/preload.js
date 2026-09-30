@@ -19,16 +19,6 @@ function safeText(value) {
 }
 
 contextBridge.exposeInMainWorld("api", {
-  institution: {
-    pickRoot: function pickRoot() {
-      return ipcRenderer.invoke("institution:pick-root");
-    },
-    scanRoot: function scanRoot(rootPath) {
-      return ipcRenderer.invoke("institution:scan-root", {
-        rootPath: safeText(rootPath)
-      });
-    }
-  },
   archive: {
     pickFolder: function pickFolder(type) {
       return ipcRenderer.invoke("archive:pick-folder", {
