@@ -209,7 +209,7 @@ Función o funciones:
 
   function parseProcessFolderName(folderName, expectedUnit) {
     const name = normalizeWhitespace(folderName);
-    const match = name.match(/^([A-Z]{2,10})-PRO-(\d{3})(?:-(.+))?$/i);
+    const match = name.match(/^([A-Z]{2,10})-PRO-(\d{2,4})(?:-(.+))?$/i);
     const safeExpectedUnit = normalizeScope(expectedUnit);
 
     if (!match) {
@@ -284,7 +284,7 @@ Función o funciones:
   function parsePeriodFolderName(folderName, expectedProcessCode, expectedUnit) {
     const rawName = normalizeWhitespace(folderName).replace(/[–—]/g, "-");
     const processPrefix = rawName.match(
-      /^([A-Z]{2,10})-PRO-(\d{3})-(.+)$/i
+      /^([A-Z]{2,10})-PRO-(\d{2,4})-(.+)$/i
     );
 
     let name = rawName;
@@ -411,7 +411,7 @@ Función o funciones:
     const normalized = normalizeWhitespace(clean).replace(/_/g, " ");
 
     const strictMatch = normalized.match(
-      /^([A-Z]{2,10})-([A-Z0-9-]+)-PRO-(\d{3})-(\d{4})-(\d{2})-(.+)$/i
+      /^([A-Z]{2,10})-([A-Z0-9-]+)-PRO-(\d{2,4})-(\d{4})-(\d{2})-(.+)$/i
     );
 
     if (strictMatch) {
@@ -429,7 +429,7 @@ Función o funciones:
       };
     }
 
-    const relaxedMatch = normalized.match(/PRO-(\d{3})/i);
+    const relaxedMatch = normalized.match(/PRO-(\d{2,4})/i);
     if (!relaxedMatch) return null;
 
     const processNumber = safeText(relaxedMatch[1]);
