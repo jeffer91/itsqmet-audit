@@ -402,6 +402,11 @@ Función o funciones:
     const original = safeText(fileName);
     if (!original) return null;
 
+    const extensionMatch = original.match(/\.([^.]+)$/);
+    const extension = extensionMatch
+      ? safeText(extensionMatch[1]).toLowerCase()
+      : "";
+
     const clean = removeFileExtension(original);
     const normalized = normalizeWhitespace(clean).replace(/_/g, " ");
 
@@ -419,6 +424,7 @@ Función o funciones:
         year: safeText(strictMatch[4]),
         month: safeText(strictMatch[5]),
         documentName: cleanupBusinessLabel(strictMatch[6]),
+        extension: extension,
         raw: original
       };
     }
@@ -445,6 +451,7 @@ Función o funciones:
       year: dateMatch ? safeText(dateMatch[1]) : "",
       month: dateMatch ? safeText(dateMatch[2]) : "",
       documentName: cleanupBusinessLabel(tail),
+      extension: extension,
       raw: original
     };
   }
