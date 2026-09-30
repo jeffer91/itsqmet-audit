@@ -1,255 +1,133 @@
+/*
+Nombre completo: rule.naming-structure.js
+Ruta: /screens/rules/rulesets/rule.naming-structure.js
+Función:
+- Validar coherencia entre el código de proceso escrito en un PDF y la carpeta de proceso donde está ubicado.
+- Evitar exigir una plantilla única a documentos cuyo nombre libre está permitido por el manual.
+*/
 (function (window) {
   "use strict";
 
-  const Types = window.RulesTypes;
+  const Types = window.RulesTypes || {};
 
   function safeText(value) {
     return String(value == null ? "" : value).trim();
   }
 
-  function detectExtension(fileName) {
-    const raw = safeText(fileName);
-    const lastDot = raw.lastIndexOf(".");
-    if (lastDot <= 0 || lastDot === raw.length - 1) return "pdf";
-    return safeText(raw.slice(lastDot + 1)) || "pdf";
-  }
-
-  function buildDocumentFileExpected(scope, processNumber, extension) {
-    const ext = safeText(extension) || "pdf";
-    return (
-      scope +
-      "-[tipo]-[consecutivo]-PRO-" +
-      safeText(processNumber || "000") +
-      "-[año]-[mes]-[nombre del documento]." +
-      ext
-    );
-  }
-
-  function buildDocumentFileExample(scope, processNumber, extension) {
-    const ext = safeText(extension) || "pdf";
-    return (
-      scope +
-      "-RGI1-01-PRO-" +
-      safeText(processNumber || "000") +
-      "-2026-03-Nombre del documento." +
-      ext
-    );
-  }
-
-  function buildCorrectedFileName(fileValidation, scope, processNumber) {
-    const extension =
-      safeText(fileValidation && fileValidation.extension) || "pdf";
-    const documentType =
-      safeText(fileValidation && fileValidation.documentType) || "RGI1-01";
-    const year = safeText(fileValidation && fileValidation.year) || "2026";
-    const month = safeText(fileValidation && fileValidation.month) || "03";
-    const documentName =
-      safeText(fileValidation && fileValidation.documentName) ||
-      "Nombre del documento";
-
-    return (
-      scope +
-      "-" +
-      documentType +
-      "-PRO-" +
-      processNumber +
-      "-" +
-      year +
-      "-" +
-      month +
-      "-" +
-      documentName +
-      "." +
-      extension
-    );
+  function normalizeRelativePath(value) {
+    return Types.normalizeRelativePath
+      ? Types.normalizeRelativePath(value)
+      : safeText(value).replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
   }
 
   function getParentAbsolutePath(absolutePath) {
-    const safePath = safeText(absolutePath);
-    if (!safePath) return "";
-    return safePath.replace(/[\\/][^\\/]+$/, "");
+    return safeText(absolutePath).replace(/[\\/][^\\/]+$/, "");
   }
 
-  function createFinding(payload) {
+  function extractProcessNumber(fileName) {
+    const match = safeText(fileName).match(/PRO-(\d{2,4})/i);
+    return match ? safeText(match[1]) : "";
+  }
+
+  function extractUnit(fileName) {
+    const match = safeText(fileName).match(/^(UGPA|UTET)(?:-|_)/i);
+    return match ? safeText(match[1]).toUpperCase() : "";
+  }
+
+  function createFinding(rule, scope, scanData, file, title, description, expectedValue) {
     const finding = {
-      ruleId: safeText(payload.ruleId),
-      ruleName: safeText(payload.ruleName),
-      scope: Types.normalizeScope(payload.scope),
-      severity: Types.normalizeSeverity(payload.severity),
-      title: safeText(payload.title),
-      description: safeText(payload.description),
-      rootName: safeText(payload.rootName),
-      rootPath: safeText(payload.rootPath),
-      relativePath: Types.normalizeRelativePath(payload.relativePath),
-      absolutePath: safeText(payload.absolutePath),
-      actualValue: safeText(payload.actualValue),
-      expectedValue: safeText(payload.expectedValue),
-      exampleValue: safeText(payload.exampleValue),
-      primaryActionLabel: safeText(payload.primaryActionLabel),
-      primaryActionPath: safeText(payload.primaryActionPath)
+      ruleId: rule.id,
+      ruleName: rule.name,
+      category: "names",
+      scope: scope,
+      severity: rule.severity,
+      title: title,
+      description: description,
+      rootName: scanData.rootName || "",
+      rootPath: scanData.rootPath || "",
+      relativePath: normalizeRelativePath(file.relativePath),
+      absolutePath: file.path || "",
+      actualLabel: "Actual",
+      actualValue: file.name || "",
+      expectedLabel: "Debe corresponder a",
+      expectedValue: expectedValue,
+      foundFileName: file.name || "",
+      primaryActionLabel: "Abrir carpeta",
+      primaryActionPath: getParentAbsolutePath(file.path || "") || scanData.rootPath || ""
     };
 
-    finding.id = Types.buildFindingId(finding);
+    finding.id = Types.buildFindingId
+      ? Types.buildFindingId(finding)
+      : [rule.id, scope, finding.relativePath, title].join("|");
+
     return finding;
-  }
-
-  function addFileFinding(findings, rule, scope, scanData, file, title, message, options) {
-    const opts = options && typeof options === "object" ? options : {};
-    const processNumber = safeText(opts.processNumber) || "000";
-    const extension = safeText(opts.extension) || detectExtension(file.name);
-
-    findings.push(
-      createFinding({
-        ruleId: rule.id,
-        ruleName: rule.name,
-        scope: scope,
-        severity: rule.severity,
-        title: title,
-        description: message,
-        rootName: scanData.rootName || "",
-        rootPath: scanData.rootPath || "",
-        relativePath: file.relativePath,
-        absolutePath: file.path || scanData.rootPath || "",
-        actualValue: safeText(opts.actualValue) || file.name,
-        expectedValue:
-          safeText(opts.expectedValue) ||
-          buildDocumentFileExpected(scope, processNumber, extension),
-        exampleValue:
-          safeText(opts.exampleValue) ||
-          buildDocumentFileExample(scope, processNumber, extension),
-        primaryActionLabel: "Abrir carpeta del documento",
-        primaryActionPath:
-          getParentAbsolutePath(file.path || "") || scanData.rootPath || ""
-      })
-    );
   }
 
   function run(scope, scanData, rule) {
     if (!scanData || scanData.ok !== true) return [];
-    if (!Types || typeof Types.findProcessFolders !== "function") return [];
+    if (!Types || typeof Types.buildScanIndex !== "function") return [];
 
     const index = Types.buildScanIndex(scanData);
+    const processFolders =
+      typeof Types.findProcessFolders === "function"
+        ? Types.findProcessFolders(index, scope)
+        : [];
     const findings = [];
-    const processFolders = Types.findProcessFolders(index, scope);
 
     processFolders.forEach(function eachProcess(processFolder) {
-      const processValidation =
+      const parsed =
         processFolder.processValidation ||
-        Types.parseProcessFolderName(processFolder.name, scope);
+        (Types.parseProcessFolderName
+          ? Types.parseProcessFolderName(processFolder.name, scope)
+          : null);
 
-      if (!processValidation || !processValidation.valid) return;
+      if (!parsed || !parsed.valid) return;
 
       index.files.forEach(function eachFile(file) {
-        if (!Types.isDescendantOf(file.relativePath, processFolder.relativePath)) {
-          return;
-        }
-
-        const fileName = safeText(file.name).toLowerCase();
-        if (fileName === "desktop.ini" || fileName === "thumbs.db") {
-          return;
-        }
-
-        const parentRel = Types.getParentRelativePath(file.relativePath);
-
-        if (parentRel === processFolder.relativePath) {
-          addFileFinding(
-            findings,
-            rule,
-            scope,
-            scanData,
-            file,
-            "Archivo fuera de subcarpeta",
-            "El archivo está directamente dentro de la carpeta del proceso. Debe ubicarse dentro de la subcarpeta documental o de período correspondiente.",
-            {
-              processNumber: processValidation.processNumber,
-              extension: detectExtension(file.name)
-            }
-          );
-        }
-
-        const fileValidation = Types.parseDocumentFileName(file.name);
-
-        if (!fileValidation || !fileValidation.valid) {
-          addFileFinding(
-            findings,
-            rule,
-            scope,
-            scanData,
-            file,
-            "Archivo mal nombrado",
-            "El nombre no contiene de forma completa la unidad, tipo documental, proceso, año, mes y nombre del documento.",
-            {
-              processNumber: processValidation.processNumber,
-              extension: detectExtension(file.name)
-            }
-          );
-          return;
-        }
-
+        if (safeText(file && file.extension).toLowerCase() !== ".pdf") return;
         if (
-          fileValidation.unitCode &&
-          fileValidation.unitCode !== scope
+          !Types.isDescendantOf(
+            file && file.relativePath,
+            processFolder && processFolder.relativePath
+          )
         ) {
-          addFileFinding(
-            findings,
-            rule,
-            scope,
-            scanData,
-            file,
-            "Unidad documental inconsistente",
-            "El archivo identifica la unidad " +
-              fileValidation.unitCode +
-              ", pero se encuentra dentro de " +
-              scope +
-              ".",
-            {
-              actualValue: file.name,
-              expectedValue: buildCorrectedFileName(
-                fileValidation,
-                scope,
-                processValidation.processNumber
-              ),
-              exampleValue: buildDocumentFileExample(
-                scope,
-                processValidation.processNumber,
-                detectExtension(file.name)
-              ),
-              processNumber: processValidation.processNumber,
-              extension: detectExtension(file.name)
-            }
+          return;
+        }
+
+        const fileProcess = extractProcessNumber(file && file.name);
+        const fileUnit = extractUnit(file && file.name);
+
+        if (fileUnit && fileUnit !== scope) {
+          findings.push(
+            createFinding(
+              rule,
+              scope,
+              scanData,
+              file,
+              "Unidad documental inconsistente",
+              "El PDF identifica " + fileUnit + " pero está dentro de " + scope + ".",
+              scope
+            )
           );
         }
 
-        if (
-          fileValidation.processNumber !== processValidation.processNumber
-        ) {
-          addFileFinding(
-            findings,
-            rule,
-            scope,
-            scanData,
-            file,
-            "Código de proceso inconsistente",
-            "El archivo identifica el proceso " +
-              fileValidation.processNumber +
-              ", pero la carpeta corresponde al proceso " +
-              processValidation.processNumber +
-              ".",
-            {
-              actualValue: file.name,
-              expectedValue: buildCorrectedFileName(
-                fileValidation,
-                scope,
-                processValidation.processNumber
-              ),
-              exampleValue: buildCorrectedFileName(
-                fileValidation,
-                scope,
-                processValidation.processNumber
-              ),
-              processNumber: processValidation.processNumber,
-              extension: detectExtension(file.name)
-            }
+        if (fileProcess && fileProcess !== parsed.processNumber) {
+          findings.push(
+            createFinding(
+              rule,
+              scope,
+              scanData,
+              file,
+              "Código de proceso inconsistente",
+              "El PDF identifica PRO-" +
+                fileProcess +
+                " pero está dentro de " +
+                scope +
+                "-PRO-" +
+                parsed.processNumber +
+                ".",
+              scope + "-PRO-" + parsed.processNumber
+            )
           );
         }
       });
@@ -260,11 +138,11 @@
 
   window.RuleNamingStructure = {
     id: "naming-structure",
-    name: "Nomenclatura de procesos y documentos",
+    name: "Coherencia de códigos",
     scope: "BOTH",
     severity: "warning",
     description:
-      "Valida los documentos ubicados dentro de procesos UGPA/UTET sin considerar como error los documentos generales de la raíz.",
+      "Comprueba únicamente códigos explícitos de unidad/proceso; los documentos de nombre libre se validan contra el manual.",
     run: function runRule(context) {
       return run(context.scope, context.scanData, this);
     }
