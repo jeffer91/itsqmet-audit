@@ -69,7 +69,7 @@ html, body {
 
 .filters-grid {
   display: grid;
-  grid-template-columns: 120px 140px minmax(200px,1fr) 170px minmax(180px,1fr) 90px;
+  grid-template-columns: 120px minmax(200px,1fr) 170px minmax(180px,1fr) 90px;
   gap: 7px;
   align-items: end;
 }
