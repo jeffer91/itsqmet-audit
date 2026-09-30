@@ -16,7 +16,6 @@ const { registerShellIpc } = require("./ipc/shell.ipc");
 const { registerRulesIpc } = require("./ipc/rules.ipc");
 const { registerArchiveIpc } = require("./ipc/archive.ipc");
 const { registerHistoryIpc } = require("./ipc/history.ipc");
-const { registerInstitutionIpc } = require("./ipc/institution.ipc");
 
 let mainWindow = null;
 
@@ -50,7 +49,6 @@ function createMainWindow() {
 }
 
 function registerAppIpc() {
-  registerInstitutionIpc();
   registerArchiveIpc();
   registerHistoryIpc();
   registerExportIpc();
