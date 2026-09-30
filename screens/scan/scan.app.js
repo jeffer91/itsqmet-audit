@@ -34,6 +34,10 @@
 
     const exportMode = byId("exportMode");
     if (exportMode) exportMode.disabled = !!isBusy;
+    const includeUgpa = byId("includeUgpa");
+    const includeUtet = byId("includeUtet");
+    if (includeUgpa) includeUgpa.disabled = !!isBusy;
+    if (includeUtet) includeUtet.disabled = !!isBusy;
   }
 
   function render() {
@@ -83,6 +87,14 @@
 
     byId("exportMode").addEventListener("change", function (event) {
       window.ScanService.setExportMode(event.target.value);
+    });
+
+    byId("includeUgpa").addEventListener("change", function (event) {
+      window.ScanService.setAuditSelection("UGPA", event.target.checked);
+    });
+
+    byId("includeUtet").addEventListener("change", function (event) {
+      window.ScanService.setAuditSelection("UTET", event.target.checked);
     });
   }
 
