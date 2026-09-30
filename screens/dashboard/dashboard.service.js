@@ -183,12 +183,7 @@ Función:
           { value: "all", label: "Todos" },
           { value: "UGPA", label: "UGPA" },
           { value: "UTET", label: "UTET" }
-        ],
-        statusOptions: [
-          { value: "issues", label: "Con novedades" },
-          { value: "all", label: "Todos" }
-        ],
-        ruleOptions: [{ value: "all", label: "Todas las reglas" }].concat(
+        ],        ruleOptions: [{ value: "all", label: "Todas las reglas" }].concat(
           base.allRules.map(function map(rule) {
             return { value: rule.id, label: rule.name };
           })
