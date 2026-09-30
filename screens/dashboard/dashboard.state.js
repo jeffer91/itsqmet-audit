@@ -6,7 +6,6 @@
 
   const state = {
     selectedScope: "all",
-    selectedStatus: "issues",
     selectedRuleId: "all",
     selectedCategory: "all",
     searchText: "",
@@ -25,7 +24,6 @@
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       state.selectedScope = safeText(parsed.selectedScope) || "all";
-      state.selectedStatus = safeText(parsed.selectedStatus) || "issues";
       state.selectedRuleId = safeText(parsed.selectedRuleId) || "all";
       state.selectedCategory = safeText(parsed.selectedCategory) || "all";
       state.searchText = typeof parsed.searchText === "string" ? parsed.searchText : "";
@@ -53,7 +51,7 @@
   function setFilters(patch) {
     const next = patch && typeof patch === "object" ? patch : {};
 
-    ["selectedScope", "selectedStatus", "selectedRuleId", "sortBy"].forEach(function each(key) {
+    ["selectedScope", "selectedRuleId", "sortBy"].forEach(function each(key) {
       if (typeof next[key] === "string") state[key] = safeText(next[key]) || state[key];
     });
 
@@ -74,7 +72,6 @@
 
   function reset() {
     state.selectedScope = "all";
-    state.selectedStatus = "issues";
     state.selectedRuleId = "all";
     state.selectedCategory = "all";
     state.searchText = "";
