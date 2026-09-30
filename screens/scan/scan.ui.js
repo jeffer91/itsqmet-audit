@@ -122,11 +122,15 @@
     const includeUtet = byId("includeUtet");
     if (includeUgpa) {
       includeUgpa.checked = !!(vm && vm.auditUgpa);
-      includeUgpa.disabled = !(vm && vm.ugpaCard && vm.ugpaCard.selected);
+      includeUgpa.disabled =
+        !!(vm && vm.loading) ||
+        !(vm && vm.ugpaCard && vm.ugpaCard.selected);
     }
     if (includeUtet) {
       includeUtet.checked = !!(vm && vm.auditUtet);
-      includeUtet.disabled = !(vm && vm.utetCard && vm.utetCard.selected);
+      includeUtet.disabled =
+        !!(vm && vm.loading) ||
+        !(vm && vm.utetCard && vm.utetCard.selected);
     }
     renderExport(vm);
 
