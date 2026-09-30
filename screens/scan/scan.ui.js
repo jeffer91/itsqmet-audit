@@ -45,12 +45,32 @@
 
     const ugpa = viewModel && viewModel.ugpaCard;
     const utet = viewModel && viewModel.utetCard;
+    const detection = viewModel && viewModel.detection ? viewModel.detection : {};
+    const ugpaDetected = !!(detection.ugpa && detection.ugpa.path);
+    const utetDetected = !!(detection.utet && detection.utet.path);
+
+    function buildUnitStatus(label, card, detected) {
+      const status = card && card.loaded
+        ? "Auditada"
+        : detected
+        ? "Detectada"
+        : "Pendiente";
+      const className = card && card.loaded
+        ? "is-ok"
+        : detected
+        ? "is-detected"
+        : "";
+
+      return (
+        '<span class="unit-status ' + className + '">' +
+        escapeHtml(label + " · " + status) +
+        "</span>"
+      );
+    }
 
     statusHost.innerHTML = [
-      '<span class="unit-status ' + (ugpa && ugpa.loaded ? "is-ok" : "") + '">UGPA · ' +
-        (ugpa && ugpa.loaded ? "Auditada" : "Pendiente") + "</span>",
-      '<span class="unit-status ' + (utet && utet.loaded ? "is-ok" : "") + '">UTET · ' +
-        (utet && utet.loaded ? "Auditada" : "Pendiente") + "</span>"
+      buildUnitStatus("UGPA", ugpa, ugpaDetected),
+      buildUnitStatus("UTET", utet, utetDetected)
     ].join("");
   }
 
