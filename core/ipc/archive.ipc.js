@@ -12,6 +12,10 @@ const path = require("path");
 const { app, dialog, ipcMain } = require("electron");
 const { importArchiveFile } = require("../archive/archive.extract");
 const { scanFolderDirectory } = require("../archive/archive.scan");
+const {
+  readSubdirectories,
+  validateTopLevelProcessFolders
+} = require("../archive/archive.normalize");
 const historyStore = require("../history/history.store");
 
 const VALID_TYPES = new Set(["UGPA", "UTET"]);
@@ -101,13 +105,74 @@ async function runFolderScan(type, folderPath) {
 
   const result = await scanFolderDirectory({
     type: safeType,
-    folderPath: safeFolderPath
+    folderPath: safeFolderPath,
+    preserveRoot: true
   });
 
   return buildPersistedResponse(safeType, result);
 }
 
+
+async function validateFolderSelection(type, folderPath) {
+  const safeType = ensureValidType(type);
+  const safeFolderPath = safeText(folderPath);
+
+  if (!safeFolderPath) {
+    throw new Error("No se recibió la carpeta a validar.");
+  }
+
+  const directFolders = await readSubdirectories(safeFolderPath);
+  const validation = validateTopLevelProcessFolders(directFolders);
+  const history = await historyStore.setSourcePath(safeType, safeFolderPath);
+
+  return {
+    ok: true,
+    type: safeType,
+    sourcePath: safeFolderPath,
+    validation: validation,
+    history: history,
+    historyFilePath: historyStore.getHistoryFilePath()
+  };
+}
+
 function registerArchiveIpc() {
+
+  ipcMain.handle(
+    "archive:pick-folder",
+    async function onPickFolder(_event, payload = {}) {
+      try {
+        const type = ensureValidType(payload.type);
+        const selection = await dialog.showOpenDialog({
+          title: buildFolderDialogTitle(type),
+          properties: ["openDirectory", "dontAddToRecent"]
+        });
+
+        if (
+          selection.canceled ||
+          !Array.isArray(selection.filePaths) ||
+          !selection.filePaths.length
+        ) {
+          return buildCancelledResponse(type);
+        }
+
+        return await validateFolderSelection(type, selection.filePaths[0]);
+      } catch (error) {
+        return buildErrorResponse(error, "No se pudo validar la carpeta seleccionada.");
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "archive:validate-folder",
+    async function onValidateFolder(_event, payload = {}) {
+      try {
+        return await validateFolderSelection(payload.type, payload.folderPath);
+      } catch (error) {
+        return buildErrorResponse(error, "No se pudo validar la carpeta.");
+      }
+    }
+  );
+
   ipcMain.handle(
     "archive:pick-and-import",
     async function onPickAndImport(_event, payload = {}) {
