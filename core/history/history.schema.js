@@ -4,12 +4,12 @@ Nombre completo: history.schema.js
 Ruta o ubicación: /core/history/history.schema.js
 Función o funciones:
 - Definir el esquema del historial JSON único
-- Crear una estructura inicial consistente
+- Guardar la raíz institucional y los resultados UGPA/UTET
 - Normalizar el contenido cargado antes de persistirlo o devolverlo
-- Mantener compatibilidad para resultados de carpeta local y archivos ZIP/RAR
+- Mantener compatibilidad con historiales anteriores
 */
 
-const HISTORY_VERSION = 2;
+const HISTORY_VERSION = 3;
 
 const REQUIRED_PROCESS_FOLDERS = [
   "PROCESOS DE APOYO",
@@ -76,7 +76,8 @@ function normalizeSummary(summary) {
 }
 
 function normalizeValidation(validation) {
-  const safeValidation = validation && typeof validation === "object" ? validation : {};
+  const safeValidation =
+    validation && typeof validation === "object" ? validation : {};
 
   const requiredProcessFolders = Array.isArray(safeValidation.requiredProcessFolders)
     ? safeValidation.requiredProcessFolders.map(safeText).filter(Boolean)
@@ -152,6 +153,7 @@ function createDefaultHistory() {
   return {
     version: HISTORY_VERSION,
     updatedAt: null,
+    institutionalRootPath: "",
     ugpaResult: null,
     utetResult: null,
     discardedFindings: []
@@ -163,8 +165,9 @@ function normalizeHistory(rawHistory) {
   const safe = rawHistory && typeof rawHistory === "object" ? rawHistory : {};
 
   return {
-    version: Number(safe.version || base.version),
+    version: HISTORY_VERSION,
     updatedAt: safe.updatedAt || null,
+    institutionalRootPath: safeText(safe.institutionalRootPath),
     ugpaResult: normalizeScanResult(safe.ugpaResult, "UGPA"),
     utetResult: normalizeScanResult(safe.utetResult, "UTET"),
     discardedFindings: normalizeDiscardedFindings(safe.discardedFindings)
