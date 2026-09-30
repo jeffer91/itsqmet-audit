@@ -207,25 +207,57 @@ Función o funciones:
     };
   }
 
-  function parseProcessFolderName(folderName) {
+  function parseProcessFolderName(folderName, expectedUnit) {
     const name = normalizeWhitespace(folderName);
-    const match = name.match(/^([A-Z]{2,10})-PRO-(\d{3})$/i);
+    const match = name.match(/^([A-Z]{2,10})-PRO-(\d{3})(?:-(.+))?$/i);
+    const safeExpectedUnit = normalizeScope(expectedUnit);
+
     if (!match) {
       return {
         valid: false,
         unitCode: "",
         processNumber: "",
         processCode: "",
-        raw: name
+        processName: "",
+        raw: name,
+        reason:
+          "La carpeta de proceso debe iniciar con UNIDAD-PRO-### y puede incluir el nombre del proceso."
+      };
+    }
+
+    const unitCode = safeText(match[1]).toUpperCase();
+    const processNumber = safeText(match[2]);
+    const processName = cleanupBusinessLabel(match[3] || "");
+
+    if (
+      safeExpectedUnit &&
+      safeExpectedUnit !== "BOTH" &&
+      unitCode !== safeExpectedUnit
+    ) {
+      return {
+        valid: false,
+        unitCode: unitCode,
+        processNumber: processNumber,
+        processCode: "PRO-" + processNumber,
+        processName: processName,
+        raw: name,
+        reason:
+          "La carpeta pertenece a " +
+          unitCode +
+          " pero se está auditando " +
+          safeExpectedUnit +
+          "."
       };
     }
 
     return {
       valid: true,
-      unitCode: safeText(match[1]).toUpperCase(),
-      processNumber: safeText(match[2]),
-      processCode: "PRO-" + safeText(match[2]),
-      raw: name
+      unitCode: unitCode,
+      processNumber: processNumber,
+      processCode: "PRO-" + processNumber,
+      processName: processName,
+      raw: name,
+      reason: ""
     };
   }
 
@@ -249,22 +281,74 @@ Función o funciones:
     return normalizeCompareText(clean);
   }
 
-  function parsePeriodFolderName(folderName) {
-    const name = normalizeWhitespace(folderName).replace(/[–—]/g, "-");
+  function parsePeriodFolderName(folderName, expectedProcessCode, expectedUnit) {
+    const rawName = normalizeWhitespace(folderName).replace(/[–—]/g, "-");
+    const processPrefix = rawName.match(
+      /^([A-Z]{2,10})-PRO-(\d{3})-(.+)$/i
+    );
+
+    let name = rawName;
+    let prefixUnit = "";
+    let prefixProcessCode = "";
+
+    if (processPrefix) {
+      const candidatePeriod = normalizeWhitespace(processPrefix[3]);
+      const looksLikePeriod =
+        /(\d{4}).*(\d{4})/.test(candidatePeriod) ||
+        /octubre|marzo|abril|septiembre/i.test(candidatePeriod);
+
+      if (looksLikePeriod) {
+        prefixUnit = safeText(processPrefix[1]).toUpperCase();
+        prefixProcessCode = "PRO-" + safeText(processPrefix[2]);
+        name = candidatePeriod.replace(/[–—]/g, "-");
+      }
+    }
 
     const officialMatch = OFFICIAL_PERIOD_PATTERNS.find(function keep(pattern) {
       return pattern.regex.test(name);
     });
+
+    const safeExpectedProcess = safeText(expectedProcessCode).toUpperCase();
+    const safeExpectedUnit = normalizeScope(expectedUnit);
+    const prefixProcessOk =
+      !prefixProcessCode ||
+      !safeExpectedProcess ||
+      prefixProcessCode === safeExpectedProcess;
+    const prefixUnitOk =
+      !prefixUnit ||
+      !safeExpectedUnit ||
+      safeExpectedUnit === "BOTH" ||
+      prefixUnit === safeExpectedUnit;
 
     if (officialMatch) {
       const match = name.match(officialMatch.regex);
       const startYear = Number(match[1]);
       const endYear = Number(match[2]);
       const yearsOk = officialMatch.validateYears(startYear, endYear);
+      const valid = yearsOk && prefixProcessOk && prefixUnitOk;
+      let message = "";
+
+      if (!yearsOk) {
+        message = officialMatch.yearsMessage;
+      } else if (!prefixProcessOk) {
+        message =
+          "El período usa " +
+          prefixProcessCode +
+          " pero pertenece a " +
+          safeExpectedProcess +
+          ".";
+      } else if (!prefixUnitOk) {
+        message =
+          "El período usa la unidad " +
+          prefixUnit +
+          " pero pertenece a " +
+          safeExpectedUnit +
+          ".";
+      }
 
       return {
         shouldEvaluate: true,
-        valid: yearsOk,
+        valid: valid,
         kind: officialMatch.kind,
         normalizedPeriod: name.replace(/\s*-\s*/g, "–"),
         periodKey: normalizePeriodLabel(name),
@@ -272,7 +356,9 @@ Función o funciones:
         example: officialMatch.example,
         startYear: startYear,
         endYear: endYear,
-        message: yearsOk ? "" : officialMatch.yearsMessage
+        prefixUnit: prefixUnit,
+        prefixProcessCode: prefixProcessCode,
+        message: message
       };
     }
 
@@ -290,6 +376,8 @@ Función o funciones:
         example: "",
         startYear: 0,
         endYear: 0,
+        prefixUnit: prefixUnit,
+        prefixProcessCode: prefixProcessCode,
         message: ""
       };
     }
@@ -304,6 +392,8 @@ Función o funciones:
       example: "Octubre 2024–Septiembre 2025",
       startYear: 0,
       endYear: 0,
+      prefixUnit: prefixUnit,
+      prefixProcessCode: prefixProcessCode,
       message: "El nombre del período no coincide con los formatos esperados."
     };
   }
@@ -366,6 +456,49 @@ Función o funciones:
     if (!parent) return !!target || target === "";
     if (!target) return false;
     return target === parent || target.startsWith(parent + "/");
+  }
+
+  function findProcessFolders(index, expectedUnit) {
+    const folders =
+      index && Array.isArray(index.folders) ? index.folders : [];
+
+    const candidates = folders
+      .map(function mapFolder(folder) {
+        return {
+          folder: folder,
+          validation: parseProcessFolderName(
+            folder && folder.name,
+            expectedUnit
+          )
+        };
+      })
+      .filter(function keep(item) {
+        return item.validation && item.validation.valid;
+      });
+
+    return candidates
+      .filter(function keepOutermost(item) {
+        return !candidates.some(function hasProcessAncestor(other) {
+          if (other === item) return false;
+          const childPath = normalizeRelativePath(
+            item.folder && item.folder.relativePath
+          );
+          const parentPath = normalizeRelativePath(
+            other.folder && other.folder.relativePath
+          );
+
+          return (
+            childPath !== parentPath &&
+            isDescendantOf(childPath, parentPath)
+          );
+        });
+      })
+      .map(function mapResult(item) {
+        return {
+          ...item.folder,
+          processValidation: item.validation
+        };
+      });
   }
 
   function removeFileExtension(fileName) {
@@ -546,6 +679,7 @@ Función o funciones:
     parseDocumentFileName: parseDocumentFileName,
     parsePeriodFolderName: parsePeriodFolderName,
     isDescendantOf: isDescendantOf,
+    findProcessFolders: findProcessFolders,
     normalizeCompareText: normalizeCompareText,
     normalizePeriodLabel: normalizePeriodLabel,
     removeFileExtension: removeFileExtension,
