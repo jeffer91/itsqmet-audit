@@ -334,20 +334,21 @@
         );
       }
 
-      const previousRootPath = safeText(state.get().institutionalRootPath);
+      const currentState = state.get();
+      const previousRootPath = safeText(currentState.institutionalRootPath);
       const nextRootPath = safeText(response.rootPath);
-      const changedRoot =
-        !!previousRootPath &&
-        previousRootPath.toLowerCase() !== nextRootPath.toLowerCase();
+      const changedRoot = previousRootPath
+        ? previousRootPath.toLowerCase() !== nextRootPath.toLowerCase()
+        : !!(currentState.ugpaResult || currentState.utetResult);
 
       state.set({
         institutionalRootPath: nextRootPath,
         detection: response.detection || null,
-        ugpaResult: changedRoot ? null : state.get().ugpaResult,
-        utetResult: changedRoot ? null : state.get().utetResult,
+        ugpaResult: changedRoot ? null : currentState.ugpaResult,
+        utetResult: changedRoot ? null : currentState.utetResult,
         exportResult: changedRoot
           ? { ok: false, filePath: "", fileName: "", error: "" }
-          : state.get().exportResult
+          : currentState.exportResult
       });
 
       if (
