@@ -62,7 +62,7 @@ Función o funciones:
     }
   }
 
-  function handleDiscard(id, source) {
+  async function handleDiscard(id, source) {
     const finding = findFindingById(id, source);
 
     if (!finding) {
@@ -70,18 +70,36 @@ Función o funciones:
       return;
     }
 
-    window.RulesService.discardFinding(finding);
+    try {
+      await window.RulesService.discardFinding(finding);
 
-    if (window.RulesState.get().focusFindingId === finding.id) {
-      window.RulesState.clearFocusFindingId();
+      if (window.RulesState.get().focusFindingId === finding.id) {
+        window.RulesState.clearFocusFindingId();
+      }
+
+      refresh("Novedad descartada y guardada en el historial.", "success");
+    } catch (error) {
+      window.RulesUI.setGlobalMessage(
+        error && error.message
+          ? error.message
+          : "No se pudo guardar la novedad descartada.",
+        "error"
+      );
     }
-
-    refresh("Novedad descartada correctamente.", "success");
   }
 
-  function handleRestore(id) {
-    window.RulesService.restoreFinding(id);
-    refresh("Novedad restaurada correctamente.", "success");
+  async function handleRestore(id) {
+    try {
+      await window.RulesService.restoreFinding(id);
+      refresh("Novedad restaurada y guardada en el historial.", "success");
+    } catch (error) {
+      window.RulesUI.setGlobalMessage(
+        error && error.message
+          ? error.message
+          : "No se pudo restaurar la novedad.",
+        "error"
+      );
+    }
   }
 
   function handleFiltersChange(filters) {
@@ -156,10 +174,10 @@ Función o funciones:
         handleOpenPath(targetPath);
       },
       onDiscard: function onDiscard(id, source) {
-        handleDiscard(id, source);
+        void handleDiscard(id, source);
       },
       onRestore: function onRestore(id) {
-        handleRestore(id);
+        void handleRestore(id);
       },
       onFiltersChange: function onFiltersChange(filters) {
         handleFiltersChange(filters);
