@@ -5,7 +5,7 @@ Ruta o ubicación: /core/main.js
 Función o funciones:
 - Registrar los IPC del proceso principal
 - Crear la ventana principal de Electron
-- Inicializar la app con importación local de ZIP/RAR e historial JSON
+- Inicializar la auditoría institucional local de UGPA y UTET
 */
 
 const path = require("path");
@@ -16,6 +16,7 @@ const { registerShellIpc } = require("./ipc/shell.ipc");
 const { registerRulesIpc } = require("./ipc/rules.ipc");
 const { registerArchiveIpc } = require("./ipc/archive.ipc");
 const { registerHistoryIpc } = require("./ipc/history.ipc");
+const { registerInstitutionIpc } = require("./ipc/institution.ipc");
 
 let mainWindow = null;
 
@@ -49,6 +50,7 @@ function createMainWindow() {
 }
 
 function registerAppIpc() {
+  registerInstitutionIpc();
   registerArchiveIpc();
   registerHistoryIpc();
   registerExportIpc();
