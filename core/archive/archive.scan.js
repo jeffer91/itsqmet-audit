@@ -258,6 +258,20 @@ async function scanFolderDirectory(params) {
     throw new Error("No se recibió la carpeta a escanear.");
   }
 
+  if (safeParams.preserveRoot === true) {
+    const directFolders = await readSubdirectories(selectedFolderPath);
+    return scanResolvedDirectory({
+      type: type,
+      rootPath: selectedFolderPath,
+      directFolders: directFolders,
+      validation: validateTopLevelProcessFolders(directFolders),
+      source: {
+        kind: "folder",
+        selectedFolderPath: selectedFolderPath
+      }
+    });
+  }
+
   const resolvedRoot = await resolveEffectiveRoot(selectedFolderPath);
 
   return scanResolvedDirectory({
