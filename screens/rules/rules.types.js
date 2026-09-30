@@ -362,8 +362,88 @@ Función o funciones:
       };
     }
 
+    const generalPeriodMatch = name.match(
+      /^(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})\s*(?:-|a|al)\s*(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})$/i
+    );
+
+    if (generalPeriodMatch) {
+      const monthMap = {
+        enero: 1,
+        febrero: 2,
+        marzo: 3,
+        abril: 4,
+        mayo: 5,
+        junio: 6,
+        julio: 7,
+        agosto: 8,
+        septiembre: 9,
+        setiembre: 9,
+        octubre: 10,
+        noviembre: 11,
+        diciembre: 12
+      };
+
+      function prettyMonth(value) {
+        const clean = safeText(value).toLowerCase();
+        return clean.charAt(0).toUpperCase() + clean.slice(1);
+      }
+
+      const startMonth = monthMap[normalizeCompareText(generalPeriodMatch[1])] || 0;
+      const startYear = Number(generalPeriodMatch[2]);
+      const endMonth = monthMap[normalizeCompareText(generalPeriodMatch[3])] || 0;
+      const endYear = Number(generalPeriodMatch[4]);
+      const startNumber = startYear * 12 + startMonth;
+      const endNumber = endYear * 12 + endMonth;
+      const duration = endNumber - startNumber;
+      const chronologyOk = duration >= 0 && duration <= 18;
+      const valid = chronologyOk && prefixProcessOk && prefixUnitOk;
+      let message = "";
+
+      if (!chronologyOk) {
+        message = "El período tiene un rango de fechas inconsistente.";
+      } else if (!prefixProcessOk) {
+        message =
+          "El período usa " +
+          prefixProcessCode +
+          " pero pertenece a " +
+          safeExpectedProcess +
+          ".";
+      } else if (!prefixUnitOk) {
+        message =
+          "El período usa la unidad " +
+          prefixUnit +
+          " pero pertenece a " +
+          safeExpectedUnit +
+          ".";
+      }
+
+      const normalizedPeriod =
+        prettyMonth(generalPeriodMatch[1]) +
+        " " +
+        startYear +
+        "–" +
+        prettyMonth(generalPeriodMatch[3]) +
+        " " +
+        endYear;
+
+      return {
+        shouldEvaluate: true,
+        valid: valid,
+        kind: "general-period",
+        normalizedPeriod: normalizedPeriod,
+        periodKey: normalizePeriodLabel(normalizedPeriod),
+        expected: "Mes AAAA–Mes AAAA",
+        example: "Mayo 2026–Noviembre 2026",
+        startYear: startYear,
+        endYear: endYear,
+        prefixUnit: prefixUnit,
+        prefixProcessCode: prefixProcessCode,
+        message: message
+      };
+    }
+
     const maybePeriodLike = /(\d{4}).*(\d{4})/.test(name)
-      || /octubre|marzo|abril|septiembre/i.test(name);
+      || /enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre/i.test(name);
 
     if (!maybePeriodLike) {
       return {
