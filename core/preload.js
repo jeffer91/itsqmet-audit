@@ -30,6 +30,17 @@ contextBridge.exposeInMainWorld("api", {
     }
   },
   archive: {
+    pickFolder: function pickFolder(type) {
+      return ipcRenderer.invoke("archive:pick-folder", {
+        type: normalizeType(type)
+      });
+    },
+    validateFolder: function validateFolder(type, folderPath) {
+      return ipcRenderer.invoke("archive:validate-folder", {
+        type: normalizeType(type),
+        folderPath: safeText(folderPath)
+      });
+    },
     pickAndImport: function pickAndImport(type) {
       return ipcRenderer.invoke("archive:pick-and-import", {
         type: normalizeType(type)
