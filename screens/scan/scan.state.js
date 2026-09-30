@@ -4,9 +4,9 @@
   Nombre completo: scan.state.js
   Ruta o ubicación: /screens/scan/scan.state.js
   Función o funciones:
-  - Administrar el estado local de la pantalla Escaneo
-  - Guardar resultados UGPA y UTET cargados desde historial o desde nuevos escaneos
-  - Gestionar mensajes globales, estado de carga, exportación e historial visible
+  - Administrar el estado de la auditoría institucional
+  - Mantener la raíz institucional y los resultados UGPA/UTET
+  - Gestionar mensajes, carga, historial y exportación
   */
 
   function clone(value) {
@@ -29,6 +29,8 @@
       loading: false,
       exportMode: "both",
       historyFilePath: "",
+      institutionalRootPath: "",
+      detection: null,
       ugpaResult: null,
       utetResult: null,
       exportResult: {
@@ -49,9 +51,7 @@
     listeners.forEach(function notify(listener) {
       try {
         listener(snapshot);
-      } catch (_error) {
-        // Mantener simple y estable
-      }
+      } catch (_error) {}
     });
   }
 
@@ -60,42 +60,27 @@
   }
 
   function set(patch) {
-    const safePatch = patch && typeof patch === "object" ? patch : {};
     state = {
       ...state,
-      ...safePatch
+      ...(patch && typeof patch === "object" ? patch : {})
     };
     emit();
     return get();
   }
 
   function patchMessage(type, text) {
-    return set({
-      message: createMessage(type, text)
-    });
-  }
-
-  function setResult(type, result) {
-    const safeType = safeText(type).toUpperCase();
-    if (safeType === "UGPA") {
-      return set({ ugpaResult: result || null });
-    }
-    if (safeType === "UTET") {
-      return set({ utetResult: result || null });
-    }
-    return get();
-  }
-
-  function clearResult(type) {
-    return setResult(type, null);
+    return set({ message: createMessage(type, text) });
   }
 
   function hydrateFromHistory(history, historyFilePath) {
     const safeHistory = history && typeof history === "object" ? history : {};
+
     return set({
+      institutionalRootPath: safeText(safeHistory.institutionalRootPath),
       ugpaResult: safeHistory.ugpaResult || null,
       utetResult: safeHistory.utetResult || null,
       historyFilePath: safeText(historyFilePath),
+      detection: null,
       exportResult: {
         ok: false,
         filePath: "",
@@ -115,6 +100,7 @@
     if (typeof listener !== "function") {
       return function unsubscribeNoop() {};
     }
+
     listeners.add(listener);
     return function unsubscribe() {
       listeners.delete(listener);
@@ -127,8 +113,6 @@
     reset: reset,
     subscribe: subscribe,
     patchMessage: patchMessage,
-    setResult: setResult,
-    clearResult: clearResult,
     hydrateFromHistory: hydrateFromHistory
   };
 })(window);
