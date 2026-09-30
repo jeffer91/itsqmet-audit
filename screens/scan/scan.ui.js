@@ -1,6 +1,10 @@
 (function (window, document) {
   "use strict";
 
+  function safeText(value) {
+    return String(value == null ? "" : value).trim();
+  }
+
   function escapeHtml(value) {
     return String(value == null ? "" : value)
       .replaceAll("&", "&amp;")
@@ -10,197 +14,133 @@
       .replaceAll("'", "&#39;");
   }
 
-  function safeText(value) {
-    return String(value == null ? "" : value).trim();
-  }
-
-  function getElement(id) {
+  function byId(id) {
     return document.getElementById(id);
   }
 
-  function renderGlobalMessage(message) {
-    const host = getElement("globalMessage");
-    if (!host) return;
-
+  function renderMessage(message) {
+    const host = byId("globalMessage");
     const text = safeText(message && message.text);
     const type = safeText(message && message.type) || "neutral";
 
-    if (!text) {
-      host.className = "global-message";
-      host.textContent = "";
-      return;
-    }
-
-    host.className = "global-message is-visible is-" + type;
+    host.className = text
+      ? "global-message is-visible is-" + type
+      : "global-message";
     host.textContent = text;
   }
 
-  function renderInstitution(viewModel) {
-    const pathHost = getElement("institutionRootPath");
-    const statusHost = getElement("institutionStatus");
-    if (!pathHost || !statusHost) return;
-
-    const path = safeText(viewModel && viewModel.institutionalRootPath);
-    pathHost.textContent = path || "No se ha seleccionado una carpeta institucional.";
-
-    const ugpa = viewModel && viewModel.ugpaCard;
-    const utet = viewModel && viewModel.utetCard;
-    const detection = viewModel && viewModel.detection ? viewModel.detection : {};
-    const ugpaDetected = !!(detection.ugpa && detection.ugpa.path);
-    const utetDetected = !!(detection.utet && detection.utet.path);
-
-    function buildUnitStatus(label, card, detected) {
-      const status = card && card.loaded
-        ? "Auditada"
-        : detected
-        ? "Detectada"
-        : "Pendiente";
-      const className = card && card.loaded
-        ? "is-ok"
-        : detected
-        ? "is-detected"
-        : "";
-
-      return (
-        '<span class="unit-status ' + className + '">' +
-        escapeHtml(label + " · " + status) +
-        "</span>"
-      );
-    }
-
-    statusHost.innerHTML = [
-      buildUnitStatus("UGPA", ugpa, ugpaDetected),
-      buildUnitStatus("UTET", utet, utetDetected)
-    ].join("");
-  }
-
-  function renderSummaryGrid(cards) {
-    const host = getElement("summaryGrid");
-    if (!host) return;
-
-    host.innerHTML = (Array.isArray(cards) ? cards : [])
-      .map(function mapCard(card) {
+  function renderSummary(cards) {
+    byId("summaryGrid").innerHTML = (Array.isArray(cards) ? cards : [])
+      .map(function (card) {
         return (
           '<article class="summary-card">' +
-          '<div class="summary-card__label">' + escapeHtml(card.label) + "</div>" +
-          '<div class="summary-card__value">' + escapeHtml(card.value) + "</div>" +
-          "</article>"
+          '<span>' + escapeHtml(card.label) + '</span>' +
+          '<strong>' + escapeHtml(card.value) + '</strong>' +
+          '</article>'
         );
       })
       .join("");
   }
 
-  function buildScanCard(card) {
-    if (!card || card.loaded !== true) {
-      return (
-        '<div class="scan-card__empty">' +
-        "Pendiente de auditoría institucional." +
-        "</div>"
-      );
-    }
+  function renderUnit(card, targetId) {
+    const host = byId(targetId);
+    const path = safeText(card && card.sourcePath);
 
-    const validation = card.validationLabel || {
-      status: "neutral",
-      text: "Sin validación estructural."
-    };
-
-    const openButton = card.effectiveRootPath
-      ? '<button class="btn btn--ghost" type="button" data-open-path="' +
-        escapeHtml(card.effectiveRootPath) +
-        '">Abrir carpeta</button>'
+    const statusClass = card && card.loaded
+      ? "is-ok"
+      : card && card.selected
+      ? "is-selected"
       : "";
 
-    return [
-      '<div class="scan-card__row scan-card__row--grid">',
-      '<div class="scan-card__item"><div class="scan-card__label">Carpetas</div><div class="scan-card__metric">' +
-        escapeHtml(String(card.summary.totalFolders || 0)) + "</div></div>",
-      '<div class="scan-card__item"><div class="scan-card__label">Archivos</div><div class="scan-card__metric">' +
-        escapeHtml(String(card.summary.totalFiles || 0)) + "</div></div>",
-      '<div class="scan-card__item"><div class="scan-card__label">Peso total</div><div class="scan-card__metric">' +
-        escapeHtml(window.ScanService.formatBytes(card.summary.totalSizeBytes || 0)) + "</div></div>",
-      "</div>",
-      '<div class="scan-card__item"><div class="scan-card__label">Carpeta detectada</div>' +
-        '<div class="scan-card__value"><strong>' + escapeHtml(card.rootName) + "</strong></div>" +
-        '<div class="code-path">' + escapeHtml(card.rootPath) + "</div></div>",
-      '<div class="scan-card__item"><div class="scan-card__label">Última auditoría</div>' +
-        '<div class="scan-card__value">' + escapeHtml(card.scannedAtLabel) + "</div></div>",
-      '<div class="scan-card__validation is-' + escapeHtml(validation.status) + '">' +
-        escapeHtml(validation.text) + "</div>",
-      '<div class="scan-card__actions">' + openButton + "</div>"
+    const statusText = card && card.loaded
+      ? "Auditada"
+      : card && card.selected
+      ? "Seleccionada"
+      : "Sin seleccionar";
+
+    const validation = card && card.validationLabel
+      ? card.validationLabel
+      : { status: "neutral", text: "" };
+
+    host.innerHTML = [
+      '<div class="unit-source">',
+      ' <div class="unit-source__status ' + statusClass + '">' +
+        escapeHtml(statusText) +
+        '</div>',
+      ' <div class="unit-source__path">' +
+        escapeHtml(path || "Seleccione una carpeta local sincronizada.") +
+        '</div>',
+      '</div>',
+      '<div class="unit-validation is-' + escapeHtml(validation.status) + '">' +
+        escapeHtml(validation.text || "") +
+        '</div>',
+      card && card.loaded
+        ? '<div class="unit-stats">' +
+          '<span><strong>' + Number(card.summary.totalFolders || 0) + '</strong> carpetas</span>' +
+          '<span><strong>' + Number(card.summary.totalFiles || 0) + '</strong> archivos</span>' +
+          '<span><strong>' + escapeHtml(window.ScanService.formatBytes(card.summary.totalSizeBytes || 0)) + '</strong></span>' +
+          '<span>' + escapeHtml(card.scannedAtLabel) + '</span>' +
+          '</div>'
+        : '',
+      path
+        ? '<button class="btn btn--ghost btn--small" type="button" data-open-path="' +
+          escapeHtml(path) +
+          '">Abrir carpeta</button>'
+        : ''
     ].join("");
   }
 
-  function renderHistoryInfo(viewModel) {
-    const host = getElement("historyInfo");
-    if (!host) return;
+  function renderExport(vm) {
+    const result = vm && vm.exportResult ? vm.exportResult : {};
+    const host = byId("exportResultBox");
 
-    const path = safeText(viewModel && viewModel.historyFilePath);
-    host.innerHTML =
-      '<div class="history-box__path">' +
-      escapeHtml(path || "El historial se creará al ejecutar la auditoría.") +
-      "</div>";
-  }
-
-  function renderExportResult(viewModel) {
-    const host = getElement("exportResultBox");
-    if (!host) return;
-
-    const result = viewModel && viewModel.exportResult ? viewModel.exportResult : {};
-
-    if (result.ok === true) {
+    if (result.ok) {
       host.className = "export-box is-success";
       host.innerHTML =
-        '<div class="export-box__title">PDF generado correctamente</div>' +
-        '<div class="export-box__file">' + escapeHtml(result.fileName || "Archivo PDF") + "</div>" +
-        '<div class="export-box__path">' + escapeHtml(result.filePath || "") + "</div>";
+        '<strong>PDF generado</strong><div>' +
+        escapeHtml(result.fileName || "") +
+        '</div>';
       return;
     }
 
     if (safeText(result.error)) {
       host.className = "export-box is-error";
-      host.innerHTML =
-        '<div class="export-box__title">Error de exportación</div>' +
-        '<div class="export-box__path">' + escapeHtml(result.error) + "</div>";
+      host.textContent = result.error;
       return;
     }
 
     host.className = "export-box";
-    host.innerHTML =
-      '<div class="export-box__path">Todavía no se ha generado un PDF.</div>';
+    host.textContent = "Sin exportación reciente.";
   }
 
-  function renderViewModel(viewModel) {
-    renderGlobalMessage(viewModel && viewModel.message);
-    renderInstitution(viewModel);
-    renderSummaryGrid(viewModel && viewModel.summaryCards);
-    renderHistoryInfo(viewModel);
-    renderExportResult(viewModel);
+  function renderViewModel(vm) {
+    renderMessage(vm && vm.message);
+    renderSummary(vm && vm.summaryCards);
+    renderUnit(vm && vm.ugpaCard, "ugpaSourceBody");
+    renderUnit(vm && vm.utetCard, "utetSourceBody");
+    renderExport(vm);
 
-    const exportMode = getElement("exportMode");
-    if (exportMode && exportMode.value !== viewModel.exportMode) {
-      exportMode.value = viewModel.exportMode;
+    const history = byId("historyInfo");
+    history.textContent =
+      safeText(vm && vm.historyFilePath) ||
+      "El historial se creará al auditar.";
+
+    const exportMode = byId("exportMode");
+    if (exportMode && exportMode.value !== vm.exportMode) {
+      exportMode.value = vm.exportMode;
     }
-
-    const ugpaHost = getElement("ugpaCardBody");
-    const utetHost = getElement("utetCardBody");
-
-    if (ugpaHost) ugpaHost.innerHTML = buildScanCard(viewModel && viewModel.ugpaCard);
-    if (utetHost) utetHost.innerHTML = buildScanCard(viewModel && viewModel.utetCard);
   }
 
-  document.addEventListener("click", async function onGlobalClick(event) {
-    const target = event.target && event.target.closest("[data-open-path]");
+  document.addEventListener("click", async function (event) {
+    const target = event.target.closest("[data-open-path]");
     if (!target) return;
 
-    const path = target.getAttribute("data-open-path");
-    if (!path) return;
-
     try {
-      await window.ScanService.openPath(path);
+      await window.ScanService.openPath(target.getAttribute("data-open-path"));
     } catch (error) {
       window.ScanState.patchMessage(
         "error",
-        error && error.message ? error.message : "No se pudo abrir la ruta."
+        error && error.message ? error.message : "No se pudo abrir la carpeta."
       );
     }
   });
