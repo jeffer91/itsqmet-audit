@@ -1,25 +1,16 @@
 (function (window) {
   "use strict";
 
-  /*
-  Nombre completo: dashboard.state.js
-  Ruta o ubicación: /screens/dashboard/dashboard.state.js
-  Función o funciones:
-  - Mantener el estado local de la pantalla Dashboard
-  - Persistir filtros, búsqueda y orden
-  - Permitir expandir o colapsar reglas con muchas novedades
-  */
-
-  const STORAGE_KEY = "audit_dashboard_state_v2";
+  const STORAGE_KEY = "audit_dashboard_state_v3";
   const listeners = new Set();
 
   const state = {
     selectedScope: "all",
     selectedStatus: "issues",
     selectedRuleId: "all",
+    selectedCategory: "all",
     searchText: "",
-    sortBy: "findings_desc",
-    expandedRuleIds: []
+    sortBy: "category"
   };
 
   function clone(value) {
@@ -30,61 +21,29 @@
     return String(value == null ? "" : value).trim();
   }
 
-  function normalizeExpandedRuleIds(value) {
-    if (!Array.isArray(value)) return [];
-    return value.map(function mapItem(item) {
-      return safeText(item);
-    }).filter(Boolean);
-  }
-
   function readStorage() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") return;
-
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       state.selectedScope = safeText(parsed.selectedScope) || "all";
       state.selectedStatus = safeText(parsed.selectedStatus) || "issues";
       state.selectedRuleId = safeText(parsed.selectedRuleId) || "all";
+      state.selectedCategory = safeText(parsed.selectedCategory) || "all";
       state.searchText = typeof parsed.searchText === "string" ? parsed.searchText : "";
-      state.sortBy = safeText(parsed.sortBy) || "findings_desc";
-      state.expandedRuleIds = normalizeExpandedRuleIds(parsed.expandedRuleIds);
-    } catch (_error) {
-      // Mantener simple
-    }
+      state.sortBy = safeText(parsed.sortBy) || "category";
+    } catch (_error) {}
   }
 
   function writeStorage() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (_error) {
-      // Mantener simple
-    }
+    } catch (_error) {}
   }
 
   function notify() {
     const snapshot = clone(state);
     listeners.forEach(function each(listener) {
-      try {
-        listener(snapshot);
-      } catch (_error) {
-        // Ignorar listeners defectuosos
-      }
+      try { listener(snapshot); } catch (_error) {}
     });
-  }
-
-  function subscribe(listener) {
-    if (typeof listener !== "function") {
-      throw new Error("El listener debe ser una función.");
-    }
-
-    listeners.add(listener);
-
-    return function unsubscribe() {
-      listeners.delete(listener);
-    };
   }
 
   function get() {
@@ -94,26 +53,21 @@
   function setFilters(patch) {
     const next = patch && typeof patch === "object" ? patch : {};
 
-    if (typeof next.selectedScope === "string") {
-      state.selectedScope = safeText(next.selectedScope) || "all";
-    }
-
-    if (typeof next.selectedStatus === "string") {
-      state.selectedStatus = safeText(next.selectedStatus) || "issues";
-    }
-
-    if (typeof next.selectedRuleId === "string") {
-      state.selectedRuleId = safeText(next.selectedRuleId) || "all";
-    }
+    ["selectedScope", "selectedStatus", "selectedRuleId", "sortBy"].forEach(function each(key) {
+      if (typeof next[key] === "string") state[key] = safeText(next[key]) || state[key];
+    });
 
     if (typeof next.searchText === "string") {
       state.searchText = next.searchText;
     }
 
-    if (typeof next.sortBy === "string") {
-      state.sortBy = safeText(next.sortBy) || "findings_desc";
-    }
+    writeStorage();
+    notify();
+  }
 
+  function setCategory(category) {
+    const next = safeText(category) || "all";
+    state.selectedCategory = state.selectedCategory === next ? "all" : next;
     writeStorage();
     notify();
   }
@@ -122,35 +76,27 @@
     state.selectedScope = "all";
     state.selectedStatus = "issues";
     state.selectedRuleId = "all";
+    state.selectedCategory = "all";
     state.searchText = "";
-    state.sortBy = "findings_desc";
-    state.expandedRuleIds = [];
+    state.sortBy = "category";
     writeStorage();
     notify();
   }
 
-  function toggleExpandedRule(ruleId) {
-    const safeRuleId = safeText(ruleId);
-    if (!safeRuleId) return;
-
-    const exists = state.expandedRuleIds.includes(safeRuleId);
-    state.expandedRuleIds = exists
-      ? state.expandedRuleIds.filter(function keep(id) {
-          return id !== safeRuleId;
-        })
-      : state.expandedRuleIds.concat(safeRuleId);
-
-    writeStorage();
-    notify();
+  function subscribe(listener) {
+    listeners.add(listener);
+    return function unsubscribe() {
+      listeners.delete(listener);
+    };
   }
 
   readStorage();
 
   window.DashboardState = {
-    subscribe,
-    get,
-    setFilters,
-    reset,
-    toggleExpandedRule
+    get: get,
+    setFilters: setFilters,
+    setCategory: setCategory,
+    reset: reset,
+    subscribe: subscribe
   };
 })(window);
