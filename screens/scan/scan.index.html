@@ -13,13 +13,10 @@
 <body>
   <main class="page">
     <header class="page__header">
-      <div class="page__intro">
+      <div>
         <h1>AUDIT</h1>
-        <p class="subtitle">
-          Auditoría local de las carpetas UGPA y UTET sincronizadas desde SharePoint.
-        </p>
+        <p>Auditoría documental local de UGPA y UTET.</p>
       </div>
-
       <nav class="header-nav">
         <button id="btnOpenDashboard" class="btn btn--ghost" type="button">Dashboard</button>
         <button id="btnOpenRules" class="btn btn--ghost" type="button">Reglas</button>
@@ -28,88 +25,78 @@
 
     <div id="globalMessage" class="global-message" aria-live="polite"></div>
 
-    <section class="card institution-card">
-      <div class="institution-card__main">
-        <div>
-          <div class="eyebrow">Origen de auditoría</div>
-          <h2>Carpeta institucional</h2>
-          <p class="muted">
-            Seleccione la carpeta que contiene las bibliotecas descargadas de UGPA y UTET.
-          </p>
-        </div>
-        <div class="institution-card__actions">
-          <button id="btnSelectInstitutionRoot" class="btn btn--ghost" type="button">
-            Seleccionar carpeta
-          </button>
-          <button id="btnAuditInstitution" class="btn btn--primary" type="button">
-            Auditar UGPA + UTET
+    <section class="source-grid">
+      <article class="card source-card">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Origen</span>
+            <h2>UGPA</h2>
+          </div>
+          <button id="btnSelectUgpa" class="btn btn--ghost" type="button">
+            Seleccionar UGPA
           </button>
         </div>
-      </div>
+        <div id="ugpaSourceBody" class="source-body"></div>
+      </article>
 
-      <div id="institutionRootPath" class="institution-path"></div>
-      <div id="institutionStatus" class="institution-status"></div>
+      <article class="card source-card">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Origen</span>
+            <h2>UTET</h2>
+          </div>
+          <button id="btnSelectUtet" class="btn btn--ghost" type="button">
+            Seleccionar UTET
+          </button>
+        </div>
+        <div id="utetSourceBody" class="source-body"></div>
+      </article>
     </section>
 
-    <section class="section section--compact">
-      <div class="section__head"><h2>Resumen global</h2></div>
+    <section class="audit-bar card">
+      <div>
+        <strong>Auditoría</strong>
+        <span>Puede ejecutar UGPA, UTET o ambas carpetas seleccionadas.</span>
+      </div>
+      <button id="btnAuditSelected" class="btn btn--primary" type="button">
+        Auditar carpetas seleccionadas
+      </button>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Resumen</h2></div>
       <div id="summaryGrid" class="summary-grid"></div>
     </section>
 
-    <section class="layout-grid">
-      <article class="card">
-        <div class="card__head card__head--tight">
+    <section class="bottom-grid">
+      <article class="card compact-card">
+        <div class="card-head">
           <div>
-            <h2>UGPA</h2>
-            <p class="muted">Unidad de Gestión de Procesos Académicos.</p>
+            <h2>Historial</h2>
+            <p>Últimos resultados y descartes.</p>
           </div>
+          <button id="btnOpenHistory" class="btn btn--ghost btn--small" type="button">
+            Abrir
+          </button>
         </div>
-        <div id="ugpaCardBody" class="scan-card"></div>
+        <div id="historyInfo" class="small-path"></div>
       </article>
 
-      <article class="card">
-        <div class="card__head card__head--tight">
+      <article class="card compact-card">
+        <div class="card-head">
           <div>
-            <h2>UTET</h2>
-            <p class="muted">Titulación y Eficiencia Terminal.</p>
+            <h2>PDF</h2>
+            <p>Exportar inventario.</p>
           </div>
         </div>
-        <div id="utetCardBody" class="scan-card"></div>
-      </article>
-    </section>
-
-    <section class="layout-grid layout-grid--secondary">
-      <article class="card">
-        <div class="card__head card__head--tight">
-          <div>
-            <h2>Historial JSON</h2>
-            <p class="muted">Conserva la última auditoría y los hallazgos descartados.</p>
-          </div>
-          <button id="btnOpenHistory" class="btn btn--ghost" type="button">Abrir historial</button>
-        </div>
-        <div id="historyInfo" class="history-box"></div>
-      </article>
-
-      <article class="card">
-        <div class="card__head card__head--tight">
-          <div>
-            <h2>Exportación PDF</h2>
-            <p class="muted">Genere un reporte de UGPA, UTET o ambas unidades.</p>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="exportMode">Modo</label>
+        <div class="export-row">
           <select id="exportMode" class="select">
             <option value="single-ugpa">Solo UGPA</option>
             <option value="single-utet">Solo UTET</option>
             <option value="both" selected>UGPA + UTET</option>
           </select>
+          <button id="btnExportPdf" class="btn btn--primary" type="button">Exportar</button>
         </div>
-
-        <button id="btnExportPdf" class="btn btn--primary btn--full" type="button">
-          Exportar PDF
-        </button>
         <div id="exportResultBox" class="export-box"></div>
       </article>
     </section>
