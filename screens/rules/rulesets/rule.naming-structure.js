@@ -34,6 +34,34 @@ Función:
     return match ? safeText(match[1]).toUpperCase() : "";
   }
 
+  function createFolderFinding(rule, scope, scanData, folder, title, description, expectedValue) {
+    const finding = {
+      ruleId: rule.id,
+      ruleName: rule.name,
+      category: "names",
+      scope: scope,
+      severity: rule.severity,
+      title: title,
+      description: description,
+      rootName: scanData.rootName || "",
+      rootPath: scanData.rootPath || "",
+      relativePath: normalizeRelativePath(folder.relativePath),
+      absolutePath: folder.path || "",
+      actualLabel: "Actual",
+      actualValue: folder.name || "",
+      expectedLabel: "Debe ser",
+      expectedValue: expectedValue,
+      primaryActionLabel: "Abrir carpeta",
+      primaryActionPath: folder.path || scanData.rootPath || ""
+    };
+
+    finding.id = Types.buildFindingId
+      ? Types.buildFindingId(finding)
+      : [rule.id, scope, finding.relativePath, title].join("|");
+
+    return finding;
+  }
+
   function createFinding(rule, scope, scanData, file, title, description, expectedValue) {
     const finding = {
       ruleId: rule.id,
@@ -82,6 +110,24 @@ Función:
           : null);
 
       if (!parsed || !parsed.valid) return;
+
+      if (
+        scope === "UTET" &&
+        parsed.processNumber === "45" &&
+        /seminarios?\s+complexivos?/i.test(safeText(processFolder.name).replace(/[-_]+/g, " "))
+      ) {
+        findings.push(
+          createFolderFinding(
+            rule,
+            scope,
+            scanData,
+            processFolder,
+            "Código de proceso a corregir",
+            "El título/listado oficial del Manual de Procesos identifica Ejecución de Seminarios Complexivos como UTET-PRO-88.",
+            safeText(processFolder.name).replace(/UTET-PRO-45/i, "UTET-PRO-88")
+          )
+        );
+      }
 
       index.files.forEach(function eachFile(file) {
         if (safeText(file && file.extension).toLowerCase() !== ".pdf") return;
