@@ -22,7 +22,6 @@ Función:
     refs.globalMessage = must("globalMessage");
     refs.noScanNotice = must("noScanNotice");
     refs.filterScope = must("filterScope");
-    refs.filterStatus = must("filterStatus");
     refs.filterRule = must("filterRule");
     refs.sortBy = must("sortBy");
     refs.filterSearch = must("filterSearch");
@@ -158,7 +157,6 @@ Función:
     const filters = vm.filters || {};
 
     renderOptions(r.filterScope, filters.scopeOptions, state.selectedScope);
-    renderOptions(r.filterStatus, filters.statusOptions, state.selectedStatus);
     renderOptions(r.filterRule, filters.ruleOptions, state.selectedRuleId);
     renderOptions(r.sortBy, filters.sortOptions, state.sortBy);
     r.filterSearch.value = safeText(state.searchText);
@@ -185,7 +183,6 @@ Función:
     const r = getRefs();
     handlers.onFiltersChange({
       selectedScope: r.filterScope.value,
-      selectedStatus: r.filterStatus.value,
       selectedRuleId: r.filterRule.value,
       searchText: r.filterSearch.value,
       sortBy: r.sortBy.value
@@ -204,7 +201,7 @@ Función:
       if (handlers.onResetFilters) handlers.onResetFilters();
     });
 
-    [r.filterScope, r.filterStatus, r.filterRule, r.sortBy].forEach(function (el) {
+    [r.filterScope, r.filterRule, r.sortBy].forEach(function (el) {
       el.addEventListener("change", emitFilters);
     });
     r.filterSearch.addEventListener("input", emitFilters);
