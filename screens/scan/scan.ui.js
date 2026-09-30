@@ -1,13 +1,5 @@
 (function (window, document) {
   "use strict";
-  /*
-  Nombre completo: scan.ui.js
-  Ruta o ubicación: /screens/scan/scan.ui.js
-  Función o funciones:
-  - Renderizar la interfaz de la pantalla Escaneo
-  - Dibujar resumen global, tarjetas UGPA/UTET, historial y exportación
-  - Conectar acciones nuevas de escaneo por carpeta sin romper la pantalla actual
-  */
 
   function escapeHtml(value) {
     return String(value == null ? "" : value)
@@ -35,46 +27,56 @@
 
     if (!text) {
       host.className = "global-message";
-      host.innerHTML = "";
+      host.textContent = "";
       return;
     }
 
-    host.className = `global-message is-visible is-${escapeHtml(type)}`;
+    host.className = "global-message is-visible is-" + type;
     host.textContent = text;
+  }
+
+  function renderInstitution(viewModel) {
+    const pathHost = getElement("institutionRootPath");
+    const statusHost = getElement("institutionStatus");
+    if (!pathHost || !statusHost) return;
+
+    const path = safeText(viewModel && viewModel.institutionalRootPath);
+    pathHost.textContent = path || "No se ha seleccionado una carpeta institucional.";
+
+    const ugpa = viewModel && viewModel.ugpaCard;
+    const utet = viewModel && viewModel.utetCard;
+
+    statusHost.innerHTML = [
+      '<span class="unit-status ' + (ugpa && ugpa.loaded ? "is-ok" : "") + '">UGPA · ' +
+        (ugpa && ugpa.loaded ? "Auditada" : "Pendiente") + "</span>",
+      '<span class="unit-status ' + (utet && utet.loaded ? "is-ok" : "") + '">UTET · ' +
+        (utet && utet.loaded ? "Auditada" : "Pendiente") + "</span>"
+    ].join("");
   }
 
   function renderSummaryGrid(cards) {
     const host = getElement("summaryGrid");
     if (!host) return;
 
-    const safeCards = Array.isArray(cards) ? cards : [];
-    host.innerHTML = safeCards.map(function mapCard(card) {
-      return `
-        <article class="summary-card">
-          <div class="summary-card__label">${escapeHtml(card.label)}</div>
-          <div class="summary-card__value">${escapeHtml(card.value)}</div>
-        </article>
-      `;
-    }).join("");
-  }
-
-  function buildBadge(label, variant) {
-    const safeVariant = safeText(variant) || "neutral";
-    return `<span class="badge badge--${escapeHtml(safeVariant)}">${escapeHtml(label)}</span>`;
-  }
-
-  function buildEmptyCard(type) {
-    return `
-      <div class="scan-card__empty">
-        No existe información cargada para <strong>${escapeHtml(type)}</strong>.<br />
-        Use <strong>Escanear carpeta</strong> o <strong>Importar ZIP/RAR</strong>.
-      </div>
-    `;
+    host.innerHTML = (Array.isArray(cards) ? cards : [])
+      .map(function mapCard(card) {
+        return (
+          '<article class="summary-card">' +
+          '<div class="summary-card__label">' + escapeHtml(card.label) + "</div>" +
+          '<div class="summary-card__value">' + escapeHtml(card.value) + "</div>" +
+          "</article>"
+        );
+      })
+      .join("");
   }
 
   function buildScanCard(card) {
     if (!card || card.loaded !== true) {
-      return buildEmptyCard(card && card.type ? card.type : "este módulo");
+      return (
+        '<div class="scan-card__empty">' +
+        "Pendiente de auditoría institucional." +
+        "</div>"
+      );
     }
 
     const validation = card.validationLabel || {
@@ -82,94 +84,30 @@
       text: "Sin validación estructural."
     };
 
-    const sourceLabel = card.sourceLabel || {
-      kind: "neutral",
-      title: "Origen no disponible",
-      detail: ""
-    };
-
-    const openRootButton = card.effectiveRootPath
-      ? `
-        <button
-          class="btn btn--ghost"
-          type="button"
-          data-open-path="${escapeHtml(card.effectiveRootPath)}"
-        >
-          Abrir carpeta raíz
-        </button>
-      `
+    const openButton = card.effectiveRootPath
+      ? '<button class="btn btn--ghost" type="button" data-open-path="' +
+        escapeHtml(card.effectiveRootPath) +
+        '">Abrir carpeta</button>'
       : "";
 
-    const openSourceButton = card.sourcePath
-      ? `
-        <button
-          class="btn btn--ghost"
-          type="button"
-          data-open-path="${escapeHtml(card.sourcePath)}"
-        >
-          Abrir origen
-        </button>
-      `
-      : "";
-
-    return `
-      <div class="scan-card__row scan-card__row--grid">
-        <div class="scan-card__item">
-          <div class="scan-card__label">Carpetas</div>
-          <div class="scan-card__value">
-            <span class="scan-card__metric">${escapeHtml(String(card.summary.totalFolders))}</span>
-          </div>
-        </div>
-        <div class="scan-card__item">
-          <div class="scan-card__label">Archivos</div>
-          <div class="scan-card__value">
-            <span class="scan-card__metric">${escapeHtml(String(card.summary.totalFiles))}</span>
-          </div>
-        </div>
-        <div class="scan-card__item">
-          <div class="scan-card__label">Peso total</div>
-          <div class="scan-card__value">
-            <span class="scan-card__metric">${escapeHtml(window.ScanService.formatBytes(card.summary.totalSizeBytes))}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="scan-card__row">
-        <div class="scan-card__item">
-          <div class="scan-card__label">Carpeta raíz detectada</div>
-          <div class="scan-card__value">${escapeHtml(card.rootName || "Sin nombre")}</div>
-          <div class="code-path">${escapeHtml(card.rootPath || "")}</div>
-        </div>
-      </div>
-
-      <div class="scan-card__row">
-        <div class="scan-card__item">
-          <div class="scan-card__label">Fecha de escaneo</div>
-          <div class="scan-card__value">${escapeHtml(card.scannedAtLabel || "Sin fecha")}</div>
-        </div>
-      </div>
-
-      <div class="scan-card__row">
-        <div class="scan-card__item">
-          <div class="scan-card__label">Origen</div>
-          <div class="scan-card__value">
-            ${buildBadge(sourceLabel.title, sourceLabel.kind === "success" ? "success" : "neutral")}
-          </div>
-          <div class="code-path">${escapeHtml(sourceLabel.detail || "")}</div>
-        </div>
-      </div>
-
-      <div class="scan-card__row">
-        <div class="scan-card__validation is-${escapeHtml(validation.status)}">
-          ${escapeHtml(validation.text)}
-        </div>
-      </div>
-
-      <div class="scan-card__actions">
-        ${openRootButton}
-        ${openSourceButton}
-      </div>
-    `;
+    return [
+      '<div class="scan-card__row scan-card__row--grid">',
+      '<div class="scan-card__item"><div class="scan-card__label">Carpetas</div><div class="scan-card__metric">' +
+        escapeHtml(String(card.summary.totalFolders || 0)) + "</div></div>",
+      '<div class="scan-card__item"><div class="scan-card__label">Archivos</div><div class="scan-card__metric">' +
+        escapeHtml(String(card.summary.totalFiles || 0)) + "</div></div>",
+      '<div class="scan-card__item"><div class="scan-card__label">Peso total</div><div class="scan-card__metric">' +
+        escapeHtml(window.ScanService.formatBytes(card.summary.totalSizeBytes || 0)) + "</div></div>",
+      "</div>",
+      '<div class="scan-card__item"><div class="scan-card__label">Carpeta detectada</div>' +
+        '<div class="scan-card__value"><strong>' + escapeHtml(card.rootName) + "</strong></div>" +
+        '<div class="code-path">' + escapeHtml(card.rootPath) + "</div></div>",
+      '<div class="scan-card__item"><div class="scan-card__label">Última auditoría</div>' +
+        '<div class="scan-card__value">' + escapeHtml(card.scannedAtLabel) + "</div></div>",
+      '<div class="scan-card__validation is-' + escapeHtml(validation.status) + '">' +
+        escapeHtml(validation.text) + "</div>",
+      '<div class="scan-card__actions">' + openButton + "</div>"
+    ].join("");
   }
 
   function renderHistoryInfo(viewModel) {
@@ -177,131 +115,75 @@
     if (!host) return;
 
     const path = safeText(viewModel && viewModel.historyFilePath);
-    if (!path) {
-      host.innerHTML = `
-        <div class="history-box__path">
-          Todavía no existe una ruta de historial disponible.
-        </div>
-      `;
-      return;
-    }
-
-    host.innerHTML = `
-      <div class="history-box__path">${escapeHtml(path)}</div>
-    `;
+    host.innerHTML =
+      '<div class="history-box__path">' +
+      escapeHtml(path || "El historial se creará al ejecutar la auditoría.") +
+      "</div>";
   }
 
   function renderExportResult(viewModel) {
     const host = getElement("exportResultBox");
     if (!host) return;
 
-    const exportResult = viewModel && viewModel.exportResult
-      ? viewModel.exportResult
-      : { ok: false, filePath: "", fileName: "", error: "" };
+    const result = viewModel && viewModel.exportResult ? viewModel.exportResult : {};
 
-    if (exportResult.ok === true) {
+    if (result.ok === true) {
       host.className = "export-box is-success";
-      host.innerHTML = `
-        <div class="export-box__title">PDF generado correctamente</div>
-        <div class="export-box__file">${escapeHtml(exportResult.fileName || "Archivo PDF")}</div>
-        <div class="export-box__path">${escapeHtml(exportResult.filePath || "")}</div>
-      `;
+      host.innerHTML =
+        '<div class="export-box__title">PDF generado correctamente</div>' +
+        '<div class="export-box__file">' + escapeHtml(result.fileName || "Archivo PDF") + "</div>" +
+        '<div class="export-box__path">' + escapeHtml(result.filePath || "") + "</div>";
       return;
     }
 
-    if (safeText(exportResult.error)) {
+    if (safeText(result.error)) {
       host.className = "export-box is-error";
-      host.innerHTML = `
-        <div class="export-box__title">Error de exportación</div>
-        <div class="export-box__path">${escapeHtml(exportResult.error)}</div>
-      `;
+      host.innerHTML =
+        '<div class="export-box__title">Error de exportación</div>' +
+        '<div class="export-box__path">' + escapeHtml(result.error) + "</div>";
       return;
     }
 
     host.className = "export-box";
-    host.innerHTML = `
-      <div class="export-box__path">Todavía no se ha generado un PDF.</div>
-    `;
-  }
-
-  function syncExportMode(viewModel) {
-    const select = getElement("exportMode");
-    if (!select) return;
-    const nextValue = safeText(viewModel && viewModel.exportMode) || "both";
-    if (select.value !== nextValue) {
-      select.value = nextValue;
-    }
+    host.innerHTML =
+      '<div class="export-box__path">Todavía no se ha generado un PDF.</div>';
   }
 
   function renderViewModel(viewModel) {
     renderGlobalMessage(viewModel && viewModel.message);
+    renderInstitution(viewModel);
     renderSummaryGrid(viewModel && viewModel.summaryCards);
     renderHistoryInfo(viewModel);
     renderExportResult(viewModel);
-    syncExportMode(viewModel);
+
+    const exportMode = getElement("exportMode");
+    if (exportMode && exportMode.value !== viewModel.exportMode) {
+      exportMode.value = viewModel.exportMode;
+    }
 
     const ugpaHost = getElement("ugpaCardBody");
-    if (ugpaHost) {
-      ugpaHost.innerHTML = buildScanCard(viewModel && viewModel.ugpaCard);
-    }
-
     const utetHost = getElement("utetCardBody");
-    if (utetHost) {
-      utetHost.innerHTML = buildScanCard(viewModel && viewModel.utetCard);
-    }
+
+    if (ugpaHost) ugpaHost.innerHTML = buildScanCard(viewModel && viewModel.ugpaCard);
+    if (utetHost) utetHost.innerHTML = buildScanCard(viewModel && viewModel.utetCard);
   }
 
-  function bindExtraButtonsOnce() {
-    if (document.body && document.body.dataset.scanExtraBound === "true") {
-      return;
+  document.addEventListener("click", async function onGlobalClick(event) {
+    const target = event.target && event.target.closest("[data-open-path]");
+    if (!target) return;
+
+    const path = target.getAttribute("data-open-path");
+    if (!path) return;
+
+    try {
+      await window.ScanService.openPath(path);
+    } catch (error) {
+      window.ScanState.patchMessage(
+        "error",
+        error && error.message ? error.message : "No se pudo abrir la ruta."
+      );
     }
-
-    if (document.body) {
-      document.body.dataset.scanExtraBound = "true";
-    }
-
-    document.addEventListener("click", async function onGlobalClick(event) {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) {
-        return;
-      }
-
-// ❌ ELIMINADO: evita doble ejecución del escaneo
-// Los botones ya están enlazados en la capa de inicialización (app/bootstrap)
-// Mantener aquí causaba ejecución duplicada por click
-
-/*
-if (target.id === "btnScanFolderUgpa") {
-  event.preventDefault();
-  await window.ScanService.scanFolder("UGPA");
-  return;
-}
-
-if (target.id === "btnScanFolderUtet") {
-  event.preventDefault();
-  await window.ScanService.scanFolder("UTET");
-  return;
-}
-*/
-
-      const pathToOpen = target.getAttribute("data-open-path");
-      if (pathToOpen) {
-        event.preventDefault();
-        try {
-          await window.ScanService.openPath(pathToOpen);
-        } catch (error) {
-          window.ScanState.set({
-            message: {
-              type: "error",
-              text: error && error.message ? error.message : "No se pudo abrir la ruta."
-            }
-          });
-        }
-      }
-    });
-  }
-
-  bindExtraButtonsOnce();
+  });
 
   window.ScanUi = {
     renderViewModel: renderViewModel
