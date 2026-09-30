@@ -2,9 +2,9 @@
 Nombre completo: rules.index.html
 Ruta o ubicación: /screens/rules/rules.index.html
 Función o funciones:
-- Mostrar la pantalla de reglas
-- Priorizar filtros, resumen y novedades activas
-- Permitir exportación Excel de novedades
+- Mostrar las reglas y novedades de la auditoría documental
+- Filtrar por regla, unidad, estado y texto
+- Permitir descartar/restaurar hallazgos y abrir sus rutas locales
 -->
 <!DOCTYPE html>
 <html lang="es">
@@ -16,7 +16,7 @@ Función o funciones:
   />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reglas</title>
-  <link rel="stylesheet" href="./shared/app.nav.css" />
+  <link rel="stylesheet" href="../shared/app.nav.css" />
   <link rel="stylesheet" href="./rules.styles.css" />
 </head>
 <body>
@@ -28,7 +28,7 @@ Función o funciones:
         <p class="eyebrow">Validación documental</p>
         <h1>Reglas</h1>
         <p class="subtitle">
-          Revise las novedades detectadas y descargue el detalle en Excel.
+          Revise las novedades detectadas en las carpetas locales de UGPA y UTET.
         </p>
       </div>
 
@@ -36,16 +36,14 @@ Función o funciones:
         <button id="btnRefreshRules" class="btn btn--ghost" type="button">
           Actualizar
         </button>
-        <button id="btnExportExcel" class="btn btn--primary" type="button">
-          Descargar Excel
-        </button>
       </div>
     </header>
 
     <section id="globalMessage" class="global-message" aria-live="polite"></section>
-    <section id="noScanNotice" class="notice"></section>
+    <section id="noScanNotice" class="no-scan-notice"></section>
+    <section id="focusBanner" class="focus-banner"></section>
 
-    <section class="section section--filters">
+    <section class="section section--compact">
       <div class="section__head section__head--compact">
         <h2>Filtros</h2>
       </div>
@@ -57,10 +55,96 @@ Función o funciones:
         </div>
 
         <div class="field">
-          <label for="scopeFilter">Tipo</label>
+          <label for="scopeFilter">Unidad</label>
           <select id="scopeFilter" class="select"></select>
         </div>
 
         <div class="field">
           <label for="statusFilter">Estado</label>
-          <select id="status
+          <select id="statusFilter" class="select"></select>
+        </div>
+
+        <div class="field">
+          <label for="searchFilter">Buscar</label>
+          <input
+            id="searchFilter"
+            class="input"
+            type="text"
+            placeholder="Persona, documento, carpeta o regla"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field field--actions">
+          <label>&nbsp;</label>
+          <button id="btnResetFilters" class="btn btn--ghost" type="button">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div class="field field--actions">
+          <label>&nbsp;</label>
+          <button id="btnClearFocus" class="btn btn--ghost" type="button">
+            Quitar enfoque
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--summary">
+      <div class="section__head section__head--compact">
+        <h2>Resumen</h2>
+      </div>
+      <div id="summaryGrid" class="summary-grid"></div>
+    </section>
+
+    <section class="rules-layout">
+      <div class="rules-main">
+        <section class="section">
+          <div class="section__head section__head--compact">
+            <h2>Novedades activas</h2>
+            <span class="section__meta">
+              <strong id="activeFindingsCount">0</strong>
+            </span>
+          </div>
+          <div id="activeFindings" class="findings-list"></div>
+        </section>
+      </div>
+
+      <aside>
+        <section class="section">
+          <div class="section__head section__head--compact">
+            <h2>Reglas visibles</h2>
+            <span class="section__meta">
+              <strong id="rulesCardsCount">0</strong>
+            </span>
+          </div>
+          <div id="rulesCards" class="rules-mini-list"></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section__head section__head--compact">
+        <h2>Novedades descartadas</h2>
+        <span class="section__meta">
+          <strong id="discardedFindingsCount">0</strong>
+        </span>
+      </div>
+      <div id="discardedFindings" class="table-scroll"></div>
+    </section>
+  </main>
+
+  <script src="../shared/app.store.js"></script>
+  <script src="../shared/app.nav.js"></script>
+  <script src="./rules.types.js"></script>
+  <script src="./rules.state.js"></script>
+  <script src="./rules.config.js"></script>
+  <script src="./rules.catalog.js"></script>
+  <script src="./rules.engine.js"></script>
+  <script src="./rules.bootstrap.js"></script>
+  <script src="./rules.service.js"></script>
+  <script src="./rules.ui.js"></script>
+  <script src="./rules.app.js"></script>
+</body>
+</html>
