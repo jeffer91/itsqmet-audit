@@ -11,6 +11,7 @@
     const finding = {
       ruleId: safeText(payload.ruleId),
       ruleName: safeText(payload.ruleName),
+      category: "names",
       scope: Types.normalizeScope(payload.scope),
       severity: Types.normalizeSeverity(payload.severity),
       title: safeText(payload.title),
