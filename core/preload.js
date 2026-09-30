@@ -4,8 +4,8 @@ Nombre completo: preload.js
 Ruta o ubicación: /core/preload.js
 Función o funciones:
 - Exponer un puente seguro entre Electron y el renderer
-- Publicar la API para escanear carpeta local e importar ZIP/RAR
-- Mantener disponibles historial, exportación PDF, apertura de rutas y reglas
+- Publicar la API de auditoría institucional
+- Mantener compatibilidad con escaneo/importación legado, historial, PDF y reglas
 */
 
 const { contextBridge, ipcRenderer } = require("electron");
@@ -19,6 +19,16 @@ function safeText(value) {
 }
 
 contextBridge.exposeInMainWorld("api", {
+  institution: {
+    pickRoot: function pickRoot() {
+      return ipcRenderer.invoke("institution:pick-root");
+    },
+    scanRoot: function scanRoot(rootPath) {
+      return ipcRenderer.invoke("institution:scan-root", {
+        rootPath: safeText(rootPath)
+      });
+    }
+  },
   archive: {
     pickAndImport: function pickAndImport(type) {
       return ipcRenderer.invoke("archive:pick-and-import", {
