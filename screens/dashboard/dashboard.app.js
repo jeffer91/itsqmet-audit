@@ -43,7 +43,7 @@
 
   function buildRuleScriptUrl(relativePath) {
     const safeRelativePath = safeText(relativePath).replace(/^\/+/, "");
-    return `./rules/rulesets/${safeRelativePath}`;
+    return `../rules/rulesets/${safeRelativePath}`;
   }
 
   function loadScript(src) {
