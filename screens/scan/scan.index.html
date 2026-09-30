@@ -7,16 +7,7 @@
     content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
   />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AUDIT - Escaneo</title>
-  <!--
-  Nombre completo: scan.index.html
-  Ruta o ubicación: /screens/scan/scan.index.html
-  Función o funciones:
-  - Definir la estructura visual compacta de la pantalla Escaneo
-  - Permitir escanear carpeta local e importar ZIP/RAR para UGPA y UTET
-  - Mostrar resumen global, historial JSON y exportación PDF
-  - Mantener compatibilidad con la inicialización actual del módulo scan
-  -->
+  <title>AUDIT - Auditoría documental</title>
   <link rel="stylesheet" href="./scan.styles.css" />
 </head>
 <body>
@@ -25,26 +16,43 @@
       <div class="page__intro">
         <h1>AUDIT</h1>
         <p class="subtitle">
-          Escaneo local de carpetas e importación de archivos ZIP/RAR para UGPA y UTET.
+          Auditoría local de las carpetas UGPA y UTET sincronizadas desde SharePoint.
         </p>
       </div>
 
       <nav class="header-nav">
-        <button id="btnOpenDashboard" class="btn btn--ghost" type="button">
-          Dashboard
-        </button>
-        <button id="btnOpenRules" class="btn btn--ghost" type="button">
-          Reglas
-        </button>
+        <button id="btnOpenDashboard" class="btn btn--ghost" type="button">Dashboard</button>
+        <button id="btnOpenRules" class="btn btn--ghost" type="button">Reglas</button>
       </nav>
     </header>
 
     <div id="globalMessage" class="global-message" aria-live="polite"></div>
 
-    <section class="section section--compact">
-      <div class="section__head">
-        <h2>Resumen global</h2>
+    <section class="card institution-card">
+      <div class="institution-card__main">
+        <div>
+          <div class="eyebrow">Origen de auditoría</div>
+          <h2>Carpeta institucional</h2>
+          <p class="muted">
+            Seleccione la carpeta que contiene las bibliotecas descargadas de UGPA y UTET.
+          </p>
+        </div>
+        <div class="institution-card__actions">
+          <button id="btnSelectInstitutionRoot" class="btn btn--ghost" type="button">
+            Seleccionar carpeta
+          </button>
+          <button id="btnAuditInstitution" class="btn btn--primary" type="button">
+            Auditar UGPA + UTET
+          </button>
+        </div>
       </div>
+
+      <div id="institutionRootPath" class="institution-path"></div>
+      <div id="institutionStatus" class="institution-status"></div>
+    </section>
+
+    <section class="section section--compact">
+      <div class="section__head"><h2>Resumen global</h2></div>
       <div id="summaryGrid" class="summary-grid"></div>
     </section>
 
@@ -53,24 +61,9 @@
         <div class="card__head card__head--tight">
           <div>
             <h2>UGPA</h2>
-            <p class="muted">
-              Puede escanear una carpeta local o importar un archivo ZIP/RAR.
-            </p>
+            <p class="muted">Unidad de Gestión de Procesos Académicos.</p>
           </div>
         </div>
-
-        <div class="card__toolbar">
-          <button id="btnScanFolderUgpa" class="btn btn--primary" type="button">
-            Escanear carpeta UGPA
-          </button>
-          <button id="btnImportUgpa" class="btn btn--secondary" type="button">
-            Importar ZIP/RAR UGPA
-          </button>
-          <button id="btnClearUgpa" class="btn btn--ghost" type="button">
-            Limpiar UGPA
-          </button>
-        </div>
-
         <div id="ugpaCardBody" class="scan-card"></div>
       </article>
 
@@ -78,24 +71,9 @@
         <div class="card__head card__head--tight">
           <div>
             <h2>UTET</h2>
-            <p class="muted">
-              Puede escanear una carpeta local o importar un archivo ZIP/RAR.
-            </p>
+            <p class="muted">Titulación y Eficiencia Terminal.</p>
           </div>
         </div>
-
-        <div class="card__toolbar">
-          <button id="btnScanFolderUtet" class="btn btn--primary" type="button">
-            Escanear carpeta UTET
-          </button>
-          <button id="btnImportUtet" class="btn btn--secondary" type="button">
-            Importar ZIP/RAR UTET
-          </button>
-          <button id="btnClearUtet" class="btn btn--ghost" type="button">
-            Limpiar UTET
-          </button>
-        </div>
-
         <div id="utetCardBody" class="scan-card"></div>
       </article>
     </section>
@@ -105,17 +83,10 @@
         <div class="card__head card__head--tight">
           <div>
             <h2>Historial JSON</h2>
-            <p class="muted">
-              Archivo histórico único donde se persisten los resultados.
-            </p>
+            <p class="muted">Conserva la última auditoría y los hallazgos descartados.</p>
           </div>
-          <div class="inline-actions">
-            <button id="btnOpenHistory" class="btn btn--ghost" type="button">
-              Abrir historial
-            </button>
-          </div>
+          <button id="btnOpenHistory" class="btn btn--ghost" type="button">Abrir historial</button>
         </div>
-
         <div id="historyInfo" class="history-box"></div>
       </article>
 
@@ -123,9 +94,7 @@
         <div class="card__head card__head--tight">
           <div>
             <h2>Exportación PDF</h2>
-            <p class="muted">
-              Genere el reporte PDF usando UGPA, UTET o ambos.
-            </p>
+            <p class="muted">Genere un reporte de UGPA, UTET o ambas unidades.</p>
           </div>
         </div>
 
@@ -138,22 +107,18 @@
           </select>
         </div>
 
-        <div class="inline-actions inline-actions--vertical">
-          <button id="btnExportPdf" class="btn btn--primary" type="button">
-            Exportar PDF
-          </button>
-        </div>
-
+        <button id="btnExportPdf" class="btn btn--primary btn--full" type="button">
+          Exportar PDF
+        </button>
         <div id="exportResultBox" class="export-box"></div>
       </article>
     </section>
   </main>
 
-<!-- Corrección: defer asegura que el DOM y preload estén listos antes de ejecutar -->
-<script src="../shared/app.store.js" defer></script>
-<script src="./scan.state.js" defer></script>
-<script src="./scan.service.js" defer></script>
-<script src="./scan.ui.js" defer></script>
-<script src="./scan.app.js" defer></script>
+  <script src="../shared/app.store.js" defer></script>
+  <script src="./scan.state.js" defer></script>
+  <script src="./scan.service.js" defer></script>
+  <script src="./scan.ui.js" defer></script>
+  <script src="./scan.app.js" defer></script>
 </body>
 </html>
