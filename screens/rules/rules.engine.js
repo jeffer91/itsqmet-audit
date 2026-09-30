@@ -71,6 +71,7 @@
     const finding = {
       ruleId: safeText(safeFinding.ruleId || rule.id),
       ruleName: safeText(safeFinding.ruleName || rule.name),
+      category: safeText(safeFinding.category || rule.category || rule.id),
       scope: normalizeScope(safeFinding.scope || scope || rule.scope),
       severity: normalizeSeverity(safeFinding.severity || rule.severity),
       title: safeText(safeFinding.title, "Novedad detectada"),
