@@ -1,14 +1,5 @@
 (function (window) {
   "use strict";
-  /*
-  Nombre completo: scan.service.js
-  Ruta o ubicación: /screens/scan/scan.service.js
-  Función o funciones:
-  - Seleccionar una única carpeta institucional
-  - Auditar automáticamente UGPA y UTET
-  - Construir el viewModel de Escaneo
-  - Gestionar historial, apertura de rutas y exportación PDF
-  */
 
   const REQUIRED_PROCESS_FOLDERS = [
     "PROCESOS DE APOYO",
@@ -20,12 +11,12 @@
     return String(value == null ? "" : value).trim();
   }
 
-  function normalizeObject(value) {
-    return value && typeof value === "object" ? value : {};
-  }
-
   function normalizeArray(value) {
     return Array.isArray(value) ? value : [];
+  }
+
+  function normalizeObject(value) {
+    return value && typeof value === "object" ? value : {};
   }
 
   function mustScanState() {
@@ -35,11 +26,11 @@
     return window.ScanState;
   }
 
-  function mustInstitutionApi() {
-    if (!window.api || !window.api.institution) {
-      throw new Error("La API de auditoría institucional no está disponible.");
+  function mustArchiveApi() {
+    if (!window.api || !window.api.archive) {
+      throw new Error("La API de carpetas no está disponible.");
     }
-    return window.api.institution;
+    return window.api.archive;
   }
 
   function mustHistoryApi() {
@@ -68,11 +59,7 @@
     return {
       totalFolders: Number(safe.totalFolders || 0),
       totalFiles: Number(safe.totalFiles || 0),
-      totalSizeBytes: Number(safe.totalSizeBytes || 0),
-      byExtension:
-        safe.byExtension && typeof safe.byExtension === "object"
-          ? safe.byExtension
-          : {}
+      totalSizeBytes: Number(safe.totalSizeBytes || 0)
     };
   }
 
@@ -84,8 +71,8 @@
     const found = normalizeArray(safe.foundProcessFolders);
     const missing = normalizeArray(safe.missingProcessFolders).length
       ? normalizeArray(safe.missingProcessFolders)
-      : required.filter(function keep(item) {
-          return !found.includes(item);
+      : required.filter(function keep(name) {
+          return !found.includes(name);
         });
 
     return {
@@ -97,34 +84,12 @@
     };
   }
 
-  function normalizeScanResult(scanResult, fallbackType) {
-    const safe = normalizeObject(scanResult);
-    const type = safeText(safe.type || fallbackType).toUpperCase();
-
-    if (!safe || (type !== "UGPA" && type !== "UTET")) {
-      return null;
-    }
-
-    return {
-      ok: safe.ok === true,
-      type: type,
-      rootPath: safeText(safe.rootPath),
-      rootName: safeText(safe.rootName),
-      scannedAt: safe.scannedAt || null,
-      folders: normalizeArray(safe.folders),
-      files: normalizeArray(safe.files),
-      summary: normalizeSummary(safe.summary),
-      validation: normalizeValidation(safe.validation),
-      source: normalizeObject(safe.source)
-    };
-  }
-
   function formatBytes(bytes) {
-    const size = Number(bytes || 0);
-    if (!Number.isFinite(size) || size <= 0) return "0 B";
+    const value = Number(bytes || 0);
+    if (!Number.isFinite(value) || value <= 0) return "0 B";
 
     const units = ["B", "KB", "MB", "GB", "TB"];
-    let current = size;
+    let current = value;
     let index = 0;
 
     while (current >= 1024 && index < units.length - 1) {
@@ -139,12 +104,10 @@
     );
   }
 
-  function formatDateTime(iso) {
-    if (!iso) return "Sin fecha";
-
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return "Sin fecha";
-
+  function formatDateTime(value) {
+    if (!value) return "Sin auditoría";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Sin auditoría";
     return date.toLocaleString("es-EC", {
       year: "numeric",
       month: "2-digit",
@@ -155,129 +118,125 @@
   }
 
   function syncAppStore(history) {
-    try {
-      if (window.AppStore && typeof window.AppStore.setHistory === "function") {
-        window.AppStore.setHistory(history || {});
-      }
-    } catch (_error) {}
+    if (
+      window.AppStore &&
+      typeof window.AppStore.setHistory === "function"
+    ) {
+      window.AppStore.setHistory(history || {});
+    }
   }
 
-  function buildValidationLabel(result) {
-    const validation = result && result.validation ? result.validation : null;
-
+  function buildValidationLabel(validation) {
     if (!validation) {
       return {
         status: "neutral",
-        text: "Todavía no se ha ejecutado la auditoría."
+        text: "Carpeta seleccionada. Pendiente de validación/auditoría."
       };
     }
 
-    if (validation.hasAllRequiredFolders) {
+    const safe = normalizeValidation(validation);
+
+    if (safe.hasAllRequiredFolders) {
       return {
         status: "success",
-        text: "Estructura principal completa: Apoyo, Estratégicos y Misionales."
+        text: "Estructura principal completa."
       };
     }
-
-    const missing = normalizeArray(validation.missingProcessFolders);
 
     return {
       status: "warning",
-      text: missing.length
-        ? "Faltan carpetas principales: " + missing.join(", ")
-        : "La estructura principal está incompleta."
+      text:
+        "Estructura incompleta · faltan: " +
+        safe.missingProcessFolders.join(", ")
     };
   }
 
-  function buildEmptyCardModel(type) {
-    return {
-      type: type,
-      loaded: false,
-      title: type,
-      summary: {
-        totalFolders: 0,
-        totalFiles: 0,
-        totalSizeBytes: 0
-      },
-      rootName: "",
-      rootPath: "",
-      scannedAtLabel: "Sin auditoría",
-      validationLabel: {
-        status: "neutral",
-        text: "Ejecute la auditoría institucional."
-      },
-      effectiveRootPath: ""
-    };
+  function resultMatchesSource(result, sourcePath) {
+    if (!result || result.ok !== true || !safeText(sourcePath)) return false;
+
+    const resultPath = safeText(
+      result.source && result.source.selectedFolderPath
+        ? result.source.selectedFolderPath
+        : result.rootPath
+    );
+
+    return resultPath.toLowerCase() === safeText(sourcePath).toLowerCase();
   }
 
-  function buildCardModel(type, rawResult) {
-    const result = normalizeScanResult(rawResult, type);
-
-    if (!result || result.ok !== true) {
-      return buildEmptyCardModel(type);
-    }
+  function buildUnitCard(type, sourcePath, validation, result) {
+    const loaded = resultMatchesSource(result, sourcePath);
+    const safeResult = loaded ? result : null;
 
     return {
       type: type,
-      loaded: true,
-      title: type,
-      summary: result.summary,
-      rootName: result.rootName,
-      rootPath: result.rootPath,
-      scannedAtLabel: formatDateTime(result.scannedAt),
-      validationLabel: buildValidationLabel(result),
-      effectiveRootPath: safeText(
-        result.source && result.source.effectiveRootPath
-          ? result.source.effectiveRootPath
-          : result.rootPath
-      )
+      selected: !!safeText(sourcePath),
+      sourcePath: safeText(sourcePath),
+      loaded: loaded,
+      validationLabel: buildValidationLabel(
+        validation || (safeResult && safeResult.validation)
+      ),
+      summary: normalizeSummary(safeResult && safeResult.summary),
+      scannedAtLabel: formatDateTime(safeResult && safeResult.scannedAt),
+      openPath: safeText(sourcePath)
     };
   }
 
-  function buildSummaryCards(ugpaCard, utetCard, discardedCount) {
-    const totalFolders =
-      Number(ugpaCard.summary.totalFolders || 0) +
-      Number(utetCard.summary.totalFolders || 0);
-    const totalFiles =
-      Number(ugpaCard.summary.totalFiles || 0) +
-      Number(utetCard.summary.totalFiles || 0);
-    const totalBytes =
-      Number(ugpaCard.summary.totalSizeBytes || 0) +
-      Number(utetCard.summary.totalSizeBytes || 0);
+  function buildSummaryCards(ugpaCard, utetCard) {
+    const selected = Number(ugpaCard.selected) + Number(utetCard.selected);
+    const audited = Number(ugpaCard.loaded) + Number(utetCard.loaded);
 
     return [
-      { label: "Unidades auditadas", value: String((ugpaCard.loaded ? 1 : 0) + (utetCard.loaded ? 1 : 0)) + "/2" },
-      { label: "Carpetas", value: String(totalFolders) },
-      { label: "Archivos", value: String(totalFiles) },
-      { label: "Peso total", value: formatBytes(totalBytes) },
-      { label: "Descartadas", value: String(Number(discardedCount || 0)) }
+      { label: "Seleccionadas", value: selected + "/2" },
+      { label: "Auditadas", value: audited + "/2" },
+      {
+        label: "Carpetas",
+        value: String(
+          Number(ugpaCard.summary.totalFolders || 0) +
+            Number(utetCard.summary.totalFolders || 0)
+        )
+      },
+      {
+        label: "Archivos",
+        value: String(
+          Number(ugpaCard.summary.totalFiles || 0) +
+            Number(utetCard.summary.totalFiles || 0)
+        )
+      },
+      {
+        label: "Peso",
+        value: formatBytes(
+          Number(ugpaCard.summary.totalSizeBytes || 0) +
+            Number(utetCard.summary.totalSizeBytes || 0)
+        )
+      }
     ];
   }
 
   function getViewModel() {
     const state = mustScanState().get();
-    const ugpaCard = buildCardModel("UGPA", state.ugpaResult);
-    const utetCard = buildCardModel("UTET", state.utetResult);
-    const appStore =
-      window.AppStore && typeof window.AppStore.get === "function"
-        ? window.AppStore.get()
-        : {};
-    const discardedCount = Array.isArray(appStore.discardedFindings)
-      ? appStore.discardedFindings.length
-      : 0;
+    const ugpa = buildUnitCard(
+      "UGPA",
+      state.ugpaSourcePath,
+      state.ugpaValidation,
+      state.ugpaResult
+    );
+    const utet = buildUnitCard(
+      "UTET",
+      state.utetSourcePath,
+      state.utetValidation,
+      state.utetResult
+    );
 
     return {
       loading: !!state.loading,
       message: state.message || { type: "neutral", text: "" },
-      institutionalRootPath: safeText(state.institutionalRootPath),
-      rootSelected: !!safeText(state.institutionalRootPath),
-      detection: state.detection || null,
       exportMode: safeText(state.exportMode) || "both",
       historyFilePath: safeText(state.historyFilePath),
       exportResult: state.exportResult || {},
-      summaryCards: buildSummaryCards(ugpaCard, utetCard, discardedCount),
-      ugpaCard: ugpaCard,
-      utetCard: utetCard
+      canAudit: ugpa.selected || utet.selected,
+      summaryCards: buildSummaryCards(ugpa, utet),
+      ugpaCard: ugpa,
+      utetCard: utet
     };
   }
 
@@ -287,23 +246,16 @@
 
     try {
       const response = await mustHistoryApi().get();
-
       if (!response || response.ok !== true) {
         throw new Error(
-          response && response.error ? response.error : "No se pudo cargar el historial."
+          response && response.error
+            ? response.error
+            : "No se pudo cargar el historial."
         );
       }
 
-      const history = normalizeObject(response.history);
-      state.hydrateFromHistory(history, response.historyFilePath || "");
-      syncAppStore(history);
-
-      if (safeText(history.institutionalRootPath)) {
-        state.patchMessage(
-          "neutral",
-          "Carpeta institucional recuperada. Puede ejecutar una nueva auditoría."
-        );
-      }
+      state.hydrateFromHistory(response.history || {}, response.historyFilePath || "");
+      syncAppStore(response.history || {});
     } catch (error) {
       state.patchMessage(
         "error",
@@ -314,12 +266,18 @@
     }
   }
 
-  async function selectInstitutionRoot() {
+  async function selectFolder(type) {
     const state = mustScanState();
+    const safeType = safeText(type).toUpperCase();
+
+    if (safeType !== "UGPA" && safeType !== "UTET") {
+      throw new Error("Unidad inválida.");
+    }
+
     state.set({ loading: true });
 
     try {
-      const response = await mustInstitutionApi().pickRoot();
+      const response = await mustArchiveApi().pickFolder(safeType);
 
       if (response && response.cancelled) {
         state.patchMessage("neutral", "Selección cancelada.");
@@ -330,133 +288,127 @@
         throw new Error(
           response && response.error
             ? response.error
-            : "La carpeta seleccionada no es válida."
+            : "No se pudo seleccionar la carpeta."
         );
       }
 
-      const currentState = state.get();
-      const previousRootPath = safeText(currentState.institutionalRootPath);
-      const nextRootPath = safeText(response.rootPath);
-      const changedRoot = previousRootPath
-        ? previousRootPath.toLowerCase() !== nextRootPath.toLowerCase()
-        : !!(currentState.ugpaResult || currentState.utetResult);
+      state.hydrateFromHistory(response.history || {}, response.historyFilePath || "");
 
-      state.set({
-        institutionalRootPath: nextRootPath,
-        detection: response.detection || null,
-        ugpaResult: changedRoot ? null : currentState.ugpaResult,
-        utetResult: changedRoot ? null : currentState.utetResult,
-        exportResult: changedRoot
-          ? { ok: false, filePath: "", fileName: "", error: "" }
-          : currentState.exportResult
-      });
+      state.set(
+        safeType === "UGPA"
+          ? { ugpaValidation: response.validation || null }
+          : { utetValidation: response.validation || null }
+      );
 
-      if (
-        changedRoot &&
-        window.AppStore &&
-        typeof window.AppStore.update === "function"
-      ) {
-        window.AppStore.update({
-          ugpaResult: null,
-          utetResult: null
-        });
-      }
+      syncAppStore(response.history || {});
 
+      const validation = normalizeValidation(response.validation);
       state.patchMessage(
-        "success",
-        changedRoot
-          ? "Nueva carpeta institucional detectada. Ejecute la auditoría para actualizar UGPA y UTET."
-          : "Carpeta institucional válida. Se detectaron UGPA y UTET."
+        validation.hasAllRequiredFolders ? "success" : "warning",
+        safeType +
+          " seleccionada. " +
+          (validation.hasAllRequiredFolders
+            ? "Estructura principal completa."
+            : "La carpeta se acepta, pero tiene estructura incompleta.")
       );
     } catch (error) {
       state.patchMessage(
         "error",
         error && error.message
           ? error.message
-          : "No se pudo seleccionar la carpeta institucional."
+          : "No se pudo seleccionar la carpeta."
       );
     } finally {
       state.set({ loading: false });
     }
   }
 
-  async function auditInstitution() {
+  async function auditSelected() {
     const state = mustScanState();
     const current = state.get();
-    const rootPath = safeText(current.institutionalRootPath);
+    const units = [];
 
-    if (!rootPath) {
-      throw new Error("Primero seleccione la carpeta institucional.");
+    if (safeText(current.ugpaSourcePath)) {
+      units.push({ type: "UGPA", path: current.ugpaSourcePath });
+    }
+
+    if (safeText(current.utetSourcePath)) {
+      units.push({ type: "UTET", path: current.utetSourcePath });
+    }
+
+    if (!units.length) {
+      throw new Error("Seleccione al menos una carpeta: UGPA o UTET.");
     }
 
     state.set({ loading: true });
 
-    try {
-      const response = await mustInstitutionApi().scanRoot(rootPath);
+    const errors = [];
+    let latestHistory = null;
+    let historyFilePath = current.historyFilePath;
 
-      if (!response || response.ok !== true) {
-        throw new Error(
-          response && response.error
-            ? response.error
-            : "No se pudo completar la auditoría."
-        );
+    try {
+      for (const unit of units) {
+        try {
+          const response = await mustArchiveApi().scanFolderFromPath(
+            unit.type,
+            unit.path
+          );
+
+          if (!response || response.ok !== true) {
+            throw new Error(
+              response && response.error
+                ? response.error
+                : "No se pudo auditar " + unit.type + "."
+            );
+          }
+
+          latestHistory = response.history || latestHistory;
+          historyFilePath = response.historyFilePath || historyFilePath;
+        } catch (error) {
+          errors.push(
+            unit.type +
+              ": " +
+              (error && error.message ? error.message : "error de auditoría")
+          );
+        }
       }
 
-      const history = normalizeObject(response.history);
+      if (latestHistory) {
+        state.hydrateFromHistory(latestHistory, historyFilePath);
+        syncAppStore(latestHistory);
+      }
 
-      state.hydrateFromHistory(history, response.historyFilePath || "");
-      state.set({
-        detection: response.detection || null,
-        exportResult: {
-          ok: false,
-          filePath: "",
-          fileName: "",
-          error: ""
-        }
-      });
-
-      syncAppStore(history);
-      state.patchMessage(
-        "success",
-        "Auditoría completada. UGPA y UTET fueron analizadas correctamente."
-      );
-    } catch (error) {
-      state.patchMessage(
-        "error",
-        error && error.message ? error.message : "No se pudo completar la auditoría."
-      );
+      if (errors.length) {
+        state.patchMessage("warning", errors.join(" · "));
+      } else {
+        state.patchMessage(
+          "success",
+          units.map(function map(unit) { return unit.type; }).join(" + ") +
+            " auditada(s) correctamente."
+        );
+      }
     } finally {
       state.set({ loading: false });
     }
   }
 
-  async function openHistoryFile() {
-    const state = mustScanState().get();
-    const filePath = safeText(state.historyFilePath);
-
-    if (!filePath) {
-      throw new Error("No existe una ruta de historial disponible.");
-    }
-
-    return openPath(filePath);
-  }
-
   async function openPath(targetPath) {
     const safePath = safeText(targetPath);
-
-    if (!safePath) {
-      throw new Error("No existe una ruta válida para abrir.");
-    }
+    if (!safePath) throw new Error("No existe una ruta válida para abrir.");
 
     const response = await mustShellApi().openPath(safePath);
-
     if (!response || response.ok !== true) {
       throw new Error(
         response && response.error ? response.error : "No se pudo abrir la ruta."
       );
     }
-
     return response;
+  }
+
+  async function openHistoryFile() {
+    const path = safeText(mustScanState().get().historyFilePath);
+    if (!path) throw new Error("No existe un historial disponible.");
+    return openPath(path);
   }
 
   function buildExportPayload(mode, state) {
@@ -482,7 +434,7 @@
       !state.utetResult ||
       state.utetResult.ok !== true
     ) {
-      throw new Error("Debe auditar UGPA y UTET antes de exportar ambas unidades.");
+      throw new Error("Para exportar ambas unidades deben existir ambos resultados.");
     }
 
     return {
@@ -495,22 +447,24 @@
   }
 
   async function exportPdf() {
-    const scanState = mustScanState();
-    scanState.set({ loading: true });
+    const state = mustScanState();
+    state.set({ loading: true });
 
     try {
-      const state = scanState.get();
+      const current = state.get();
       const response = await mustPdfApi().export(
-        buildExportPayload(state.exportMode, state)
+        buildExportPayload(current.exportMode, current)
       );
 
       if (!response || response.ok !== true) {
         throw new Error(
-          response && response.error ? response.error : "No se pudo exportar el PDF."
+          response && response.error
+            ? response.error
+            : "No se pudo exportar el PDF."
         );
       }
 
-      scanState.set({
+      state.set({
         exportResult: {
           ok: true,
           filePath: safeText(response.filePath),
@@ -518,22 +472,22 @@
           error: ""
         }
       });
-      scanState.patchMessage("success", "PDF generado correctamente.");
+      state.patchMessage("success", "PDF generado correctamente.");
     } catch (error) {
-      scanState.set({
+      state.set({
         exportResult: {
           ok: false,
           filePath: "",
           fileName: "",
-          error: error && error.message ? error.message : "No se pudo exportar el PDF."
+          error: error && error.message ? error.message : "Error de exportación."
         }
       });
-      scanState.patchMessage(
+      state.patchMessage(
         "error",
         error && error.message ? error.message : "No se pudo exportar el PDF."
       );
     } finally {
-      scanState.set({ loading: false });
+      state.set({ loading: false });
     }
   }
 
@@ -541,26 +495,21 @@
     mustScanState().set({ exportMode: safeText(mode) || "both" });
   }
 
-  function goToDashboard() {
-    window.location.href = "../dashboard/dashboard.index.html";
-  }
-
-  function goToRules() {
-    window.location.href = "../rules/rules.index.html";
-  }
-
   window.ScanService = {
     getViewModel: getViewModel,
     initializeFromHistory: initializeFromHistory,
-    selectInstitutionRoot: selectInstitutionRoot,
-    auditInstitution: auditInstitution,
-    openHistoryFile: openHistoryFile,
+    selectFolder: selectFolder,
+    auditSelected: auditSelected,
     openPath: openPath,
+    openHistoryFile: openHistoryFile,
     exportPdf: exportPdf,
     setExportMode: setExportMode,
-    goToDashboard: goToDashboard,
-    goToRules: goToRules,
-    formatBytes: formatBytes,
-    formatDateTime: formatDateTime
+    goToDashboard: function () {
+      window.location.href = "../dashboard/dashboard.index.html";
+    },
+    goToRules: function () {
+      window.location.href = "../rules/rules.index.html";
+    },
+    formatBytes: formatBytes
   };
 })(window);
