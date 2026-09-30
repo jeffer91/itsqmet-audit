@@ -114,6 +114,11 @@ button, select, input { font: inherit; }
   color: var(--success);
 }
 
+.unit-status.is-detected {
+  background: rgba(47, 102, 224, .1);
+  color: var(--primary);
+}
+
 .btn {
   min-height: 40px;
   border-radius: 10px;
