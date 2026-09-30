@@ -233,7 +233,11 @@
       exportMode: safeText(state.exportMode) || "both",
       historyFilePath: safeText(state.historyFilePath),
       exportResult: state.exportResult || {},
-      canAudit: ugpa.selected || utet.selected,
+      canAudit:
+        (ugpa.selected && state.auditUgpa) ||
+        (utet.selected && state.auditUtet),
+      auditUgpa: !!state.auditUgpa,
+      auditUtet: !!state.auditUtet,
       summaryCards: buildSummaryCards(ugpa, utet),
       ugpaCard: ugpa,
       utetCard: utet
@@ -328,11 +332,11 @@
     const current = state.get();
     const units = [];
 
-    if (safeText(current.ugpaSourcePath)) {
+    if (safeText(current.ugpaSourcePath) && current.auditUgpa) {
       units.push({ type: "UGPA", path: current.ugpaSourcePath });
     }
 
-    if (safeText(current.utetSourcePath)) {
+    if (safeText(current.utetSourcePath) && current.auditUtet) {
       units.push({ type: "UTET", path: current.utetSourcePath });
     }
 
@@ -495,6 +499,15 @@
     mustScanState().set({ exportMode: safeText(mode) || "both" });
   }
 
+  function setAuditSelection(type, checked) {
+    const safeType = safeText(type).toUpperCase();
+    if (safeType === "UGPA") {
+      mustScanState().set({ auditUgpa: !!checked });
+    } else if (safeType === "UTET") {
+      mustScanState().set({ auditUtet: !!checked });
+    }
+  }
+
   window.ScanService = {
     getViewModel: getViewModel,
     initializeFromHistory: initializeFromHistory,
@@ -504,6 +517,7 @@
     openHistoryFile: openHistoryFile,
     exportPdf: exportPdf,
     setExportMode: setExportMode,
+    setAuditSelection: setAuditSelection,
     goToDashboard: function () {
       window.location.href = "../dashboard/dashboard.index.html";
     },
