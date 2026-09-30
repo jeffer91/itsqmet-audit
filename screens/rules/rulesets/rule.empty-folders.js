@@ -11,6 +11,7 @@ Función o funciones:
   "use strict";
 
   const Types = window.RulesTypes || {};
+  const TECHNICAL_FILE_NAMES = new Set(["desktop.ini", "thumbs.db"]);
 
   function safeText(value) {
     if (Types && typeof Types.safeText === "function") {
@@ -115,7 +116,12 @@ Función o funciones:
       });
 
       const childFiles = allFiles.filter(function keepFile(item) {
-        return getParentRelativePath(item && item.relativePath) === rel;
+        return (
+          getParentRelativePath(item && item.relativePath) === rel &&
+          !TECHNICAL_FILE_NAMES.has(
+            safeText(item && item.name).toLowerCase()
+          )
+        );
       });
 
       if (childFolders.length > 0 || childFiles.length > 0) {
@@ -128,6 +134,7 @@ Función o funciones:
           ruleName: rule.name,
           scope: scope,
           severity: rule.severity,
+          category: "empty-folders",
           title: "Carpeta vacía",
           description: "La carpeta no contiene archivos ni subcarpetas.",
           rootName: scanData.rootName || "",
