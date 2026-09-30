@@ -334,14 +334,38 @@
         );
       }
 
+      const previousRootPath = safeText(state.get().institutionalRootPath);
+      const nextRootPath = safeText(response.rootPath);
+      const changedRoot =
+        !!previousRootPath &&
+        previousRootPath.toLowerCase() !== nextRootPath.toLowerCase();
+
       state.set({
-        institutionalRootPath: safeText(response.rootPath),
-        detection: response.detection || null
+        institutionalRootPath: nextRootPath,
+        detection: response.detection || null,
+        ugpaResult: changedRoot ? null : state.get().ugpaResult,
+        utetResult: changedRoot ? null : state.get().utetResult,
+        exportResult: changedRoot
+          ? { ok: false, filePath: "", fileName: "", error: "" }
+          : state.get().exportResult
       });
+
+      if (
+        changedRoot &&
+        window.AppStore &&
+        typeof window.AppStore.update === "function"
+      ) {
+        window.AppStore.update({
+          ugpaResult: null,
+          utetResult: null
+        });
+      }
 
       state.patchMessage(
         "success",
-        "Carpeta institucional válida. Se detectaron UGPA y UTET."
+        changedRoot
+          ? "Nueva carpeta institucional detectada. Ejecute la auditoría para actualizar UGPA y UTET."
+          : "Carpeta institucional válida. Se detectaron UGPA y UTET."
       );
     } catch (error) {
       state.patchMessage(
