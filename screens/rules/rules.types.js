@@ -42,6 +42,16 @@ Función o funciones:
         return Number(endYear) === Number(startYear) + 1;
       },
       yearsMessage: "El período Octubre–Septiembre debe terminar en el año siguiente."
+    },
+    {
+      kind: "biennial-oct-sep",
+      regex: /^Octubre (\d{4})[-–—]Septiembre (\d{4})$/i,
+      expected: "Octubre AAAA–Septiembre AAAA (2 años)",
+      example: "Octubre 2024–Septiembre 2026",
+      validateYears: function validateYears(startYear, endYear) {
+        return Number(endYear) === Number(startYear) + 2;
+      },
+      yearsMessage: "El período bienal Octubre–Septiembre debe terminar dos años después."
     }
   ];
 
@@ -304,9 +314,13 @@ Función o funciones:
       }
     }
 
-    const officialMatch = OFFICIAL_PERIOD_PATTERNS.find(function keep(pattern) {
+    const matchingOfficialPatterns = OFFICIAL_PERIOD_PATTERNS.filter(function keep(pattern) {
       return pattern.regex.test(name);
     });
+    const officialMatch = matchingOfficialPatterns.find(function preferValidPattern(pattern) {
+      const match = name.match(pattern.regex);
+      return !!(match && pattern.validateYears(Number(match[1]), Number(match[2])));
+    }) || matchingOfficialPatterns[0];
 
     const safeExpectedProcess = safeText(expectedProcessCode).toUpperCase();
     const safeExpectedUnit = normalizeScope(expectedUnit);
@@ -395,7 +409,11 @@ Función o funciones:
       const startNumber = startYear * 12 + startMonth;
       const endNumber = endYear * 12 + endMonth;
       const duration = endNumber - startNumber;
-      const chronologyOk = duration >= 0 && duration <= 18;
+      // Los procesos no comparten una única vigencia: además de períodos
+      // semestrales y anuales existen procesos bienales (24 meses).
+      // Aquí solo validamos cronología razonable; la duración esperada se
+      // valida después contra la política específica de cada proceso.
+      const chronologyOk = duration >= 0 && duration <= 30;
       const valid = chronologyOk && prefixProcessOk && prefixUnitOk;
       let message = "";
 

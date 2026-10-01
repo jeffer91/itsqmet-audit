@@ -91,6 +91,39 @@
     return normalizeCompareText(leftPeriod) === normalizeCompareText(rightPeriod);
   }
 
+  function teacherNameTokens(value) {
+    return normalizeTeacherName(value)
+      .split(/\s+/)
+      .map(function mapToken(token) {
+        return safeText(token);
+      })
+      .filter(function keepToken(token) {
+        return token.length >= 3;
+      });
+  }
+
+  function teacherNamesMatch(leftName, rightName) {
+    const leftKey = normalizeTeacherName(leftName);
+    const rightKey = normalizeTeacherName(rightName);
+    if (!leftKey || !rightKey) return false;
+    if (leftKey === rightKey) return true;
+
+    const leftTokens = Array.from(new Set(teacherNameTokens(leftName)));
+    const rightTokens = Array.from(new Set(teacherNameTokens(rightName)));
+    if (leftTokens.length < 2 || rightTokens.length < 2) return false;
+
+    const rightSet = new Set(rightTokens);
+    const shared = leftTokens.filter(function sharedToken(token) {
+      return rightSet.has(token);
+    }).length;
+    const shorterLength = Math.min(leftTokens.length, rightTokens.length);
+
+    // Dos nombres/apellidos coincidentes son el mínimo. Se exige además que
+    // representen al menos 2/3 de la forma más corta para admitir archivos
+    // históricos que omiten un segundo apellido o incluyen una sigla de curso.
+    return shared >= 2 && shared / shorterLength >= 2 / 3;
+  }
+
   function escapeForId(value) {
     return normalizeCompareText(value).replace(/[^a-z0-9]+/g, "-");
   }
@@ -380,7 +413,7 @@
   function hasMatchingCounterpart(sourceDoc, candidates) {
     return candidates.some(function someCandidate(candidate) {
       return (
-        candidate.personKey === sourceDoc.personKey &&
+        teacherNamesMatch(candidate.personLabel, sourceDoc.personLabel) &&
         arePeriodsRelated(sourceDoc.periodLabel, candidate.periodLabel)
       );
     });

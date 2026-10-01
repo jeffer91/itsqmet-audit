@@ -14,6 +14,14 @@ Función:
       processes: {
         "70": {
           name: "Proceso de Capacitación Docente",
+          periodPolicy: {
+            required: true,
+            months: 12,
+            label: "Anual hasta septiembre de 2025; semestral desde octubre de 2025",
+            versions: [
+              { from: "2025-10", months: 6, label: "Semestral" }
+            ]
+          },
           documents: [
             { id: "rgi1", label: "Detección de Necesidades de Capacitación", codes: ["UGPA-RGI1", "PRO-70"], keywords: ["deteccion", "necesidades", "capacitacion"], template: "UGPA-RGI1-0X-PRO-70-AÑO-MES" },
             { id: "rgi2", label: "Plan Semestral de Capacitación Docente", codes: ["UGPA-RGI2", "PRO-70"], keywords: ["plan", "semestral", "capacitacion"], template: "UGPA-RGI2-0X-PRO-70-AÑO-MES" },
@@ -22,6 +30,7 @@ Función:
         },
         "31": {
           name: "Proceso de Formación Docente",
+          periodPolicy: { required: true, months: 12, label: "Anual" },
           documents: [
             { id: "rgi1", label: "Detección de Necesidades de Formación", codes: ["UGPA-RGI1", "PRO-31"], keywords: ["deteccion", "necesidades", "formacion"], template: "UGPA-RGI1-0X-PRO-31-AÑO-MES" },
             { id: "rgi2", label: "Plan Anual de Formación Docente", codes: ["UGPA-RGI2", "PRO-31"], keywords: ["plan", "anual", "formacion"], template: "UGPA-RGI2-0X-PRO-31-AÑO-MES" },
@@ -30,6 +39,7 @@ Función:
         },
         "60": {
           name: "Proceso de Construcción Curricular Continua",
+          periodPolicy: { required: true, months: 24, label: "Cada dos años" },
           documents: [
             { id: "rgi1", label: "Acta de Reunión de Colectivos Docentes para el Análisis de la Ficha CCC", codes: ["UGPA-RGI1", "PRO-60"], keywords: ["acta", "colectivos", "ccc"], template: "UGPA-RGI1-0X-PRO-60-AÑO-MES" },
             { id: "rgi2", label: "Ficha Individual de Análisis por Nivel - Construcción Curricular Continua", codes: ["UGPA-RGI2", "PRO-60"], keywords: ["ficha", "individual", "analisis", "curricular"], template: "UGPA-RGI2-0X-PRO-60-AÑO-MES" },
@@ -38,6 +48,7 @@ Función:
         },
         "134": {
           name: "Proceso de Ejecución de Capacitación Docente",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "rgi1", label: "Planificación de la Capacitación", codes: ["UGPA-RGI1", "PRO-134"], keywords: ["planificacion", "capacitacion"], template: "UGPA-RGI1-0X-PRO-134-AÑO-MES" },
             { id: "rgi2", label: "Acuerdo de Patrocinio Institucional", codes: ["UGPA-RGI2", "PRO-134"], keywords: ["acuerdo", "patrocinio"], template: "UGPA-RGI2-0X-PRO-134-AÑO-MES" },
@@ -46,6 +57,7 @@ Función:
         },
         "135": {
           name: "Proceso de Medición de Impacto de la Capacitación Docente",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "rgi1", label: "Instrumento de Evaluación de la Capacitación", codes: ["UGPA-RGI1", "PRO-135"], keywords: ["instrumento", "evaluacion", "capacitacion"], template: "UGPA-RGI1-0X-PRO-135-AÑO-MES" },
             { id: "inf", label: "Informe de Impacto de Capacitación", codes: ["UGPA-INF", "PRO-135"], keywords: ["informe", "impacto", "capacitacion"], template: "UGPA-INF-0X-PRO-135-AÑO-MES" }
@@ -53,6 +65,14 @@ Función:
         },
         "251": {
           name: "Proceso de Planificación de Capacitación y Formación Individual a Docentes",
+          periodPolicy: {
+            required: true,
+            months: 12,
+            label: "Anual hasta septiembre de 2025; semestral desde octubre de 2025",
+            versions: [
+              { from: "2025-10", months: 6, label: "Semestral" }
+            ]
+          },
           documents: [
             { id: "rgi1", label: "Plan Individual de Formación y Capacitación Docente", codes: ["UGPA-RGI1", "PRO-251"], keywords: ["plan", "individual", "formacion", "capacitacion"], template: "UGPA-RGI1-0X-PRO-251-AÑO-MES" },
             { id: "rgi2", label: "Reporte General de Resultados del Plan de Formación y Capacitación Docente", codes: ["UGPA-RGI2", "PRO-251"], keywords: ["reporte", "resultados", "plan", "formacion", "capacitacion"], template: "UGPA-RGI2-0X-PRO-251-AÑO-MES" }
@@ -60,12 +80,14 @@ Función:
         },
         "248": {
           name: "Proceso de Seguimiento al Proceso de Formación del Personal Docente",
+          periodPolicy: { required: true, months: 12, label: "Anual" },
           documents: [
             { id: "rgi1", label: "Reporte de Seguimiento de Formación Docente", codes: ["UGPA-RGI1", "PRO-248"], keywords: ["reporte", "seguimiento", "formacion"], template: "UGPA-RGI1-0X-PRO-248-AÑO-MES" }
           ]
         },
         "321": {
           name: "Proceso de Generación, Emisión y Validación de Matriz de Ejecución Curricular",
+          periodPolicy: { required: true, months: 0, label: "Período obligatorio" },
           documents: [
             { id: "com", label: "Carga de la Matriz CCC en Sisacad - Comunicado", codes: ["COM-ITSQMET-UGPA"], keywords: ["matriz", "ccc", "sisacad", "comunicado"], template: "COM-ITSQMET-UGPA-AÑO-MES-0X" }
           ]
@@ -77,6 +99,7 @@ Función:
       processes: {
         "94": {
           name: "Proceso de Regulación de Normativa de la UTET",
+          periodPolicy: { required: true, months: 0, label: "Período obligatorio" },
           documents: [
             { id: "reglamento", label: "Reglamento de la UTET", codes: ["CTI-REG-14"], keywords: ["reglamento", "utet"], template: "CTI-REG-14" },
             { id: "resolucion", label: "Resolución del OCS", codes: ["ITSQMET-OCS"], keywords: ["resolucion", "ocs"], template: "ITSQMET-OCS-AÑO-MES-0X/DÍA-MES-AÑO" },
@@ -86,6 +109,7 @@ Función:
         },
         "56": {
           name: "Proceso de Planificación Semestral del Proceso de Titulación",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "rgi1", label: "Planificación del Examen Complexivo", codes: ["UTET-RGI1", "PRO-56"], keywords: ["planificacion", "examen", "complexivo"], template: "UTET-RGI1-0X-PRO-56-AÑO-MES" },
             { id: "rgi2", label: "Planificación del Trabajo de Titulación", codes: ["UTET-RGI2", "PRO-56"], keywords: ["planificacion", "trabajo", "titulacion"], template: "UTET-RGI2-0X-PRO-56-AÑO-MES" },
@@ -94,12 +118,14 @@ Función:
         },
         "95": {
           name: "Proceso de Evaluación Semestral del Proceso de Titulación",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "inf", label: "Informe Final del Proceso de Titulación", codes: ["UTET-INF", "PRO-95"], keywords: ["informe", "final", "titulacion"], template: "UTET-INF-0X-PRO-95-AÑO-MES" }
           ]
         },
         "58": {
           name: "Proceso de Seguimiento de Requisitos",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "act", label: "Acta de Seguimiento de los Requisitos de Titulación", codes: ["UTET-ACT", "PRO-58"], keywords: ["acta", "seguimiento", "requisitos"], template: "UTET-ACT-0X-PRO-58-AÑO-MES" },
             { id: "rgi1", label: "Informe Individual de Verificación de Requisitos para el Proceso de Titulación", codes: ["UTET-RGI1", "PRO-58"], keywords: ["informe", "individual", "verificacion", "requisitos"], template: "UTET-RGI1-0X-PRO-58-AÑO-MES" },
@@ -108,6 +134,7 @@ Función:
         },
         "59": {
           name: "Proceso de Gestión de Guías de Integración Curricular",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "formato-guia", label: "Formato de Guía de Integración Curricular", keywords: ["formato", "guia", "integracion", "curricular"], template: "Formato de Guía de Integración Curricular" },
             { id: "guia", label: "Guía de Integración Curricular", keywords: ["guia", "integracion", "curricular"], template: "Guía de Integración Curricular" }
@@ -115,6 +142,7 @@ Función:
         },
         "88": {
           name: "Proceso de Ejecución de Seminarios Complexivos",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           note: "El listado/título del manual identifica este proceso como UTET-PRO-88; la tabla final lo rotula como UTET-PRO-45. Se aplica la jerarquía acordada y se conserva PRO-88.",
           documents: [
             { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
@@ -125,6 +153,7 @@ Función:
         },
         "93": {
           name: "Proceso de Ejecución de Examen Complexivo",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "com", label: "Comunicado del Proceso de Titulación y Evaluación", codes: ["COM-ITSQMET-UTET"], keywords: ["comunicado", "titulacion", "evaluacion"], template: "COM-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "acta", label: "Acta de Titulación por Examen Complexivo", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "examen", "complexivo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X" }
@@ -132,6 +161,7 @@ Función:
         },
         "96": {
           name: "Proceso de Ingreso al Trabajo de Titulación",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "cronograma", label: "Cronograma de Trabajo de Titulación - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "trabajo", "titulacion"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
@@ -141,6 +171,7 @@ Función:
         },
         "164": {
           name: "Proceso de Ejecución del Trabajo de Titulación",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "plan", label: "Plan de Trabajo de Titulación", keywords: ["plan", "trabajo", "titulacion"], template: "Plan de Trabajo de Titulación" },
             { id: "borrador1", label: "Trabajo de Titulación (Borrador 1)", keywords: ["trabajo", "titulacion", "borrador", "1"], template: "Trabajo de Titulación (Borrador 1)" },
@@ -153,6 +184,7 @@ Función:
         },
         "57": {
           name: "Proceso de Gestión de Artículo Académico",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "cronograma", label: "Cronograma de Artículo Académico - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "articulo", "academico"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
@@ -167,6 +199,7 @@ Función:
         },
         "97": {
           name: "Proceso de Inducción del Proceso de Titulación",
+          periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "rgi1", label: "Registro de Asistencia Inducción", codes: ["UTET-RGI1", "PRO-97"], keywords: ["registro", "asistencia", "induccion"], template: "UTET-RGI1-0X-PRO-97-AÑO-MES" },
             { id: "inf", label: "Informe de Finalización de la Inducción del Proceso de Titulación", codes: ["UTET-INF", "PRO-97"], keywords: ["informe", "finalizacion", "induccion"], template: "UTET-INF-0X-PRO-97-AÑO-MES" }
