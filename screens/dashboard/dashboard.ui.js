@@ -139,6 +139,56 @@ Función:
     ].join("");
   }
 
+  function renderGroupItem(item, category) {
+    const isName = category === "names";
+    const expected = safeText(item.expectedValue);
+    const actual = safeText(item.actualValue);
+    const comparison = isName && expected
+      ? '<span class="finding-group__change">' +
+        escapeHtml(actual) + ' <b>→</b> ' + escapeHtml(expected) +
+        '</span>'
+      : "";
+
+    return [
+      '<li class="finding-group__item">',
+      '<div><strong>' + escapeHtml(safeText(item.groupItemLabel, "Novedad")) + '</strong>',
+      comparison,
+      '</div>',
+      '<button class="btn btn--ghost btn--small" type="button" data-action="go-rules" data-rule-id="' +
+        escapeHtml(safeText(item.ruleId)) + '" data-finding-id="' +
+        escapeHtml(safeText(item.id)) + '">Detalle</button>',
+      '</li>'
+    ].join("");
+  }
+
+  function renderGroup(group) {
+    const items = Array.isArray(group.items) ? group.items : [];
+    const path = openPath(group);
+    const location = safeText(group.groupLocation, group.groupLocationLabel || "Raíz");
+
+    return [
+      '<article class="finding-row finding-row--group">',
+      '<div class="finding-row__scope">' + escapeHtml(safeText(group.scope)) + '</div>',
+      '<div class="finding-row__main">',
+      '<strong>' + escapeHtml(safeText(group.title, "Novedades agrupadas")) + '</strong>',
+      '<span>Carpeta madre: ' + escapeHtml(location) + '</span>',
+      '<details class="finding-group">',
+      '<summary>Ver ' + items.length + ' elementos</summary>',
+      '<ul>' + items.map(function map(item) {
+        return renderGroupItem(item, safeText(group.category));
+      }).join("") + '</ul>',
+      '</details>',
+      '</div>',
+      '<div class="finding-row__actions">',
+      path
+        ? '<button class="btn btn--ghost btn--small" type="button" data-action="open-path" data-path="' +
+          escapeHtml(path) + '">Abrir carpeta madre</button>'
+        : '',
+      '</div>',
+      '</article>'
+    ].join("");
+  }
+
   function renderFindings(findings) {
     const r = getRefs();
     const list = Array.isArray(findings) ? findings : [];
@@ -148,7 +198,9 @@ Función:
       return;
     }
 
-    r.rulesBoard.innerHTML = list.map(renderFinding).join("");
+    r.rulesBoard.innerHTML = list.map(function map(finding) {
+      return finding && finding.isGroup ? renderGroup(finding) : renderFinding(finding);
+    }).join("");
   }
 
   function render(vm) {

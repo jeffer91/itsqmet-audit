@@ -185,6 +185,70 @@ html, body {
   gap: 5px;
 }
 
+.finding-row--group {
+  border-color: #c9d9f5;
+  background: #f8fbff;
+}
+
+.finding-row--group .finding-row__main {
+  gap: 3px;
+}
+
+.finding-group {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.finding-group summary {
+  width: fit-content;
+  color: var(--primary);
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+
+.finding-group ul {
+  display: grid;
+  gap: 3px;
+  margin: 5px 0 1px;
+  padding: 0;
+  list-style: none;
+}
+
+.finding-group__item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 5px 4px 7px;
+  border-left: 2px solid #c9d9f5;
+  background: #fff;
+}
+
+.finding-group__item > div {
+  min-width: 0;
+}
+
+.finding-group__item strong,
+.finding-group__change {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finding-group__item strong {
+  color: var(--text);
+  font-size: 10px;
+}
+
+.finding-group__change {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
 .empty-state {
   padding: 14px;
   border: 1px dashed var(--line);
