@@ -263,14 +263,6 @@ Función o funciones:
   function buildMetaLine(finding) {
     const parts = [];
 
-    if (safeText(finding.scope)) {
-      parts.push(buildScopeBadge(finding.scope));
-    }
-
-    if (safeText(finding.severity)) {
-      parts.push(buildSeverityBadge(finding.severity));
-    }
-
     if (safeText(finding.personLabel)) {
       parts.push(
         "<span><strong>Persona:</strong> " +

@@ -8,19 +8,19 @@
   />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AUDIT - Auditoría documental</title>
+  <link rel="stylesheet" href="../shared/app.nav.css" />
   <link rel="stylesheet" href="./scan.styles.css" />
 </head>
 <body>
+  <div id="appTopNav"></div>
+
   <main class="page">
     <header class="page__header">
       <div>
+        <span class="eyebrow">Auditoría documental</span>
         <h1>AUDIT</h1>
-        <p>Auditoría documental local de UGPA y UTET.</p>
+        <p>Seleccione las fuentes locales de UGPA y UTET y ejecute la validación.</p>
       </div>
-      <nav class="header-nav">
-        <button id="btnOpenDashboard" class="btn btn--ghost" type="button">Dashboard</button>
-        <button id="btnOpenRules" class="btn btn--ghost" type="button">Reglas</button>
-      </nav>
     </header>
 
     <div id="globalMessage" class="global-message" aria-live="polite"></div>
@@ -115,6 +115,7 @@
   </main>
 
   <script src="../shared/app.store.js" defer></script>
+  <script src="../shared/app.nav.js" defer></script>
   <script src="./scan.state.js" defer></script>
   <script src="./scan.service.js" defer></script>
   <script src="./scan.ui.js" defer></script>

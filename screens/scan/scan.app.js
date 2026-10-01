@@ -24,9 +24,7 @@
       "btnSelectUtet",
       "btnAuditSelected",
       "btnOpenHistory",
-      "btnExportPdf",
-      "btnOpenDashboard",
-      "btnOpenRules"
+      "btnExportPdf"
     ].forEach(function each(id) {
       const el = byId(id);
       if (el) el.disabled = !!isBusy;
@@ -73,14 +71,6 @@
       safeRun(function () { return window.ScanService.exportPdf(); })
     );
 
-    byId("btnOpenDashboard").addEventListener("click", function () {
-      window.ScanService.goToDashboard();
-    });
-
-    byId("btnOpenRules").addEventListener("click", function () {
-      window.ScanService.goToRules();
-    });
-
     byId("exportMode").addEventListener("change", function (event) {
       window.ScanService.setExportMode(event.target.value);
     });
@@ -95,6 +85,7 @@
   }
 
   async function boot() {
+    if (window.AppNav) window.AppNav.render("scan");
     render();
     bind();
     window.ScanState.subscribe(render);
