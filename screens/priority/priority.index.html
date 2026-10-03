@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Priorización</title>
+  <link rel="stylesheet" href="../shared/app.nav.css" />
+  <link rel="stylesheet" href="./priority.styles.css" />
+</head>
+<body>
+  <div id="appTopNav"></div>
+  <main class="page">
+    <header class="page__header">
+      <div>
+        <p class="eyebrow">Trabajo pendiente</p>
+        <h1>Priorización</h1>
+        <p class="subtitle">Qué atender primero según urgencia, jerarquía del proceso y esfuerzo. POA primero; manual como respaldo.</p>
+      </div>
+      <div class="header__actions">
+        <span id="todayLabel" class="today-label"></span>
+        <button id="btnRefreshPriority" class="btn btn--primary" type="button">Actualizar</button>
+      </div>
+    </header>
+
+    <section id="globalMessage" class="global-message" aria-live="polite"></section>
+    <section id="noScanNotice" class="notice"></section>
+
+    <section class="panel filters-panel">
+      <div class="panel__head"><h2>Filtros</h2></div>
+      <div class="filters-grid">
+        <div class="field"><label for="filterScope">Unidad</label><select id="filterScope"><option value="all">Todas</option><option value="UGPA">UGPA</option><option value="UTET">UTET</option></select></div>
+        <div class="field"><label for="filterArea">Área</label><select id="filterArea"><option value="all">Todas</option><option value="strategic">Estratégicos</option><option value="mission">Misionales</option><option value="support">Apoyo</option></select></div>
+        <div class="field"><label for="filterLevel">Prioridad</label><select id="filterLevel"><option value="all">Todas</option><option value="max">Máxima</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option></select></div>
+        <div class="field field--search"><label for="filterSearch">Buscar</label><input id="filterSearch" type="text" placeholder="Proceso, documento o período" autocomplete="off" /></div>
+        <button id="btnResetFilters" class="btn btn--ghost" type="button">Limpiar</button>
+      </div>
+    </section>
+
+    <section class="panel summary-panel">
+      <div class="panel__head"><h2>Resumen</h2><span>Solo pendientes</span></div>
+      <div id="summaryGrid" class="summary-grid"></div>
+    </section>
+
+    <section class="work-section">
+      <div class="section__head"><div><h2>Qué atender primero</h2><p>Orden: urgencia → Estratégicos → Misionales → Apoyo → esfuerzo.</p></div><span id="priorityCount"></span></div>
+      <div id="priorityList" class="priority-list"></div>
+    </section>
+
+    <section class="work-section issues-section">
+      <div class="section__head"><div><h2>Inconsistencias y estructura</h2><p>No se corrigen automáticamente: se muestran para revisión.</p></div><span id="issueCount"></span></div>
+      <div id="issueList" class="issue-list"></div>
+    </section>
+  </main>
+
+  <script src="../shared/app.store.js"></script>
+  <script src="../shared/app.nav.js"></script>
+  <script src="../rules/rules.types.js"></script>
+  <script src="../rules/manual/manual.catalog.js"></script>
+  <script src="../rules/rules.catalog.js"></script>
+  <script src="../rules/rules.engine.js"></script>
+  <script src="./priority.config.js"></script>
+  <script src="./priority.service.js"></script>
+  <script src="./priority.ui.js"></script>
+  <script src="./priority.app.js"></script>
+</body>
+</html>
