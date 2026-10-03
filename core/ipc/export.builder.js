@@ -1149,6 +1149,10 @@ function buildPriorityDocument(payload) {
     const process = task && task.processNumber
       ? String(task.scope || "") + "-PRO-" + String(task.processNumber)
       : String(task && task.scope || "");
+    const dueDate = task && task.dueDate ? new Date(task.dueDate) : null;
+    const dueLabel = dueDate && !Number.isNaN(dueDate.getTime())
+      ? dueDate.toLocaleDateString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit" })
+      : "";
     return `
       <tr>
         <td class="center">${index + 1}</td>
@@ -1156,7 +1160,7 @@ function buildPriorityDocument(payload) {
         <td><strong>${escapeHtml(process)}</strong><br><span class="muted">${escapeHtml(task.areaLabel || "")}</span></td>
         <td><strong>${escapeHtml(task.title || "")}</strong><br><span class="muted">${escapeHtml(task.processName || "")}</span></td>
         <td>${escapeHtml(task.periodLabel || "Sin período")}</td>
-        <td>${escapeHtml(task.stageLabel || "")}</td>
+        <td>${escapeHtml(task.stageLabel || "")}${dueLabel ? "<br><span class=\"muted\">Ref.: " + escapeHtml(dueLabel) + "</span>" : ""}</td>
         <td>${escapeHtml(task.reason || "")}</td>
         <td class="path">${escapeHtml(task.pathLabel || "")}</td>
       </tr>
