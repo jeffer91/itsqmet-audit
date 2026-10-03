@@ -56,6 +56,7 @@
 
   async function init() {
     if (window.AppNav) window.AppNav.render("dashboard");
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(true, "Cargando reglas del Dashboard…");
     await ensureRulesetsLoaded();
 
     window.DashboardUI.bindEvents({
@@ -88,7 +89,10 @@
 
     window.DashboardState.subscribe(function () { refresh(); });
     window.AppStore.subscribe(function () { refresh(); });
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(true, "Analizando Dashboard…");
+    await new Promise(function (resolve) { window.requestAnimationFrame(function () { window.requestAnimationFrame(resolve); }); });
     refresh();
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(false);
   }
 
   document.addEventListener("DOMContentLoaded", function () {
