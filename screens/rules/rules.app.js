@@ -160,6 +160,7 @@ Función o funciones:
 
     if (window.AppNav) {
       window.AppNav.render("rules");
+      if (window.AppNav.setLoading) window.AppNav.setLoading(true, "Cargando reglas de auditoría…");
     }
 
     if (window.RulesBootstrap && window.RulesBootstrap.ready) {
@@ -202,7 +203,10 @@ Función o funciones:
     });
 
     applyExternalFocusFromSession();
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(true, "Analizando documentación…");
+    await new Promise(function (resolve) { window.requestAnimationFrame(function () { window.requestAnimationFrame(resolve); }); });
     refresh();
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(false);
 
     if (bootstrapResult && bootstrapResult.ok !== true && bootstrapResult.error) {
       window.RulesUI.setGlobalMessage(bootstrapResult.error, "error");
