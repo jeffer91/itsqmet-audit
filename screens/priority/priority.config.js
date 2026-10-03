@@ -33,7 +33,7 @@
         "60": {
           special: true,
           effort: "high",
-          note: "Proceso especial: se priorizan sus hallazgos reales sin forzarlo al ciclo detección-plan-informe."
+          note: "Ciclo bienal de 24 meses. Las nuevas carreras pueden incorporarse cada 6 meses sin reiniciar el ciclo general."
         }
       },
       UTET: {
