@@ -35,6 +35,17 @@
         fileName: "",
         error: ""
       },
+      progress: {
+        active: false,
+        type: "",
+        phase: "",
+        folders: 0,
+        files: 0,
+        processed: 0,
+        currentPath: "",
+        unitIndex: 0,
+        unitTotal: 0
+      },
       message: createMessage("neutral", "")
     };
   }
