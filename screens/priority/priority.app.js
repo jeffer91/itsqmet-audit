@@ -41,9 +41,21 @@
 
   async function init() {
     if (window.AppNav) window.AppNav.render("priority");
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(true, "Cargando reglas y prioridades…");
     await ensureRulesetsLoaded();
     window.PriorityUI.bindEvents({
       onRefresh: function () { refresh("Priorización actualizada.", "success"); },
+      onExportPdf: async function () {
+        try {
+          if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(true, "Generando PDF de pendientes…");
+          const result = await window.PriorityService.exportPdf(filters);
+          window.PriorityUI.setGlobalMessage("PDF guardado en Descargas: " + result.fileName, "success");
+        } catch (error) {
+          window.PriorityUI.setGlobalMessage(error && error.message ? error.message : "No se pudo generar el PDF.", "error");
+        } finally {
+          if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(false);
+        }
+      },
       onFiltersChange: function (nextFilters) { filters = nextFilters; refresh(); },
       onOpenPath: async function (path) {
         try { await window.PriorityService.openPath(path); }
@@ -53,7 +65,10 @@
       }
     });
     window.AppStore.subscribe(function () { refresh(); });
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(true, "Analizando pendientes…");
+    await new Promise(function (resolve) { window.requestAnimationFrame(function () { window.requestAnimationFrame(resolve); }); });
     refresh();
+    if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(false);
   }
 
   document.addEventListener("DOMContentLoaded", function () {
