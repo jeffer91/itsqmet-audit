@@ -43,9 +43,10 @@
   function issueCard(issue) {
     return '<article class="issue-row">' +
       '<div class="issue-row__scope">' + escapeHtml(issue.scope) + '</div>' +
-      '<div class="issue-row__body"><strong>' + escapeHtml(issue.title) + '</strong>' +
+      '<div class="issue-row__body"><strong>' + (Number(issue.groupCount || 0) > 1 ? escapeHtml(issue.groupCount) + ' × ' : '') + escapeHtml(issue.title) + '</strong>' +
         (issue.description ? '<span>' + escapeHtml(issue.description) + '</span>' : '') +
         (issue.expected ? '<small>Esperado: ' + escapeHtml(issue.expected) + (issue.actual ? ' · Actual: ' + escapeHtml(issue.actual) : '') + '</small>' : '') +
+        (Array.isArray(issue.examples) && issue.examples.length ? '<small>Ejemplos: ' + escapeHtml(issue.examples.join(' · ')) + '</small>' : '') +
         (issue.pathLabel ? '<small>' + escapeHtml(issue.pathLabel) + '</small>' : '') +
       '</div>' +
       '<div>' + (issue.actionPath ? '<button class="btn btn--small js-open" data-path="' + escapeHtml(issue.actionPath) + '" type="button">Abrir</button>' : '') + '</div>' +
@@ -63,7 +64,7 @@
       ? vm.tasks.map(taskCard).join("")
       : '<div class="empty-state">No hay pendientes que coincidan con los filtros.</div>';
 
-    el("issueCount").textContent = vm.inconsistencies.length + " visibles";
+    el("issueCount").textContent = vm.totalInconsistencies + " hallazgos agrupados en " + vm.inconsistencyGroups;
     el("issueList").innerHTML = vm.inconsistencies.length
       ? vm.inconsistencies.map(issueCard).join("")
       : '<div class="empty-state">No hay inconsistencias que coincidan con los filtros.</div>';
@@ -91,6 +92,7 @@
       handlers.onFiltersChange(getFilters());
     });
     el("btnRefreshPriority").addEventListener("click", handlers.onRefresh);
+    el("btnExportPriorityPdf").addEventListener("click", handlers.onExportPdf);
     document.addEventListener("click", function (event) {
       const button = event.target.closest(".js-open");
       if (button) handlers.onOpenPath(button.dataset.path);
