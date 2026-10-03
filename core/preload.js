@@ -52,6 +52,16 @@ contextBridge.exposeInMainWorld("api", {
         type: normalizeType(type),
         folderPath: safeText(folderPath)
       });
+    },
+    onScanProgress: function onScanProgress(listener) {
+      if (typeof listener !== "function") return function noop() {};
+      const handler = function handler(_event, payload) {
+        listener(payload && typeof payload === "object" ? payload : {});
+      };
+      ipcRenderer.on("archive:scan-progress", handler);
+      return function unsubscribe() {
+        ipcRenderer.removeListener("archive:scan-progress", handler);
+      };
     }
   },
   history: {
