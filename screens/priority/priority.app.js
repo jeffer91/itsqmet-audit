@@ -76,6 +76,8 @@
       if (window.PriorityUI) {
         window.PriorityUI.setGlobalMessage(error && error.message ? error.message : "No se pudo iniciar Priorización.", "error");
       }
+    }).finally(function () {
+      if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(false);
     });
   });
 })(window, document);
