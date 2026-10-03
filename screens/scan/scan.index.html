@@ -75,6 +75,20 @@
       </button>
     </section>
 
+    <section id="scanProgress" class="scan-progress card" aria-live="polite" hidden>
+      <div class="scan-progress__head">
+        <div>
+          <span class="eyebrow">Progreso en tiempo real</span>
+          <strong id="progressStage">Preparando auditoría…</strong>
+        </div>
+        <span id="progressStats" class="scan-progress__stats"></span>
+      </div>
+      <div class="scan-progress__track" aria-hidden="true">
+        <span id="progressBar" class="scan-progress__bar"></span>
+      </div>
+      <div id="progressPath" class="scan-progress__path"></div>
+    </section>
+
     <section class="section">
       <div class="section-head"><h2>Resumen</h2></div>
       <div id="summaryGrid" class="summary-grid"></div>
