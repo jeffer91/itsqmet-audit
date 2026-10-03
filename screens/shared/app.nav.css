@@ -112,3 +112,41 @@ Función o funciones:
     font-size: 12px;
   }
 }
+
+
+.app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(244, 247, 250, 0.72);
+  backdrop-filter: blur(2px);
+}
+.app-loading.is-visible { display: flex; }
+.app-loading__card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  padding: 14px 16px;
+  border: 1px solid var(--nav-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 36px rgba(18, 38, 63, .14);
+}
+.app-loading__card strong,
+.app-loading__card span { display: block; }
+.app-loading__card strong { color: var(--nav-text); font-size: 13px; }
+.app-loading__card span { margin-top: 2px; color: var(--nav-muted); font-size: 10px; }
+.app-loading__spinner {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border: 3px solid #dbe7fb;
+  border-top-color: var(--nav-primary);
+  border-radius: 50%;
+  animation: app-loading-spin .8s linear infinite;
+}
+@keyframes app-loading-spin { to { transform: rotate(360deg); } }
