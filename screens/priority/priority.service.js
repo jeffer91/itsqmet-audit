@@ -230,6 +230,10 @@
     if (!["required-documents", "empty-folders", "folders-without-pdf"].includes(category)) return null;
     const scope = safeText(finding.scope).toUpperCase();
     const processNumber = processFromFinding(finding);
+    // PRO-60 se evalúa aparte por ciclo bienal y por carrera. La regla genérica
+    // del manual no distingue las incorporaciones semestrales ni el formato
+    // histórico de fichas, por lo que aquí se evita convertirla en falsos pendientes.
+    if (scope === "UGPA" && processNumber === "60" && category === "required-documents") return null;
     const area = areaFromPath(finding.relativePath);
     const stage = stageFromFinding(finding, processNumber, scope);
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
@@ -364,6 +368,182 @@
     return tasks;
   }
 
+  function biennialPeriod(date) {
+    const referenceYear = date.getUTCMonth() >= 9
+      ? date.getUTCFullYear()
+      : date.getUTCFullYear() - 1;
+    const offset = ((referenceYear - 2024) % 2 + 2) % 2;
+    const startYear = referenceYear - offset;
+    const start = dateUtc(startYear, 9, 1);
+    const nextStart = dateUtc(startYear + 2, 9, 1);
+    return { start: start, end: new Date(nextStart.getTime() - DAY) };
+  }
+
+  function isDirectChild(childPath, parentPath) {
+    const child = rel(childPath).split("/").filter(Boolean);
+    const parent = rel(parentPath).split("/").filter(Boolean);
+    if (child.length !== parent.length + 1) return false;
+    return child.slice(0, parent.length).join("/") === parent.join("/");
+  }
+
+  function overlapsInside(period, cycle) {
+    return !!period && period.start.getTime() >= cycle.start.getTime() && period.end.getTime() <= cycle.end.getTime();
+  }
+
+  function pro60CareerName(folderName) {
+    return safeText(folderName).replace(/^UGPA-PRO-60-/i, "").trim();
+  }
+
+  function pro60CareerKey(value) {
+    return normalize(pro60CareerName(value));
+  }
+
+  function buildPro60DocumentTask(params) {
+    const due = dueFor("close", params.cycle, params.today);
+    return {
+      id: ["pro60", params.careerKey, params.documentId, periodLabel(params.cycle)].join("|"),
+      scope: "UGPA",
+      processNumber: "60",
+      processName: "Proceso de Construcción Curricular Continua",
+      area: "strategic",
+      areaLabel: Config.areas.strategic.label,
+      level: due.level,
+      levelLabel: levelDef(due.level).label,
+      stage: "close",
+      stageLabel: "Cierre bienal",
+      effort: "high",
+      periodLabel: periodLabel(params.cycle),
+      dueDate: due.dueDate,
+      reason: params.reason + " " + due.reason,
+      title: params.title + " · " + params.careerName,
+      pathLabel: safeText(params.careerFolder && params.careerFolder.relativePath),
+      actionPath: safeText(params.actionPath || (params.careerFolder && params.careerFolder.path)),
+      synthetic: true
+    };
+  }
+
+  function buildPro60Tasks(sharedState, today) {
+    const scan = scanForScope(sharedState, "UGPA");
+    if (!scan || scan.ok !== true || !Types.buildScanIndex) return [];
+    const index = Types.buildScanIndex(scan);
+    const processFolder = findProcessFolder(index, "UGPA", "60");
+    if (!processFolder) return [];
+
+    const currentCycle = biennialPeriod(today);
+    const previousCycle = previousPeriod(currentCycle, 24);
+    const processRel = rel(processFolder.relativePath);
+
+    const periodFolders = index.folders.filter(function keep(folder) {
+      if (!isDirectChild(folder.relativePath, processRel)) return false;
+      const parsed = periodFromName(folder.name, "60", "UGPA");
+      return overlapsInside(parsed, previousCycle);
+    });
+
+    const tasks = [];
+    const currentHasContainer = index.folders.some(function some(folder) {
+      if (!isDirectChild(folder.relativePath, processRel)) return false;
+      return overlapsInside(periodFromName(folder.name, "60", "UGPA"), currentCycle);
+    });
+
+    if (!currentHasContainer) {
+      const due = dueFor("start", currentCycle, today);
+      tasks.push({
+        id: "pro60|cycle|" + periodLabel(currentCycle),
+        scope: "UGPA",
+        processNumber: "60",
+        processName: "Proceso de Construcción Curricular Continua",
+        area: "strategic",
+        areaLabel: Config.areas.strategic.label,
+        level: due.level,
+        levelLabel: levelDef(due.level).label,
+        stage: "start",
+        stageLabel: "Inicio bienal",
+        effort: "high",
+        periodLabel: periodLabel(currentCycle),
+        dueDate: due.dueDate,
+        reason: "El proceso trabaja en ciclos de 24 meses. Las nuevas carreras pueden incorporarse cada 6 meses sin crear un nuevo ciclo bienal. " + due.reason,
+        title: "Iniciar ciclo bienal de Construcción Curricular",
+        pathLabel: processRel,
+        actionPath: safeText(processFolder.path),
+        synthetic: true
+      });
+    }
+
+    const careers = new Map();
+    periodFolders.forEach(function eachPeriod(periodFolder) {
+      index.folders.forEach(function eachFolder(folder) {
+        if (!isDirectChild(folder.relativePath, periodFolder.relativePath)) return;
+        const name = pro60CareerName(folder.name);
+        const key = pro60CareerKey(name);
+        if (!key || key === "acta" || key === "fichas") return;
+        if (!careers.has(key)) careers.set(key, { name: name, folders: [] });
+        careers.get(key).folders.push(folder);
+      });
+    });
+
+    careers.forEach(function eachCareer(career, careerKey) {
+      const careerFiles = [];
+      const careerFolders = [];
+      career.folders.forEach(function eachBase(base) {
+        index.files.forEach(function eachFile(file) {
+          if (Types.isDescendantOf ? Types.isDescendantOf(file.relativePath, base.relativePath) : rel(file.relativePath).startsWith(rel(base.relativePath) + "/")) {
+            if (safeText(file.extension).toLowerCase() === ".pdf") careerFiles.push(file);
+          }
+        });
+        index.folders.forEach(function eachSub(folder) {
+          if (Types.isDescendantOf ? Types.isDescendantOf(folder.relativePath, base.relativePath) : rel(folder.relativePath).startsWith(rel(base.relativePath) + "/")) {
+            careerFolders.push(folder);
+          }
+        });
+      });
+
+      const hasActa = careerFiles.some(function some(file) {
+        const text = normalize([file.name, file.relativePath].join(" "));
+        return text.includes("acta") && text.includes("pro 60");
+      });
+      const hasFicha = careerFiles.some(function some(file) {
+        const text = normalize([file.name, file.relativePath].join(" "));
+        return text.includes("ficha") || text.includes("pro 60 fichas") || /ugpa rgi2/.test(text);
+      });
+      const hasGuide = careerFiles.some(function some(file) {
+        const text = normalize([file.name, file.relativePath].join(" "));
+        return text.includes("guia curricular") || /\brgi3\b/.test(text);
+      });
+
+      const latestBase = career.folders.slice().sort(function sort(a, b) {
+        return rel(b.relativePath).localeCompare(rel(a.relativePath), "es");
+      })[0];
+      function targetPath(kind) {
+        const wanted = kind === "acta" ? "acta" : kind === "ficha" ? "fichas" : "";
+        const found = careerFolders.find(function find(folder) {
+          return wanted && normalize(folder.name).includes(wanted);
+        });
+        return safeText(found && found.path) || safeText(latestBase && latestBase.path);
+      }
+
+      if (!hasActa) tasks.push(buildPro60DocumentTask({
+        careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
+        documentId: "acta", title: "Falta Acta de reunión de colectivos docentes",
+        reason: "No se encontró el Acta RGI1 de esta carrera dentro del ciclo bienal.",
+        actionPath: targetPath("acta"), cycle: previousCycle, today: today
+      }));
+      if (!hasFicha) tasks.push(buildPro60DocumentTask({
+        careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
+        documentId: "ficha", title: "Faltan fichas de análisis curricular",
+        reason: "No se encontraron fichas de nivel de esta carrera. Se aceptan las fichas históricas por carrera y el formato UGPA-RGI2 vigente.",
+        actionPath: targetPath("ficha"), cycle: previousCycle, today: today
+      }));
+      if (!hasGuide) tasks.push(buildPro60DocumentTask({
+        careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
+        documentId: "guia", title: "Falta Guía Curricular de Aplicación Académica",
+        reason: "No se encontró la guía curricular RGI3 de esta carrera dentro del ciclo bienal.",
+        actionPath: targetPath("guide"), cycle: previousCycle, today: today
+      }));
+    });
+
+    return tasks;
+  }
+
   function cadenceForDate(policy, date) {
     let months = Number(policy && policy.months) || 0;
     const currentKey = date.getUTCFullYear() * 12 + date.getUTCMonth() + 1;
@@ -436,6 +616,22 @@
     };
   }
 
+  function groupInconsistencies(items) {
+    const groups = new Map();
+    (Array.isArray(items) ? items : []).forEach(function each(item) {
+      const key = [item.scope, item.category, item.title].join("|");
+      if (!groups.has(key)) {
+        groups.set(key, { ...item, groupCount: 0, examples: [] });
+      }
+      const group = groups.get(key);
+      group.groupCount += 1;
+      if (group.examples.length < 3 && item.pathLabel) group.examples.push(item.pathLabel);
+    });
+    return Array.from(groups.values()).sort(function sort(a, b) {
+      return b.groupCount - a.groupCount || safeText(a.title).localeCompare(safeText(b.title), "es");
+    });
+  }
+
   function structuralInconsistencies(sharedState) {
     const issues = [];
     ["UGPA", "UTET"].forEach(function eachScope(scope) {
@@ -504,6 +700,7 @@
     const today = todayUtc();
     const findings = activeFindings(sharedState);
     const syntheticTasks = buildStrategicScheduleTasks(sharedState, today).concat(
+      buildPro60Tasks(sharedState, today),
       buildOtherScheduleTasks(sharedState, today)
     );
     const findingTasks = findings.map(function map(item) { return taskFromFinding(item, today); }).filter(Boolean);
@@ -514,7 +711,8 @@
 
     const safeFilters = Object.assign({ scope: "all", area: "all", level: "all", search: "" }, filters || {});
     const visibleTasks = applyFilters(tasks, safeFilters);
-    const inconsistencies = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(sharedState));
+    const rawInconsistencies = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(sharedState));
+    const inconsistencies = groupInconsistencies(rawInconsistencies);
     const visibleIssues = inconsistencies.filter(function keep(item) {
       if (safeFilters.scope !== "all" && item.scope !== safeFilters.scope) return false;
       return !normalize(safeFilters.search) || haystack(item).includes(normalize(safeFilters.search));
@@ -532,9 +730,28 @@
       inconsistencies: visibleIssues,
       counts: counts,
       totalTasks: tasks.length,
-      totalInconsistencies: inconsistencies.length,
+      totalInconsistencies: rawInconsistencies.length,
+      inconsistencyGroups: inconsistencies.length,
       filters: safeFilters
     };
+  }
+
+  async function exportPdf(filters) {
+    const vm = buildViewModel(filters || {});
+    if (!vm.tasks.length) throw new Error("No hay pendientes para exportar con los filtros actuales.");
+    if (!window.api || !window.api.pdf) throw new Error("La API de exportación PDF no está disponible.");
+    const response = await window.api.pdf.export({
+      mode: "priority",
+      generatedAt: new Date().toISOString(),
+      tasks: vm.tasks,
+      inconsistencies: vm.inconsistencies,
+      rawInconsistenciesCount: vm.totalInconsistencies,
+      counts: vm.counts
+    });
+    if (!response || response.ok !== true) {
+      throw new Error(response && response.error ? response.error : "No se pudo generar el PDF de prioridades.");
+    }
+    return response;
   }
 
   async function openPath(targetPath) {
@@ -549,6 +766,7 @@
 
   window.PriorityService = {
     buildViewModel: buildViewModel,
-    openPath: openPath
+    openPath: openPath,
+    exportPdf: exportPdf
   };
 })(window);
