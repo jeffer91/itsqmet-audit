@@ -10,6 +10,8 @@
   */
 
   const Types = window.RulesTypes || {};
+  let lastAnalysisKey = "";
+  let lastAnalysis = null;
 
   function safeText(value, fallback) {
     const text = String(value == null ? "" : value).trim();
@@ -187,6 +189,12 @@
   function analyze(sharedState) {
     const safeState =
       sharedState && typeof sharedState === "object" ? sharedState : {};
+    const ugpaStamp = safeText(safeState.ugpaResult && safeState.ugpaResult.scannedAt);
+    const utetStamp = safeText(safeState.utetResult && safeState.utetResult.scannedAt);
+    const discardedKey = (Array.isArray(safeState.discardedFindings) ? safeState.discardedFindings : [])
+      .map(function map(item) { return safeText(item && item.id); }).sort().join("|");
+    const analysisKey = [ugpaStamp, utetStamp, discardedKey].join("||");
+    if (analysisKey && analysisKey === lastAnalysisKey && lastAnalysis) return lastAnalysis;
     const ugpaResult = safeState.ugpaResult;
     const utetResult = safeState.utetResult;
 
@@ -282,11 +290,14 @@
       });
     });
 
-    return {
+    const result = {
       generatedAt: new Date().toISOString(),
       findings: findings,
       ruleResults: ruleResults
     };
+    lastAnalysisKey = analysisKey;
+    lastAnalysis = result;
+    return result;
   }
 
   window.RulesEngine = {
