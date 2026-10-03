@@ -61,6 +61,20 @@ function addFileToSummary(summary, fileRecord) {
     (summary.byExtension[fileRecord.extension] || 0) + 1;
 }
 
+function notifyProgress(params, currentRelativePath, force) {
+  if (!params || typeof params.onProgress !== "function") return;
+  const summary = params.summary || createEmptySummary();
+  const processed = Number(summary.totalFolders || 0) + Number(summary.totalFiles || 0);
+  if (!force && processed > 1 && processed % 25 !== 0) return;
+  params.onProgress({
+    phase: "scanning",
+    folders: Number(summary.totalFolders || 0),
+    files: Number(summary.totalFiles || 0),
+    processed: processed,
+    currentPath: normalizeSlashes(currentRelativePath || "")
+  });
+}
+
 function shouldIgnoreEntry(entryName) {
   return IGNORED_FOLDER_NAMES.has(safeText(entryName).toLowerCase());
 }
@@ -138,13 +152,15 @@ async function walkDirectory(params) {
       const folderRecord = buildFolderRecord(absolutePath, relativePath, stats);
       folders.push(folderRecord);
       addFolderToSummary(summary);
+      notifyProgress(params, relativePath, false);
 
       await walkDirectory({
         currentAbsolutePath: absolutePath,
         currentRelativePath: relativePath,
         folders: folders,
         files: files,
-        summary: summary
+        summary: summary,
+        onProgress: params.onProgress
       });
 
       continue;
@@ -161,6 +177,7 @@ async function walkDirectory(params) {
 
       files.push(fileRecord);
       addFileToSummary(summary, fileRecord);
+      notifyProgress(params, relativePath, false);
     }
   }
 }
@@ -215,13 +232,18 @@ async function scanResolvedDirectory(params) {
   const files = [];
   const summary = createEmptySummary();
 
+  notifyProgress({ onProgress: safeParams.onProgress, summary: summary }, "", true);
+
   await walkDirectory({
     currentAbsolutePath: rootPath,
     currentRelativePath: "",
     folders: folders,
     files: files,
-    summary: summary
+    summary: summary,
+    onProgress: safeParams.onProgress
   });
+
+  notifyProgress({ onProgress: safeParams.onProgress, summary: summary }, "", true);
 
   const validation = await buildValidation(
     rootPath,
@@ -268,7 +290,8 @@ async function scanFolderDirectory(params) {
       source: {
         kind: "folder",
         selectedFolderPath: selectedFolderPath
-      }
+      },
+      onProgress: safeParams.onProgress
     });
   }
 
@@ -282,7 +305,8 @@ async function scanFolderDirectory(params) {
     source: {
       kind: "folder",
       selectedFolderPath: selectedFolderPath
-    }
+    },
+    onProgress: safeParams.onProgress
   });
 }
 
