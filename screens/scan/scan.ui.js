@@ -90,6 +90,44 @@
     ].join("");
   }
 
+  function renderProgress(progress) {
+    const safe = progress && typeof progress === "object" ? progress : {};
+    const host = byId("scanProgress");
+    if (!host) return;
+
+    const active = safe.active === true;
+    host.hidden = !active;
+    if (!active) return;
+
+    const type = safeText(safe.type) || "carpetas";
+    const phase = safeText(safe.phase);
+    const stage = phase === "saving"
+      ? "Guardando resultado de " + type + "…"
+      : phase === "preparing"
+      ? "Preparando " + type + "…"
+      : "Auditando " + type + "…";
+
+    const unitIndex = Number(safe.unitIndex || 0);
+    const unitTotal = Number(safe.unitTotal || 0);
+    const folders = Number(safe.folders || 0);
+    const files = Number(safe.files || 0);
+    const unitLabel = unitTotal > 0
+      ? "Unidad " + Math.max(1, unitIndex) + " de " + unitTotal + " · "
+      : "";
+
+    byId("progressStage").textContent = stage;
+    byId("progressStats").textContent =
+      unitLabel + folders + " carpetas · " + files + " archivos";
+    byId("progressPath").textContent =
+      safeText(safe.currentPath) || "Leyendo estructura…";
+
+    const bar = byId("progressBar");
+    if (bar) {
+      bar.className = "scan-progress__bar" +
+        (phase === "saving" ? " is-saving" : "");
+    }
+  }
+
   function renderExport(vm) {
     const result = vm && vm.exportResult ? vm.exportResult : {};
     const host = byId("exportResultBox");
@@ -133,6 +171,7 @@
         !(vm && vm.utetCard && vm.utetCard.selected);
     }
     renderExport(vm);
+    renderProgress(vm && vm.progress);
 
     const history = byId("historyInfo");
     history.textContent =
