@@ -89,6 +89,23 @@
     render();
     bind();
     window.ScanState.subscribe(render);
+    if (
+      window.api &&
+      window.api.archive &&
+      typeof window.api.archive.onScanProgress === "function"
+    ) {
+      window.api.archive.onScanProgress(function onScanProgress(progress) {
+        const current = window.ScanState.get().progress || {};
+        const phase = String(progress && progress.phase || "");
+        window.ScanState.set({
+          progress: {
+            ...current,
+            ...(progress || {}),
+            active: phase !== "done"
+          }
+        });
+      });
+    }
     if (window.AppStore && typeof window.AppStore.subscribe === "function") {
       window.AppStore.subscribe(render);
     }
