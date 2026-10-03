@@ -54,6 +54,8 @@ Función o funciones:
       yearsMessage: "El período bienal Octubre–Septiembre debe terminar dos años después."
     }
   ];
+  const scanIndexCache = new WeakMap();
+
 
   const REMOVABLE_FILE_SUFFIXES = [
     "firmado",
@@ -160,6 +162,9 @@ Función o funciones:
   }
 
   function buildScanIndex(scanData) {
+    if (scanData && typeof scanData === "object" && scanIndexCache.has(scanData)) {
+      return scanIndexCache.get(scanData);
+    }
     const folders = Array.isArray(scanData && scanData.folders) ? scanData.folders.slice() : [];
     const files = Array.isArray(scanData && scanData.files) ? scanData.files.slice() : [];
 
@@ -207,7 +212,7 @@ Función o funciones:
       fileMap.set(normalized.relativePath, normalized);
     });
 
-    return {
+    const builtIndex = {
       rootPath: safeText(scanData && scanData.rootPath),
       rootName: safeText(scanData && scanData.rootName),
       folders: Array.from(folderMap.values()),
@@ -215,6 +220,8 @@ Función o funciones:
       folderMap: folderMap,
       fileMap: fileMap
     };
+    if (scanData && typeof scanData === "object") scanIndexCache.set(scanData, builtIndex);
+    return builtIndex;
   }
 
   function parseProcessFolderName(folderName, expectedUnit) {
