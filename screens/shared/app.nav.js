@@ -4,84 +4,53 @@ Ruta o ubicación: /screens/shared/app.nav.js
 Función o funciones:
 - Renderizar un menú superior simple para navegar entre pantallas
 - Marcar visualmente la pantalla activa
-- Incluir la nueva pantalla Dashboard
+- Incluir Escaneo, Dashboard, Reglas y Priorización
 */
 (function (window, document) {
   "use strict";
 
   function normalizePage(currentPage) {
     const safe = String(currentPage || "").trim().toLowerCase();
-    if (safe === "rules" || safe === "dashboard" || safe === "scan") {
-      return safe;
-    }
+    if (["rules", "dashboard", "scan", "priority"].includes(safe)) return safe;
     return "scan";
   }
 
   function getLinks(currentPage) {
     const current = normalizePage(currentPage);
-
-    if (current === "rules") {
-      return {
-        current: "rules",
-        scanHref: "../scan/scan.index.html",
-        dashboardHref: "../dashboard/dashboard.index.html",
-        rulesHref: "./rules.index.html"
-      };
-    }
-
-    if (current === "dashboard") {
-      return {
-        current: "dashboard",
-        scanHref: "../scan/scan.index.html",
-        dashboardHref: "./dashboard.index.html",
-        rulesHref: "../rules/rules.index.html"
-      };
-    }
-
+    const base = current === "scan" ? "../" : "../";
     return {
-      current: "scan",
-      scanHref: "./scan.index.html",
-      dashboardHref: "../dashboard/dashboard.index.html",
-      rulesHref: "../rules/rules.index.html"
+      current: current,
+      scanHref: current === "scan" ? "./scan.index.html" : base + "scan/scan.index.html",
+      dashboardHref: current === "dashboard" ? "./dashboard.index.html" : base + "dashboard/dashboard.index.html",
+      rulesHref: current === "rules" ? "./rules.index.html" : base + "rules/rules.index.html",
+      priorityHref: current === "priority" ? "./priority.index.html" : base + "priority/priority.index.html"
     };
   }
 
   function render(currentPage) {
     const host = document.getElementById("appTopNav");
     if (!host) return;
-
     const links = getLinks(currentPage);
+    const items = [
+      ["scan", "Escaneo", links.scanHref],
+      ["dashboard", "Dashboard", links.dashboardHref],
+      ["rules", "Reglas", links.rulesHref],
+      ["priority", "Priorización", links.priorityHref]
+    ];
 
     host.innerHTML = `
       <nav class="app-nav">
         <div class="app-nav__inner">
           <div class="app-nav__brand">AUDIT</div>
           <div class="app-nav__links">
-            <a
-              class="app-nav__link ${links.current === "scan" ? "is-active" : ""}"
-              href="${links.scanHref}"
-            >
-              Escaneo
-            </a>
-            <a
-              class="app-nav__link ${links.current === "dashboard" ? "is-active" : ""}"
-              href="${links.dashboardHref}"
-            >
-              Dashboard
-            </a>
-            <a
-              class="app-nav__link ${links.current === "rules" ? "is-active" : ""}"
-              href="${links.rulesHref}"
-            >
-              Reglas
-            </a>
+            ${items.map(function map(item) {
+              return `<a class="app-nav__link ${links.current === item[0] ? "is-active" : ""}" href="${item[2]}">${item[1]}</a>`;
+            }).join("")}
           </div>
         </div>
       </nav>
     `;
   }
 
-  window.AppNav = {
-    render: render
-  };
+  window.AppNav = { render: render };
 })(window, document);
