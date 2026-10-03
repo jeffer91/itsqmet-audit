@@ -95,7 +95,7 @@ async function runArchiveImport(type, archivePath) {
   return buildPersistedResponse(safeType, result);
 }
 
-async function runFolderScan(type, folderPath) {
+async function runFolderScan(type, folderPath, onProgress) {
   const safeType = ensureValidType(type);
   const safeFolderPath = safeText(folderPath);
 
@@ -103,13 +103,32 @@ async function runFolderScan(type, folderPath) {
     throw new Error("No se recibió la carpeta a escanear.");
   }
 
+  const report = function report(progress) {
+    if (typeof onProgress === "function") onProgress({ type: safeType, ...(progress || {}) });
+  };
+
+  report({ phase: "preparing", folders: 0, files: 0, processed: 0 });
   const result = await scanFolderDirectory({
     type: safeType,
     folderPath: safeFolderPath,
-    preserveRoot: true
+    preserveRoot: true,
+    onProgress: report
   });
 
-  return buildPersistedResponse(safeType, result);
+  report({
+    phase: "saving",
+    folders: Number(result.summary && result.summary.totalFolders || 0),
+    files: Number(result.summary && result.summary.totalFiles || 0),
+    processed: Number(result.summary && result.summary.totalFolders || 0) + Number(result.summary && result.summary.totalFiles || 0)
+  });
+  const response = await buildPersistedResponse(safeType, result);
+  report({
+    phase: "done",
+    folders: Number(result.summary && result.summary.totalFolders || 0),
+    files: Number(result.summary && result.summary.totalFiles || 0),
+    processed: Number(result.summary && result.summary.totalFolders || 0) + Number(result.summary && result.summary.totalFiles || 0)
+  });
+  return response;
 }
 
 
@@ -256,7 +275,10 @@ function registerArchiveIpc() {
       try {
         const type = ensureValidType(payload.type);
         const folderPath = safeText(payload.folderPath);
-        return await runFolderScan(type, folderPath);
+        const sender = _event.sender;
+        return await runFolderScan(type, folderPath, function onProgress(progress) {
+          if (sender && !sender.isDestroyed()) sender.send("archive:scan-progress", progress);
+        });
       } catch (error) {
         return buildErrorResponse(error, "No se pudo escanear la carpeta.");
       }
