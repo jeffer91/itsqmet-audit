@@ -238,6 +238,7 @@
         (utet.selected && state.auditUtet),
       auditUgpa: !!state.auditUgpa,
       auditUtet: !!state.auditUtet,
+      progress: state.progress || {},
       summaryCards: buildSummaryCards(ugpa, utet),
       ugpaCard: ugpa,
       utetCard: utet
@@ -344,14 +345,41 @@
       throw new Error("Seleccione al menos una carpeta: UGPA o UTET.");
     }
 
-    state.set({ loading: true });
+    state.set({
+      loading: true,
+      progress: {
+        active: true,
+        type: "",
+        phase: "preparing",
+        folders: 0,
+        files: 0,
+        processed: 0,
+        currentPath: "",
+        unitIndex: 0,
+        unitTotal: units.length
+      }
+    });
 
     const errors = [];
     let latestHistory = null;
     let historyFilePath = current.historyFilePath;
 
     try {
-      for (const unit of units) {
+      for (let unitIndex = 0; unitIndex < units.length; unitIndex += 1) {
+        const unit = units[unitIndex];
+        state.set({
+          progress: {
+            active: true,
+            type: unit.type,
+            phase: "preparing",
+            folders: 0,
+            files: 0,
+            processed: 0,
+            currentPath: "",
+            unitIndex: unitIndex + 1,
+            unitTotal: units.length
+          }
+        });
         try {
           const response = await mustArchiveApi().scanFolderFromPath(
             unit.type,
@@ -392,7 +420,15 @@
         );
       }
     } finally {
-      state.set({ loading: false });
+      const lastProgress = state.get().progress || {};
+      state.set({
+        loading: false,
+        progress: {
+          ...lastProgress,
+          active: false,
+          phase: "done"
+        }
+      });
     }
   }
 
