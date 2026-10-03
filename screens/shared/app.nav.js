@@ -52,5 +52,24 @@ Función o funciones:
     `;
   }
 
-  window.AppNav = { render: render };
+  function ensureLoadingHost() {
+    let host = document.getElementById("appLoadingOverlay");
+    if (host) return host;
+    host = document.createElement("div");
+    host.id = "appLoadingOverlay";
+    host.className = "app-loading";
+    host.innerHTML = '<div class="app-loading__card"><div class="app-loading__spinner"></div><div><strong id="appLoadingTitle">Procesando…</strong><span>La aplicación sigue trabajando.</span></div></div>';
+    document.body.appendChild(host);
+    return host;
+  }
+
+  function setLoading(visible, message) {
+    const host = ensureLoadingHost();
+    const title = document.getElementById("appLoadingTitle");
+    if (title && message) title.textContent = String(message);
+    host.classList.toggle("is-visible", !!visible);
+    host.setAttribute("aria-hidden", visible ? "false" : "true");
+  }
+
+  window.AppNav = { render: render, setLoading: setLoading };
 })(window, document);
