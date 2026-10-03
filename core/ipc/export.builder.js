@@ -1126,6 +1126,129 @@ function buildDocumentHtml(payload, items, todayLabel) {
   `;
 }
 
+
+function buildPriorityDocument(payload) {
+  const now = new Date();
+  const todayForFile = formatDateForFile(now);
+  const todayLabel = now.toLocaleDateString("es-EC", {
+    year: "numeric", month: "2-digit", day: "2-digit"
+  });
+  const tasks = normalizeArray(payload && payload.tasks);
+  const issues = normalizeArray(payload && payload.inconsistencies);
+  if (!tasks.length) {
+    throw new Error("No hay pendientes de priorización para exportar.");
+  }
+
+  const priorityOrder = { max: 4, high: 3, medium: 2, low: 1 };
+  const priorityLabel = { max: "Máxima", high: "Alta", medium: "Media", low: "Baja" };
+  const sorted = tasks.slice().sort(function sort(a, b) {
+    return (priorityOrder[b && b.level] || 0) - (priorityOrder[a && a.level] || 0);
+  });
+
+  const rows = sorted.map(function mapTask(task, index) {
+    const process = task && task.processNumber
+      ? String(task.scope || "") + "-PRO-" + String(task.processNumber)
+      : String(task && task.scope || "");
+    return `
+      <tr>
+        <td class="center">${index + 1}</td>
+        <td><span class="priority priority--${escapeHtml(task.level || "low")}">${escapeHtml(priorityLabel[task.level] || task.level || "")}</span></td>
+        <td><strong>${escapeHtml(process)}</strong><br><span class="muted">${escapeHtml(task.areaLabel || "")}</span></td>
+        <td><strong>${escapeHtml(task.title || "")}</strong><br><span class="muted">${escapeHtml(task.processName || "")}</span></td>
+        <td>${escapeHtml(task.periodLabel || "Sin período")}</td>
+        <td>${escapeHtml(task.stageLabel || "")}</td>
+        <td>${escapeHtml(task.reason || "")}</td>
+        <td class="path">${escapeHtml(task.pathLabel || "")}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const issueRows = issues.map(function mapIssue(issue) {
+    return `
+      <tr>
+        <td>${escapeHtml(issue.scope || "")}</td>
+        <td><strong>${Number(issue.groupCount || 1)} × ${escapeHtml(issue.title || "")}</strong></td>
+        <td>${escapeHtml(issue.description || "")}</td>
+        <td class="path">${escapeHtml((issue.examples && issue.examples[0]) || issue.pathLabel || "")}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Plan de prioridades AUDIT</title>
+<style>
+@page { size: A4 landscape; margin: 12mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #16263a; font-family: Arial, Helvetica, sans-serif; font-size: 9px; line-height: 1.35; }
+h1,h2 { margin: 0; color: #173b64; }
+.header { border-bottom: 2px solid #2f6fed; padding-bottom: 10px; margin-bottom: 12px; }
+.eyebrow { color: #2f6fed; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.header h1 { font-size: 22px; margin-top: 3px; }
+.header p { margin: 4px 0 0; color: #66798f; }
+.kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; margin: 10px 0 14px; }
+.kpi { border: 1px solid #d9e2ec; border-radius: 8px; padding: 8px; background: #f8fbff; }
+.kpi span { color: #66798f; font-size: 8px; text-transform: uppercase; }
+.kpi strong { display: block; margin-top: 2px; font-size: 16px; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 7px; }
+th,td { border: 1px solid #d9e2ec; padding: 6px; vertical-align: top; overflow-wrap: anywhere; }
+th { background: #eef4ff; color: #173b64; font-size: 8px; text-transform: uppercase; text-align: left; }
+.center { text-align: center; }
+.muted { color: #66798f; }
+.path { color: #526a83; font-size: 8px; }
+.priority { display: inline-block; padding: 3px 6px; border-radius: 999px; font-weight: 800; }
+.priority--max { background: #fde9e7; color: #9f2018; }
+.priority--high { background: #fff0dc; color: #9a5d00; }
+.priority--medium { background: #eaf1ff; color: #245fcf; }
+.priority--low { background: #edf2f7; color: #536b83; }
+.section { margin-top: 14px; }
+.note { margin-top: 10px; padding: 8px; background: #fff8e8; border: 1px solid #efd28c; border-radius: 8px; }
+</style>
+</head>
+<body>
+<section class="header">
+  <div class="eyebrow">AUDIT · Plan operativo</div>
+  <h1>Qué tengo que hacer primero</h1>
+  <p>Generado el ${escapeHtml(todayLabel)}. Ordenado por urgencia, jerarquía del proceso y esfuerzo.</p>
+</section>
+<section class="kpis">
+  <div class="kpi"><span>Máxima</span><strong>${Number(payload.counts && payload.counts.max || 0)}</strong></div>
+  <div class="kpi"><span>Alta</span><strong>${Number(payload.counts && payload.counts.high || 0)}</strong></div>
+  <div class="kpi"><span>Media</span><strong>${Number(payload.counts && payload.counts.medium || 0)}</strong></div>
+  <div class="kpi"><span>Baja</span><strong>${Number(payload.counts && payload.counts.low || 0)}</strong></div>
+  <div class="kpi"><span>Inconsistencias</span><strong>${Number(payload.rawInconsistenciesCount || 0)}</strong></div>
+</section>
+<section>
+  <h2>Pendientes priorizados</h2>
+  <table>
+    <thead><tr>
+      <th style="width:4%">#</th><th style="width:7%">Prioridad</th><th style="width:10%">Proceso</th>
+      <th style="width:19%">Qué hacer</th><th style="width:11%">Período</th><th style="width:8%">Etapa</th>
+      <th style="width:23%">Por qué</th><th style="width:18%">Ubicación</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</section>
+${issueRows ? `
+<section class="section">
+  <h2>Inconsistencias agrupadas para revisión</h2>
+  <div class="note">Estas observaciones no se mezclan con la lista de trabajo prioritario. Se agrupan para evitar cientos de filas repetidas.</div>
+  <table>
+    <thead><tr><th style="width:8%">Unidad</th><th style="width:27%">Grupo</th><th style="width:40%">Descripción</th><th style="width:25%">Ejemplo</th></tr></thead>
+    <tbody>${issueRows}</tbody>
+  </table>
+</section>` : ""}
+</body>
+</html>`;
+
+  return {
+    baseName: "audit_prioridades_" + todayForFile,
+    html: html
+  };
+}
+
 function buildExportDocument(payload) {
   const today = new Date();
   const todayForFile = formatDateForFile(today);
@@ -1140,6 +1263,9 @@ function buildExportDocument(payload) {
   }
 
   const mode = String(payload.mode || "").trim().toLowerCase();
+  if (mode === "priority") {
+    return buildPriorityDocument(payload);
+  }
   let items = [];
 
   if (mode === "single") {
