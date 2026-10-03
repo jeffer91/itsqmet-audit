@@ -232,6 +232,8 @@ Función o funciones:
       } else {
         console.error(message);
       }
+    }).finally(function () {
+      if (window.AppNav && window.AppNav.setLoading) window.AppNav.setLoading(false);
     });
   });
 })(window, document);
