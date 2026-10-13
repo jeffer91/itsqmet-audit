@@ -11,6 +11,7 @@
   */
 
   const Types = window.RulesTypes || {};
+  const Policy = window.RulesFilePolicy;
 
   const RULE_ID = "plan-individual-requires-sponsorship";
   const RULE_NAME = "Plan individual - acuerdo";
@@ -260,7 +261,8 @@
 
     return files
       .filter(function keep(fileRecord) {
-        return !isIgnoredFile(fileRecord);
+        return !isIgnoredFile(fileRecord) &&
+          (Policy.isFinalPdf(fileRecord) || Policy.isEditable(fileRecord));
       })
       .map(function mapFile(fileRecord) {
         const relativePath = normalizeRelativePath(fileRecord.relativePath);
@@ -310,6 +312,7 @@
           personLabel: personLabel,
           personKey: personKey,
           fileName: fileName,
+          isFinalPdf: Policy.isFinalPdf(fileRecord),
           containerRelativePath: containerRelativePath,
           containerPath: buildAbsolutePath(scanData.rootPath, containerRelativePath),
           expectedCounterpartRelativePath: normalizeRelativePath(
@@ -338,7 +341,8 @@
 
     return files
       .filter(function keep(fileRecord) {
-        return !isIgnoredFile(fileRecord);
+        return !isIgnoredFile(fileRecord) &&
+          (Policy.isFinalPdf(fileRecord) || Policy.isEditable(fileRecord));
       })
       .map(function mapFile(fileRecord) {
         const relativePath = normalizeRelativePath(fileRecord.relativePath);
@@ -388,6 +392,7 @@
           personLabel: personLabel,
           personKey: personKey,
           fileName: fileName,
+          isFinalPdf: Policy.isFinalPdf(fileRecord),
           containerRelativePath: containerRelativePath,
           containerPath: buildAbsolutePath(scanData.rootPath, containerRelativePath),
           expectedCounterpartRelativePath: normalizeRelativePath(
@@ -410,9 +415,22 @@
       .filter(Boolean);
   }
 
+  function selectBestDocumentPerPersonAndPeriod(documents) {
+    const result = new Map();
+    documents.forEach(function each(document) {
+      const key = document.personKey + "|" + normalizeCompareText(document.periodLabel);
+      const previous = result.get(key);
+      if (!previous || (!previous.isFinalPdf && document.isFinalPdf)) {
+        result.set(key, document);
+      }
+    });
+    return Array.from(result.values());
+  }
+
   function hasMatchingCounterpart(sourceDoc, candidates) {
     return candidates.some(function someCandidate(candidate) {
       return (
+        candidate.isFinalPdf &&
         teacherNamesMatch(candidate.personLabel, sourceDoc.personLabel) &&
         arePeriodsRelated(sourceDoc.periodLabel, candidate.periodLabel)
       );
@@ -421,9 +439,9 @@
 
   function createMissingAgreementFinding(planDoc) {
     return createFinding({
-      title: "Plan individual sin acuerdo de patrocinio",
+      title: "Plan individual sin acuerdo de patrocinio PDF",
       description:
-        "Se encontró un Plan Individual, pero no se encontró su Acuerdo de Patrocinio correspondiente para la misma persona y período.",
+        "Se encontró un Plan Individual, pero no el PDF final de su Acuerdo de Patrocinio para la misma persona y período.",
       rootName: planDoc.rootName,
       rootPath: planDoc.rootPath,
       relativePath: planDoc.relativePath,
@@ -456,9 +474,9 @@
 
   function createMissingPlanFinding(agreementDoc) {
     return createFinding({
-      title: "Acuerdo de patrocinio sin plan individual",
+      title: "Acuerdo de patrocinio sin plan individual PDF",
       description:
-        "Se encontró un Acuerdo de Patrocinio, pero no se encontró su Plan Individual correspondiente para la misma persona y período.",
+        "Se encontró un Acuerdo de Patrocinio, pero no el PDF final del Plan Individual para la misma persona y período.",
       rootName: agreementDoc.rootName,
       rootPath: agreementDoc.rootPath,
       relativePath: agreementDoc.relativePath,
@@ -514,8 +532,8 @@
       return [];
     }
 
-    const planDocuments = collectPlanDocuments(scanData);
-    const agreementDocuments = collectAgreementDocuments(scanData);
+    const planDocuments = selectBestDocumentPerPersonAndPeriod(collectPlanDocuments(scanData));
+    const agreementDocuments = selectBestDocumentPerPersonAndPeriod(collectAgreementDocuments(scanData));
 
     const findings = [];
 
@@ -540,7 +558,7 @@
     scope: RULE_SCOPE,
     severity: RULE_SEVERITY,
     description:
-      "Valida que cada Plan Individual tenga su Acuerdo de Patrocinio y viceversa, mostrando persona, períodos y documento faltante.",
+      "Exige un PDF final por persona y período para el Plan Individual y el Acuerdo de Patrocinio; los editables no acreditan su cumplimiento.",
     run: run
   };
 })(window);

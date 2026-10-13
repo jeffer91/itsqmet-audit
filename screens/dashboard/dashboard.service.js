@@ -11,7 +11,7 @@ Función:
   const CATEGORY_DEFS = [
     { id: "empty-folders", label: "Vacías" },
     { id: "folders-without-pdf", label: "Sin PDF" },
-    { id: "non-pdf", label: "No PDF" },
+    { id: "non-pdf", label: "Editables/otros" },
     { id: "names", label: "Nombres" },
     { id: "required-documents", label: "Faltantes" },
     { id: "root-files", label: "Raíz" }
@@ -250,7 +250,13 @@ Función:
       return count + " carpetas necesitan documentos PDF";
     }
     if (category === "non-pdf") {
-      return count + " archivos deben convertirse o reemplazarse por PDF";
+      if (items.every(function every(item) { return item.editableStatus === "with-final"; })) {
+        return count + " archivos editables adicionales junto a su PDF final";
+      }
+      if (items.every(function every(item) { return item.editableStatus === "without-final"; })) {
+        return count + " archivos editables sin PDF final equivalente";
+      }
+      return count + " archivos no PDF requieren revisión";
     }
     if (category === "names") {
       const allFiles = items.every(function every(item) {

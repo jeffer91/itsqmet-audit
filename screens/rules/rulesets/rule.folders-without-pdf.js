@@ -9,6 +9,7 @@ Función:
   "use strict";
 
   const Types = window.RulesTypes || {};
+  const Policy = window.RulesFilePolicy;
   const TECHNICAL = new Set(["desktop.ini", "thumbs.db"]);
 
   function safeText(value) {
@@ -40,8 +41,10 @@ Función:
       category: "folders-without-pdf",
       scope: scope,
       severity: rule.severity,
-      title: "Subcarpeta sin PDF",
-      description: "La subcarpeta final contiene archivos, pero ninguno está en formato PDF.",
+      title: folder.editableOnly ? "Subcarpeta con editables, sin PDF final" : "Subcarpeta sin PDF",
+      description: folder.editableOnly
+        ? "Solo hay archivos de trabajo Word/Excel; todavía no se encontró evidencia final en PDF."
+        : "La subcarpeta final contiene archivos, pero ninguno está en formato PDF.",
       rootName: scanData.rootName || "",
       rootPath: scanData.rootPath || "",
       relativePath: normalizeRel(folder.relativePath),
@@ -49,7 +52,7 @@ Función:
       actualLabel: "Subcarpeta",
       actualValue: folder.name || folder.relativePath,
       expectedLabel: "Esperado",
-      expectedValue: "Al menos un archivo PDF",
+      expectedValue: "El PDF final correspondiente a la documentación de la carpeta",
       primaryActionLabel: "Abrir carpeta",
       primaryActionPath: folder.path || scanData.rootPath || ""
     };
@@ -77,7 +80,7 @@ Función:
       if (hasChildFolder) return;
 
       const directFiles = files.filter(function keep(file) {
-        return parentOf(file && file.relativePath) === rel && !isTechnical(file);
+        return parentOf(file && file.relativePath) === rel && !isTechnical(file) && !Policy.isIgnored(file);
       });
 
       if (!directFiles.length) return;
@@ -87,7 +90,10 @@ Función:
       });
 
       if (!hasPdf) {
-        findings.push(createFinding(rule, scope, scanData, folder));
+        findings.push(createFinding(rule, scope, scanData, {
+          ...folder,
+          editableOnly: directFiles.every(function every(file) { return Policy.isEditable(file); })
+        }));
       }
     });
 

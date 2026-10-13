@@ -93,12 +93,18 @@ Función:
     return labelMatch || keywordMatch;
   }
 
-  function hasPdfWithin(files, folderRelativePath) {
+  // El nombre del PDF (no solo la carpeta) debe identificar el documento requerido.
+  function matchesFinalDocument(expected, file) {
+    if (safeText(file && file.extension).toLowerCase() !== ".pdf") return false;
+    if (matchesExpected(expected, { name: file.name, relativePath: "" })) return true;
+    const codes = Array.isArray(expected && expected.codes) ? expected.codes : [];
+    return codes.length > 0 && everyCode(file.name, codes);
+  }
+
+  function hasPdfWithin(files, folderRelativePath, expected) {
     return files.some(function some(file) {
-      return (
-        safeText(file && file.extension).toLowerCase() === ".pdf" &&
-        isDescendant(file && file.relativePath, folderRelativePath)
-      );
+      return isDescendant(file && file.relativePath, folderRelativePath) &&
+        matchesFinalDocument(expected, file);
     });
   }
 
@@ -167,16 +173,15 @@ Función:
 
     if (
       matchingFolders.some(function hasPdf(folder) {
-        return hasPdfWithin(index.files, folder.relativePath);
+        return hasPdfWithin(index.files, folder.relativePath, expected);
       })
     ) {
       return true;
     }
 
     return index.files.some(function keep(file) {
-      if (safeText(file && file.extension).toLowerCase() !== ".pdf") return false;
       if (!isDescendant(file && file.relativePath, containerRel)) return false;
-      return matchesExpected(expected, file);
+      return matchesFinalDocument(expected, file);
     });
   }
 
@@ -194,13 +199,13 @@ Función:
       category: "required-documents",
       scope: scope,
       severity: rule.severity,
-      title: "Documento obligatorio faltante",
+      title: "Documento obligatorio sin PDF final",
       description:
         "El Manual de Procesos establece este documento dentro del proceso " +
         scope +
         "-PRO-" +
         processNumber +
-        ".",
+        ". Se requiere el PDF final correspondiente, no solo un Word o Excel.",
       rootName: scanData.rootName || "",
       rootPath: scanData.rootPath || "",
       relativePath: rel(container && container.relativePath),

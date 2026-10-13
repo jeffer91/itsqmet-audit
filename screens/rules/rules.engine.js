@@ -105,6 +105,8 @@
       ),
       missingPeriodLabel: safeText(safeFinding.missingPeriodLabel),
       foundFileName: safeText(safeFinding.foundFileName),
+      editableStatus: safeText(safeFinding.editableStatus),
+      relatedPdfPath: safeText(safeFinding.relatedPdfPath),
       missingFileName: safeText(safeFinding.missingFileName),
       foundRelativePath: normalizeRelativePath(
         safeFinding.foundRelativePath || safeFinding.relativePath

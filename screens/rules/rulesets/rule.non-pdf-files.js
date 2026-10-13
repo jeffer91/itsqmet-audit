@@ -10,6 +10,7 @@ Función:
   "use strict";
 
   const Types = window.RulesTypes || {};
+  const Policy = window.RulesFilePolicy;
   const TECHNICAL = new Set(["desktop.ini", "thumbs.db"]);
 
   function safeText(value) {
@@ -27,20 +28,36 @@ Función:
   function run(scope, scanData, rule) {
     if (!scanData || scanData.ok !== true) return [];
 
+    const findFinalPdf = Policy.createPdfLookup(scanData.files);
     return (Array.isArray(scanData.files) ? scanData.files : [])
       .filter(function keep(file) {
-        if (!file || isTechnical(file.name)) return false;
-        return safeText(file.extension).toLowerCase() !== ".pdf";
+        if (!file || isTechnical(file.name) || Policy.isIgnored(file)) return false;
+        return !Policy.isFinalPdf(file);
       })
       .map(function mapFile(file) {
+        const isEditable = Policy.isEditable(file);
+        const finalPdf = isEditable ? findFinalPdf(file) : null;
+        const editableStatus = !isEditable ? "other" : finalPdf ? "with-final" : "without-final";
+        const title = editableStatus === "with-final"
+          ? "Versión editable adicional con PDF final"
+          : editableStatus === "without-final"
+          ? "Archivo editable sin PDF final"
+          : "Archivo en formato no admitido";
+        const description = editableStatus === "with-final"
+          ? "Se encontró su PDF final correspondiente, pero permanece un Word o Excel editable en la carpeta."
+          : editableStatus === "without-final"
+          ? "Existe un archivo de trabajo, pero no se encontró su PDF final equivalente en esta carpeta."
+          : "El archivo no es un PDF final ni un documento editable Word/Excel reconocido.";
         const finding = {
           ruleId: rule.id,
           ruleName: rule.name,
           category: "non-pdf",
           scope: scope,
           severity: rule.severity,
-          title: "Archivo no PDF",
-          description: "Todo archivo documental de la auditoría debe estar en formato PDF.",
+          title: title,
+          description: description,
+          editableStatus: editableStatus,
+          relatedPdfPath: finalPdf ? finalPdf.path || "" : "",
           rootName: scanData.rootName || "",
           rootPath: scanData.rootPath || "",
           relativePath: Types.normalizeRelativePath
@@ -49,8 +66,12 @@ Función:
           absolutePath: file.path || "",
           actualLabel: "Archivo",
           actualValue: file.name || "",
-          expectedLabel: "Formato permitido",
-          expectedValue: "PDF",
+          expectedLabel: "Acción recomendada",
+          expectedValue: editableStatus === "with-final"
+            ? "Revisar el editable adicional; el PDF final ya acredita el documento."
+            : "Incorporar o verificar el PDF final correspondiente.",
+          exampleLabel: finalPdf ? "PDF final correspondiente" : "Estado documental",
+          exampleValue: finalPdf ? finalPdf.relativePath || finalPdf.name : "No se encontró PDF equivalente.",
           foundFileName: file.name || "",
           primaryActionLabel: "Abrir carpeta",
           primaryActionPath: getParentAbsolutePath(file.path || "") || scanData.rootPath || ""
@@ -69,7 +90,7 @@ Función:
     name: "Archivos no PDF",
     scope: "BOTH",
     severity: "warning",
-    description: "Detecta DOCX, XLSX, imágenes, ZIP y cualquier otro archivo documental distinto de PDF.",
+    description: "Advierte sobre Word/Excel adicionales incluso si existe su PDF final; distingue editables sin PDF y formatos no admitidos.",
     run: function runRule(context) {
       return run(context.scope, context.scanData, this);
     }

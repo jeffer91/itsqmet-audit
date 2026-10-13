@@ -13,6 +13,7 @@ Función o funciones:
   "use strict";
 
   const Types = window.RulesTypes;
+  const Policy = window.RulesFilePolicy;
 
   const RULE_ID = "RG-002";
   const RULE_NAME = "Capacitación completa con 4 evidencias";
@@ -305,6 +306,7 @@ Función o funciones:
     const entries = [];
 
     files.forEach(function each(file) {
+      if (!Policy.isFinalPdf(file) && !Policy.isEditable(file)) return;
       const parsed = Types.parseDocumentFileName(file.name, DEFAULT_SCOPE);
       const processNumber = parsed && parsed.valid
         ? safeText(parsed.processNumber)
@@ -355,7 +357,8 @@ Función o funciones:
         evaluationInstrument: null,
         impactReport: null
       },
-      anyFoundEntry: null
+      anyFoundEntry: null,
+      anyFinalEntry: null
     };
   }
 
@@ -389,10 +392,14 @@ Función o funciones:
       group.periodRaw = group.periodRaw || entry.periodRaw;
       group.rootPath = group.rootPath || entry.rootPath;
       group.anyFoundEntry = preferEntry(group.anyFoundEntry, entry);
-      group.entriesByEvidence[entry.evidenceKey] = preferEntry(
-        group.entriesByEvidence[entry.evidenceKey],
-        entry
-      );
+      // Los editables detectan la capacitación, pero no cuentan como evidencias finales.
+      if (Policy.isFinalPdf(entry.file)) {
+        group.anyFinalEntry = preferEntry(group.anyFinalEntry, entry);
+        group.entriesByEvidence[entry.evidenceKey] = preferEntry(
+          group.entriesByEvidence[entry.evidenceKey],
+          entry
+        );
+      }
     });
 
     return Array.from(groupsMap.values()).sort(function compare(a, b) {
@@ -514,8 +521,8 @@ Función o funciones:
     const evaluationInstrument = group.entriesByEvidence.evaluationInstrument;
     const impactReport = group.entriesByEvidence.impactReport;
 
-    const foundFilePath = group.anyFoundEntry && group.anyFoundEntry.file
-      ? safeText(group.anyFoundEntry.file.path)
+    const foundFilePath = group.anyFinalEntry && group.anyFinalEntry.file
+      ? safeText(group.anyFinalEntry.file.path)
       : "";
 
     return [
@@ -552,7 +559,8 @@ Función o funciones:
   }
 
   function addMissingEvidenceFinding(findings, rule, scope, scanData, index, group, evidenceDef) {
-    const foundEntry = group.anyFoundEntry;
+    const foundEntry = group.anyFinalEntry || group.anyFoundEntry;
+    const hasFinalReference = !!group.anyFinalEntry;
     const expectedFileName = buildExpectedFileName(group.trainingLabel, evidenceDef);
     const relatedFolderRelative = buildExpectedFolderRelative(group, evidenceDef);
     const relatedFolderPath = buildClosestFolderPath(index, group, evidenceDef);
@@ -565,7 +573,7 @@ Función o funciones:
         severity: rule.severity,
         title: "Capacitación incompleta: falta " + evidenceDef.shortLabel.toLowerCase(),
         description:
-          "La capacitación existe en el período identificado, pero no cuenta con una de las 4 evidencias obligatorias.",
+          "La capacitación existe en el período identificado, pero no cuenta con el PDF final de una de las 4 evidencias obligatorias.",
         rootName: scanData.rootName || "",
         rootPath: scanData.rootPath || "",
         relativePath:
@@ -587,7 +595,7 @@ Función o funciones:
 
         trainingLabel: group.trainingLabel,
         periodLabel: group.periodLabel,
-        foundLabel: "Archivo correcto encontrado",
+        foundLabel: hasFinalReference ? "PDF final de referencia" : "Archivo editable encontrado",
         missingLabel: evidenceDef.title,
         expectedFileName: expectedFileName,
         foundFilePath:
@@ -595,7 +603,7 @@ Función o funciones:
             ? safeText(foundEntry.file.path)
             : "",
         relatedFolderPath: relatedFolderPath,
-        primaryActionLabel: "Abrir archivo correcto",
+        primaryActionLabel: hasFinalReference ? "Abrir PDF de referencia" : "Abrir archivo editable",
         primaryActionPath:
           foundEntry && foundEntry.file
             ? safeText(foundEntry.file.path)
