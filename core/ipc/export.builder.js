@@ -1135,8 +1135,8 @@ function buildPriorityDocument(payload) {
   });
   const tasks = normalizeArray(payload && payload.tasks);
   const issues = normalizeArray(payload && payload.inconsistencies);
-  if (!tasks.length) {
-    throw new Error("No hay pendientes de priorización para exportar.");
+  if (!tasks.length && !issues.length) {
+    throw new Error("No hay pendientes ni inconsistencias para exportar.");
   }
 
   const priorityOrder = { max: 4, high: 3, medium: 2, low: 1 };

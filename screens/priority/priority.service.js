@@ -786,7 +786,7 @@
 
   async function exportPdf(filters) {
     const vm = buildViewModel(filters || {});
-    if (!vm.tasks.length) throw new Error("No hay pendientes para exportar con los filtros actuales.");
+    if (!vm.tasks.length && !vm.inconsistencies.length) throw new Error("No hay pendientes ni inconsistencias para exportar con los filtros actuales.");
     if (!window.api || !window.api.pdf) throw new Error("La API de exportación PDF no está disponible.");
     const response = await window.api.pdf.export({
       mode: "priority",
