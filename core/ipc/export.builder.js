@@ -1177,6 +1177,18 @@ function buildPriorityDocument(payload) {
       </tr>
     `;
   }).join("");
+  const quickDetails = payload.workType === "quick"
+    ? issues.flatMap(function eachGroup(issue) {
+        return normalizeArray(issue.items).map(function eachItem(item) {
+          return `<tr>
+            <td>${escapeHtml(item.scope || "")}</td>
+            <td>${escapeHtml(item.actual || item.title || "")}</td>
+            <td>${escapeHtml(item.suggestedName || "Revisar manualmente")}</td>
+            <td class="path">${escapeHtml(item.pathLabel || "")}</td>
+          </tr>`;
+        });
+      }).join("")
+    : "";
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -1242,6 +1254,14 @@ ${issueRows ? `
   <table>
     <thead><tr><th style="width:8%">Unidad</th><th style="width:27%">Grupo</th><th style="width:40%">Descripción</th><th style="width:25%">Ejemplo</th></tr></thead>
     <tbody>${issueRows}</tbody>
+  </table>
+</section>` : ""}
+${quickDetails ? `
+<section class="section">
+  <h2>Detalle individual de las correcciones rápidas</h2>
+  <table>
+    <thead><tr><th style="width:8%">Unidad</th><th style="width:30%">Nombre actual</th><th style="width:30%">Nombre propuesto</th><th style="width:32%">Ubicación</th></tr></thead>
+    <tbody>${quickDetails}</tbody>
   </table>
 </section>` : ""}
 </body>

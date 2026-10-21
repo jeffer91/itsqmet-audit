@@ -637,6 +637,26 @@
     });
   }
 
+  // Sugerir nombres solo cuando son inequívocos. La norma del manual puede
+  // describir el formato, pero esa descripción NO es un nombre de carpeta.
+  function proposedName(finding) {
+    const title = normalize(finding && finding.title);
+    const actual = safeText(finding && finding.actualValue);
+    const expected = safeText(finding && finding.expectedValue);
+    if (/^nombre de (pdf|carpeta) incorrecto$/.test(title)) {
+      return expected && !/usar uno de|formato oficial|mes aaaa|meses/.test(normalize(expected))
+        ? expected : "";
+    }
+    if (title !== "carpeta de periodo mal nombrada" || !actual) return "";
+    const match = actual.match(/^(.*?)\b(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})\s+(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})$/i);
+    if (!match || !Types.parsePeriodFolderName) return "";
+    const suggestion = match[1] + match[2] + " " + match[3] + "–" + match[4] + " " + match[5];
+    const processNumber = processFromFinding(finding);
+    if (!processNumber) return "";
+    const validation = Types.parsePeriodFolderName(suggestion, "PRO-" + processNumber, safeText(finding.scope).toUpperCase());
+    return validation && validation.valid ? suggestion : "";
+  }
+
   function inconsistencyFromFinding(finding) {
     const category = mapCategory(finding);
     if (["required-documents", "empty-folders", "folders-without-pdf"].includes(category)) return null;
@@ -644,10 +664,12 @@
       id: "issue|" + safeText(finding.id),
       scope: safeText(finding.scope).toUpperCase(),
       category: category,
+      area: areaFromPath(finding.relativePath),
       title: safeText(finding.title, "Inconsistencia detectada"),
       description: safeText(finding.description),
       actual: safeText(finding.actualValue),
       expected: safeText(finding.expectedValue),
+      suggestedName: proposedName(finding),
       pathLabel: safeText(finding.relativePath),
       actionPath: safeText(finding.primaryActionPath || finding.absolutePath || finding.rootPath),
       workType: classifyIssue(finding)
@@ -688,6 +710,7 @@
             id: ["structure", scope, key].join("|"),
             scope: scope,
             category: "structure",
+            area: key,
             title: "Carpeta principal faltante: " + expected,
             description: "El escaneo no contiene la carpeta principal requerida para este tipo de procesos.",
             actual: "No encontrada",
@@ -748,7 +771,13 @@
     const fromRules = findings.map(function (finding) { return taskFromFinding(finding, today); }).filter(Boolean);
     const tasks = synthetic.concat(fromRules.filter(function (task) {
       return !duplicateGenericMissingPeriod(task, synthetic);
-    })).map(function (task) { return {...task, status: progress[task.id] || "pending"}; });
+    })).map(function (task) {
+      const scan = scanForScope(shared, task.scope);
+      const localFolder = !!(scan && scan.source && scan.source.kind === "folder");
+      return {...task, status: progress[task.id] || "pending",
+        parentPath: localFolder ? task.parentPath : "",
+        proposedFolderName: localFolder ? task.proposedFolderName : ""};
+    });
     sortTasks(tasks);
 
     const filtersSafe = Object.assign({scope:"all",area:"all",level:"all",workType:"all",status:"all",search:""},filters || {});
@@ -757,6 +786,7 @@
       .map(function (issue) { return {...issue,status:progress[issue.id] || "pending"}; });
     const visibleIssues = allIssues.filter(function (issue) {
       return (filtersSafe.scope === "all" || filtersSafe.scope === issue.scope) &&
+        (filtersSafe.area === "all" || filtersSafe.area === issue.area) &&
         (filtersSafe.workType === "all" || filtersSafe.workType === issue.workType) &&
         (filtersSafe.status === "all" || filtersSafe.status === issue.status) &&
         (!normalize(filtersSafe.search) || haystack(issue).includes(normalize(filtersSafe.search)));
@@ -793,9 +823,10 @@
       generatedAt: new Date().toISOString(),
       tasks: vm.tasks,
       inconsistencies: vm.inconsistencies,
-      rawInconsistenciesCount: vm.totalInconsistencies,
+      rawInconsistenciesCount: vm.visibleInconsistencies,
       counts: vm.counts,
-      scansLabel: vm.scansLabel
+      scansLabel: vm.scansLabel,
+      workType: vm.filters.workType
     });
     if (!response || response.ok !== true) {
       throw new Error(response && response.error ? response.error : "No se pudo generar el PDF de prioridades.");

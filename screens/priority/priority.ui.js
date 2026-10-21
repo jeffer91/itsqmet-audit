@@ -24,11 +24,12 @@
       status(item)+'</div></article>';
   }
   function detail(item) {
-    const canCopy = /nombre de (pdf|carpeta) incorrecto|carpeta de per[ií]odo mal nombrada/i.test(item.title) && item.expected;
+    const canCopy = !!item.suggestedName;
     return '<div class="issue-detail"><div class="issue-detail__text"><strong>'+esc(item.actual||item.title)+'</strong>' +
-      '<small>'+esc(item.pathLabel)+'</small>'+(item.expected?'<small>Sugerencia: '+esc(item.expected)+'</small>':"")+
+      '<small>'+esc(item.pathLabel)+'</small>'+(item.suggestedName?'<small>Nombre propuesto: '+esc(item.suggestedName)+'</small>':
+        item.expected?'<small>Criterio para revisar: '+esc(item.expected)+'</small>':"")+
       (item.description?'<small>'+esc(item.description)+'</small>':"")+'</div><div class="issue-detail__actions">' +
-      (canCopy?'<button class="btn btn--small js-copy" data-name="'+esc(item.expected)+'">Copiar nombre</button>':"") +
+      (canCopy?'<button class="btn btn--small js-copy" data-name="'+esc(item.suggestedName)+'">Copiar nombre</button>':"") +
       (item.actionPath?'<button class="btn btn--small js-open" data-path="'+esc(item.actionPath)+'">Abrir</button>':"") +
       status(item)+'</div></div>';
   }
