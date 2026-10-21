@@ -89,8 +89,14 @@ contextBridge.exposeInMainWorld("api", {
   },
   shell: {
     openPath: function openPath(targetPath) {
-      return ipcRenderer.invoke("shell:open-path", {
-        path: safeText(targetPath)
+      return ipcRenderer.invoke("shell:open-path", { path: safeText(targetPath) });
+    },
+    copyText: function copyText(text) {
+      return ipcRenderer.invoke("shell:copy-text", {text: safeText(text)});
+    },
+    createFolder: function createFolder(scope, parentPath, name) {
+      return ipcRenderer.invoke("shell:create-folder", {
+        scope: normalizeType(scope), parentPath: safeText(parentPath), name: safeText(name)
       });
     }
   },

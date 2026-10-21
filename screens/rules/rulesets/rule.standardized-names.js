@@ -102,8 +102,12 @@ Función:
 
   function sanitizeFileName(fileName) {
     const parts = splitFileName(fileName);
-    let base = removeUnsafeSuffixes(parts.base);
-    base = normalizeCommon(base);
+    let base = parts.base;
+    // No eliminar una marca única de firma de un PDF legalizado.
+    // En secuencias repetidas se conserva un marcador de firma.
+    if (/(?:[\\s_-]+(?:signed|firmado)){2,}$/i.test(base))
+      base = base.replace(/(?:[\\s_-]+(?:signed|firmado)){2,}$/i, "_firmado");
+    base = normalizeCommon(removeCopyMarker(base));
     const extension = safeText(parts.extension).toLowerCase();
     return extension ? base + "." + extension : base;
   }

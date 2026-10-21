@@ -133,7 +133,7 @@
   function periodFromName(name, processNumber, scope) {
     if (!Types.parsePeriodFolderName || !Types.parseSpanishPeriodRange) return null;
     const validation = Types.parsePeriodFolderName(name, "PRO-" + processNumber, scope);
-    if (!validation || !validation.shouldEvaluate || !validation.normalizedPeriod) return null;
+    if (!validation || !validation.valid || !validation.shouldEvaluate || !validation.normalizedPeriod) return null;
     return rangeFromParsed(Types.parseSpanishPeriodRange(validation.normalizedPeriod));
   }
 
@@ -224,6 +224,25 @@
   function effortRank(value) {
     return value === "high" ? 3 : value === "medium" ? 2 : 1;
   }
+  const PROGRESS_KEY = "audit_priority_progress_v1";
+  function progressMap() {
+    try {
+      const value = JSON.parse(window.localStorage.getItem(PROGRESS_KEY) || "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch (_err) { return {}; }
+  }
+  function saveProgress(id, status) {
+    if (!id || !["pending", "doing", "review", "done"].includes(status))
+      throw new Error("Estado de seguimiento no válido.");
+    const map = progressMap();
+    if (status === "pending") delete map[id];
+    else map[id] = status;
+    window.localStorage.setItem(PROGRESS_KEY, JSON.stringify(map));
+  }
+  function classifyIssue(item) {
+    const title = normalize(item.title);
+    return /nombre de pdf incorrecto|nombre de carpeta incorrecto|carpeta de periodo mal nombrada/.test(title) ? "quick" : "review";
+  }
 
   function taskFromFinding(finding, today) {
     const category = mapCategory(finding);
@@ -238,7 +257,9 @@
     const stage = stageFromFinding(finding, processNumber, scope);
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
     const due = dueFor(stage, period, today);
-    const level = due.level || levelFallback(area, category);
+    const verify = category !== "required-documents" ||
+      (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(finding.missingFileName || finding.expectedValue)));
+    const level = verify ? "medium" : due.level || levelFallback(area, category);
     const manualProcess = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
     const title = category === "required-documents"
       ? safeText(finding.missingFileName || finding.expectedValue || finding.title, "Completar documento obligatorio")
@@ -260,7 +281,11 @@
       effort: effortFor(area, processNumber, finding),
       periodLabel: period ? periodLabel(period) : safeText(finding.periodLabel),
       dueDate: due.dueDate,
-      reason: due.reason || safeText(finding.description, "Pendiente detectado por las reglas de auditoría."),
+      reason: verify ? (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(title))
+        ? "Planificación de Artículo Académico: verificar si aplica a este período antes de elaborar."
+        : "Revisar antes de elaborar o corregir: " + safeText(finding.description))
+        : due.reason || safeText(finding.description, "Pendiente detectado por las reglas de auditoría."),
+      workType: verify ? "review" : "document",
       title: title,
       pathLabel: safeText(finding.relativePath),
       actionPath: safeText(finding.primaryActionPath || finding.absolutePath || finding.rootPath),
@@ -296,7 +321,12 @@
     return index.folders.find(function find(folder) {
       const folderRel = rel(folder && folder.relativePath);
       if (!folderRel || folderRel === parent || !folderRel.startsWith(parent + "/")) return false;
-      return samePeriod(periodFromName(folder && folder.name, processNumber, scope), target);
+      if (samePeriod(periodFromName(folder && folder.name, processNumber, scope), target)) return true;
+      // Un período mal nombrado puede existir: no ofrecer una carpeta duplicada.
+      const txt = normalize(folder && folder.name);
+      const first = normalize(MONTHS[target.start.getUTCMonth()] + " " + target.start.getUTCFullYear());
+      const last = normalize(MONTHS[target.end.getUTCMonth()] + " " + target.end.getUTCFullYear());
+      return txt.includes(first) && txt.includes(last);
     }) || null;
   }
 
@@ -333,6 +363,9 @@
         : "Crear carpeta del período",
       pathLabel: safeText(processFolder && processFolder.relativePath),
       actionPath: actionPath,
+      parentPath: !missingProcess ? actionPath : "",
+      proposedFolderName: !missingProcess ? scope + "-PRO-" + processNumber + "-" + label : "",
+      workType: missingProcess ? "review" : "quick",
       synthetic: true
     };
   }
@@ -395,7 +428,7 @@
   }
 
   function pro60CareerKey(value) {
-    return normalize(pro60CareerName(value));
+    return normalize(pro60CareerName(value)).replace(/gestion de talento humano/g, "gestion del talento humano");
   }
 
   function buildPro60DocumentTask(params) {
@@ -418,6 +451,7 @@
       title: params.title + " · " + params.careerName,
       pathLabel: safeText(params.careerFolder && params.careerFolder.relativePath),
       actionPath: safeText(params.actionPath || (params.careerFolder && params.careerFolder.path)),
+      workType: "document",
       synthetic: true
     };
   }
@@ -465,6 +499,9 @@
         title: "Iniciar ciclo bienal de Construcción Curricular",
         pathLabel: processRel,
         actionPath: safeText(processFolder.path),
+        parentPath: safeText(processFolder.path),
+        proposedFolderName: "UGPA-PRO-60-" + periodLabel(currentCycle),
+        workType: "quick",
         synthetic: true
       });
     }
@@ -612,7 +649,8 @@
       actual: safeText(finding.actualValue),
       expected: safeText(finding.expectedValue),
       pathLabel: safeText(finding.relativePath),
-      actionPath: safeText(finding.primaryActionPath || finding.absolutePath || finding.rootPath)
+      actionPath: safeText(finding.primaryActionPath || finding.absolutePath || finding.rootPath),
+      workType: classifyIssue(finding)
     };
   }
 
@@ -621,10 +659,11 @@
     (Array.isArray(items) ? items : []).forEach(function each(item) {
       const key = [item.scope, item.category, item.title].join("|");
       if (!groups.has(key)) {
-        groups.set(key, { ...item, groupCount: 0, examples: [] });
+        groups.set(key, { ...item, groupCount: 0, examples: [], items: [] });
       }
       const group = groups.get(key);
       group.groupCount += 1;
+      group.items.push(item);
       if (group.examples.length < 3 && item.pathLabel) group.examples.push(item.pathLabel);
     });
     return Array.from(groups.values()).sort(function sort(a, b) {
@@ -654,7 +693,8 @@
             actual: "No encontrada",
             expected: expected,
             pathLabel: "",
-            actionPath: safeText(scan.rootPath)
+            actionPath: safeText(scan.rootPath),
+            workType: "review"
           });
         }
       });
@@ -668,7 +708,7 @@
       if (byUrgency) return byUrgency;
       const byArea = areaDef(b.area).rank - areaDef(a.area).rank;
       if (byArea) return byArea;
-      const byEffort = effortRank(b.effort) - effortRank(a.effort);
+      const byEffort = effortRank(a.effort) - effortRank(b.effort);
       if (byEffort) return byEffort;
       const byScope = safeText(a.scope).localeCompare(safeText(b.scope), "es");
       if (byScope) return byScope;
@@ -691,48 +731,56 @@
       if (filters.scope !== "all" && task.scope !== filters.scope) return false;
       if (filters.area !== "all" && task.area !== filters.area) return false;
       if (filters.level !== "all" && task.level !== filters.level) return false;
+      if (filters.workType !== "all" && task.workType !== filters.workType) return false;
+      if (filters.status !== "all" && task.status !== filters.status) return false;
       return !search || haystack(task).includes(search);
     });
   }
 
   function buildViewModel(filters) {
-    const sharedState = window.AppStore.get();
+    const shared = window.AppStore.get();
     const today = todayUtc();
-    const findings = activeFindings(sharedState);
-    const syntheticTasks = buildStrategicScheduleTasks(sharedState, today).concat(
-      buildPro60Tasks(sharedState, today),
-      buildOtherScheduleTasks(sharedState, today)
+    const progress = progressMap();
+    const findings = activeFindings(shared);
+    const synthetic = buildStrategicScheduleTasks(shared, today).concat(
+      buildPro60Tasks(shared, today), buildOtherScheduleTasks(shared, today)
     );
-    const findingTasks = findings.map(function map(item) { return taskFromFinding(item, today); }).filter(Boolean);
-    const tasks = syntheticTasks.concat(findingTasks.filter(function keep(task) {
-      return !duplicateGenericMissingPeriod(task, syntheticTasks);
-    }));
+    const fromRules = findings.map(function (finding) { return taskFromFinding(finding, today); }).filter(Boolean);
+    const tasks = synthetic.concat(fromRules.filter(function (task) {
+      return !duplicateGenericMissingPeriod(task, synthetic);
+    })).map(function (task) { return {...task, status: progress[task.id] || "pending"}; });
     sortTasks(tasks);
 
-    const safeFilters = Object.assign({ scope: "all", area: "all", level: "all", search: "" }, filters || {});
-    const visibleTasks = applyFilters(tasks, safeFilters);
-    const rawInconsistencies = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(sharedState));
-    const inconsistencies = groupInconsistencies(rawInconsistencies);
-    const visibleIssues = inconsistencies.filter(function keep(item) {
-      if (safeFilters.scope !== "all" && item.scope !== safeFilters.scope) return false;
-      return !normalize(safeFilters.search) || haystack(item).includes(normalize(safeFilters.search));
+    const filtersSafe = Object.assign({scope:"all",area:"all",level:"all",workType:"all",status:"all",search:""},filters || {});
+    const visibleTasks = applyFilters(tasks,filtersSafe);
+    const allIssues = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(shared))
+      .map(function (issue) { return {...issue,status:progress[issue.id] || "pending"}; });
+    const visibleIssues = allIssues.filter(function (issue) {
+      return (filtersSafe.scope === "all" || filtersSafe.scope === issue.scope) &&
+        (filtersSafe.workType === "all" || filtersSafe.workType === issue.workType) &&
+        (filtersSafe.status === "all" || filtersSafe.status === issue.status) &&
+        (!normalize(filtersSafe.search) || haystack(issue).includes(normalize(filtersSafe.search)));
     });
-
+    const grouped = groupInconsistencies(visibleIssues);
     const counts = {};
-    Config.levels.forEach(function each(level) {
-      counts[level.id] = tasks.filter(function keep(item) { return item.level === level.id; }).length;
+    Config.levels.forEach(function (def) {
+      counts[def.id] = visibleTasks.filter(function (item) { return item.level === def.id; }).length;
     });
-
+    const buckets = { quick:0, review:0, document:0 };
+    tasks.concat(allIssues).forEach(function (item) {
+      if (buckets[item.workType] !== undefined) buckets[item.workType] += 1;
+    });
+    const scansLabel = ["UGPA","UTET"].map(function (scope) {
+      const scan = scanForScope(shared,scope);
+      return scope + ": " + (scan && scan.ok && scan.scannedAt
+        ? new Date(scan.scannedAt).toLocaleString("es-EC") : "sin escaneo");
+    }).join(" · ");
     return {
-      todayLabel: formatDate(today),
-      noScan: !(sharedState.ugpaResult && sharedState.ugpaResult.ok) && !(sharedState.utetResult && sharedState.utetResult.ok),
-      tasks: visibleTasks,
-      inconsistencies: visibleIssues,
-      counts: counts,
-      totalTasks: tasks.length,
-      totalInconsistencies: rawInconsistencies.length,
-      inconsistencyGroups: inconsistencies.length,
-      filters: safeFilters
+      todayLabel:formatDate(today), scansLabel:scansLabel,
+      noScan:!(shared.ugpaResult && shared.ugpaResult.ok) && !(shared.utetResult && shared.utetResult.ok),
+      tasks:visibleTasks, inconsistencies:grouped, counts:counts, workCounts:buckets,
+      totalTasks:tasks.length, totalInconsistencies:allIssues.length,
+      visibleInconsistencies:visibleIssues.length, inconsistencyGroups:grouped.length, filters:filtersSafe
     };
   }
 
@@ -746,7 +794,8 @@
       tasks: vm.tasks,
       inconsistencies: vm.inconsistencies,
       rawInconsistenciesCount: vm.totalInconsistencies,
-      counts: vm.counts
+      counts: vm.counts,
+      scansLabel: vm.scansLabel
     });
     if (!response || response.ok !== true) {
       throw new Error(response && response.error ? response.error : "No se pudo generar el PDF de prioridades.");
@@ -764,9 +813,15 @@
     return response;
   }
 
+  async function createFolder(task) {
+    if (!task || !task.parentPath || !task.proposedFolderName || task.workType !== "quick")
+      throw new Error("No existe una carpeta de destino verificada.");
+    const response = await window.api.shell.createFolder(task.scope, task.parentPath, task.proposedFolderName);
+    if (!response || !response.ok) throw new Error(response && response.error || "No se pudo crear la carpeta.");
+    return response;
+  }
   window.PriorityService = {
-    buildViewModel: buildViewModel,
-    openPath: openPath,
-    exportPdf: exportPdf
+    buildViewModel: buildViewModel, openPath: openPath, exportPdf: exportPdf,
+    saveProgress: saveProgress, createFolder: createFolder
   };
 })(window);

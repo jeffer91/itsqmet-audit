@@ -1151,14 +1151,14 @@ function buildPriorityDocument(payload) {
       : String(task && task.scope || "");
     const dueDate = task && task.dueDate ? new Date(task.dueDate) : null;
     const dueLabel = dueDate && !Number.isNaN(dueDate.getTime())
-      ? dueDate.toLocaleDateString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit" })
+      ? dueDate.toLocaleDateString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" })
       : "";
     return `
       <tr>
         <td class="center">${index + 1}</td>
         <td><span class="priority priority--${escapeHtml(task.level || "low")}">${escapeHtml(priorityLabel[task.level] || task.level || "")}</span></td>
         <td><strong>${escapeHtml(process)}</strong><br><span class="muted">${escapeHtml(task.areaLabel || "")}</span></td>
-        <td><strong>${escapeHtml(task.title || "")}</strong><br><span class="muted">${escapeHtml(task.processName || "")}</span></td>
+        <td><strong>${escapeHtml(task.title || "")}</strong><br><span class="muted">${escapeHtml(task.processName || "")}</span><br><span class="muted">${escapeHtml(({quick:"Corrección rápida",review:"Verificar",document:"Elaborar"})[task.workType] || "")}</span></td>
         <td>${escapeHtml(task.periodLabel || "Sin período")}</td>
         <td>${escapeHtml(task.stageLabel || "")}${dueLabel ? "<br><span class=\"muted\">Ref.: " + escapeHtml(dueLabel) + "</span>" : ""}</td>
         <td>${escapeHtml(task.reason || "")}</td>
@@ -1215,7 +1215,7 @@ th { background: #eef4ff; color: #173b64; font-size: 8px; text-transform: upperc
 <section class="header">
   <div class="eyebrow">AUDIT · Plan operativo</div>
   <h1>Qué tengo que hacer primero</h1>
-  <p>Generado el ${escapeHtml(todayLabel)}. Ordenado por urgencia, jerarquía del proceso y esfuerzo.</p>
+  <p>Generado el ${escapeHtml(todayLabel)}. Fechas estimadas: contrastar con cronograma y POA.</p><p>Escaneos: ${escapeHtml(payload.scansLabel || "Sin fecha")}</p>
 </section>
 <section class="kpis">
   <div class="kpi"><span>Máxima</span><strong>${Number(payload.counts && payload.counts.max || 0)}</strong></div>

@@ -9,7 +9,9 @@ Función o funciones:
 */
 
 const fs = require("fs");
-const { ipcMain, shell } = require("electron");
+const path = require("path");
+const { ipcMain, shell, clipboard } = require("electron");
+const historyStore = require("../history/history.store");
 
 function isHttpUrl(value) {
   try {
@@ -20,7 +22,47 @@ function isHttpUrl(value) {
   }
 }
 
+function within(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative));
+}
+function allowedName(name) {
+  return name && name.length <= 180 && name !== "." && name !== ".." &&
+    !/[\\/<>:"|?*\x00-\x1f]/.test(name) && !/[. ]$/.test(name);
+}
 function registerShellIpc() {
+  ipcMain.handle("shell:copy-text", async (_event, payload = {}) => {
+    const value = String(payload.text || "");
+    if (!value || value.length > 1000) return {ok:false,error:"Nombre no válido."};
+    clipboard.writeText(value);
+    return {ok:true};
+  });
+  ipcMain.handle("shell:create-folder", async (_event, payload = {}) => {
+    try {
+      const scope = String(payload.scope || "").toUpperCase();
+      const parent = String(payload.parentPath || "").trim();
+      const name = String(payload.name || "").trim();
+      if (!["UGPA", "UTET"].includes(scope) || !path.isAbsolute(parent) || !allowedName(name))
+        throw new Error("Parámetros de carpeta no válidos.");
+      const history = await historyStore.loadHistory();
+      const scan = scope === "UGPA" ? history.ugpaResult : history.utetResult;
+      if (!scan || !scan.ok || !scan.source || scan.source.kind !== "folder")
+        throw new Error("La creación solo está permitida en carpetas locales escaneadas.");
+      const root = String(scan.source.selectedFolderPath || scan.rootPath || "");
+      const actualRoot = await fs.promises.realpath(root);
+      const actualParent = await fs.promises.realpath(parent);
+      if (!within(actualRoot, actualParent) || actualParent === actualRoot)
+        throw new Error("Destino fuera de la carpeta de procesos autorizada.");
+      const destination = path.join(actualParent, name);
+      if (!within(actualRoot, destination)) throw new Error("Destino no autorizado.");
+      await fs.promises.mkdir(destination, {recursive:false});
+      return {ok:true,path:destination};
+    } catch (error) {
+      return {ok:false,error:error && error.code === "EEXIST"
+        ? "La carpeta ya existe. Verifica nombres equivalentes."
+        : error && error.message || "No se pudo crear la carpeta."};
+    }
+  });
   ipcMain.handle("shell:open-path", async (_event, payload = {}) => {
     try {
       const targetPath = String(payload.path || "").trim();

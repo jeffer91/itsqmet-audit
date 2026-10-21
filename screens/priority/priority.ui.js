@@ -1,113 +1,90 @@
 (function (window, document) {
   "use strict";
-
-  function el(id) { return document.getElementById(id); }
-  function safeText(value) { return String(value == null ? "" : value).trim(); }
-  function escapeHtml(value) {
-    return safeText(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  const el = id => document.getElementById(id);
+  const clean = v => String(v == null ? "" : v).trim();
+  const esc = v => clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+  const workflow = {quick:"Corrección rápida",review:"Por verificar",document:"Por elaborar"};
+  const states = {pending:"Pendiente",doing:"En proceso",review:"En revisión",done:"Completado (por verificar)"};
+  let groups = [];
+  function status(item) {
+    return '<label class="status-field">Estado<select class="js-status" data-id="' + esc(item.id) + '">' +
+      Object.keys(states).map(s=>'<option value="'+s+'"'+(item.status===s?' selected':'')+'>'+states[s]+'</option>').join("") +
+      '</select></label>';
   }
-
-  function effortLabel(value) {
-    return value === "high" ? "Alto" : value === "medium" ? "Medio" : "Bajo";
+  function task(item) {
+    const due = item.dueDate ? new Intl.DateTimeFormat("es-EC",{day:"2-digit",month:"short",year:"numeric",timeZone:"UTC"}).format(item.dueDate) : "Sin fecha exacta";
+    return '<article class="task-card task-card--'+esc(item.level)+'"><div class="task-card__priority"><span class="priority-pill priority-pill--'+esc(item.level)+'">'+esc(item.levelLabel)+'</span></div>' +
+      '<div class="task-card__body"><div class="task-card__meta"><span>'+esc(item.scope+(item.processNumber?"-PRO-"+item.processNumber:""))+'</span><span>'+esc(item.areaLabel)+'</span><span class="work-tag">'+esc(workflow[item.workType]||"Verificar")+'</span><span>Esfuerzo '+(item.effort==="high"?"alto":item.effort==="medium"?"medio":"bajo")+'</span></div>' +
+      '<h3>'+esc(item.title)+'</h3><p class="task-card__reason">'+esc(item.reason)+'</p>' +
+      '<div class="task-card__foot"><span>'+esc(item.periodLabel||"Sin período")+'</span><span>Fecha de referencia estimada: '+esc(due)+'</span></div></div>' +
+      '<div class="task-card__actions">' +
+      (item.actionPath?'<button class="btn btn--small js-open" data-path="'+esc(item.actionPath)+'">Abrir carpeta</button>':"") +
+      (item.parentPath&&item.proposedFolderName?'<button class="btn btn--small btn--action js-mkdir" data-id="'+esc(item.id)+'">Crear carpeta</button>':"") +
+      status(item)+'</div></article>';
   }
-
-  function renderSummary(vm) {
-    const defs = [
-      ["max", "Máxima"], ["high", "Alta"], ["medium", "Media"], ["low", "Baja"]
-    ];
-    el("summaryGrid").innerHTML = defs.map(function map(def) {
-      return '<div class="kpi kpi--' + def[0] + '"><span>' + def[1] + '</span><strong>' + (vm.counts[def[0]] || 0) + '</strong></div>';
-    }).join("") +
-      '<div class="kpi kpi--issue"><span>Inconsistencias</span><strong>' + vm.totalInconsistencies + '</strong></div>';
+  function detail(item) {
+    const canCopy = /nombre de (pdf|carpeta) incorrecto|carpeta de per[ií]odo mal nombrada/i.test(item.title) && item.expected;
+    return '<div class="issue-detail"><div class="issue-detail__text"><strong>'+esc(item.actual||item.title)+'</strong>' +
+      '<small>'+esc(item.pathLabel)+'</small>'+(item.expected?'<small>Sugerencia: '+esc(item.expected)+'</small>':"")+
+      (item.description?'<small>'+esc(item.description)+'</small>':"")+'</div><div class="issue-detail__actions">' +
+      (canCopy?'<button class="btn btn--small js-copy" data-name="'+esc(item.expected)+'">Copiar nombre</button>':"") +
+      (item.actionPath?'<button class="btn btn--small js-open" data-path="'+esc(item.actionPath)+'">Abrir</button>':"") +
+      status(item)+'</div></div>';
   }
-
-  function taskCard(task) {
-    const due = task.dueDate ? new Intl.DateTimeFormat("es-EC", {
-      day: "2-digit", month: "short", year: "numeric", timeZone: "UTC"
-    }).format(task.dueDate) : "Sin fecha exacta";
-    const process = task.processNumber ? task.scope + "-PRO-" + task.processNumber : task.scope;
-    return '<article class="task-card task-card--' + escapeHtml(task.level) + '">' +
-      '<div class="task-card__priority"><span class="priority-pill priority-pill--' + escapeHtml(task.level) + '">' + escapeHtml(task.levelLabel) + '</span></div>' +
-      '<div class="task-card__body">' +
-        '<div class="task-card__meta"><span>' + escapeHtml(process) + '</span><span>' + escapeHtml(task.areaLabel) + '</span><span>' + escapeHtml(task.stageLabel) + '</span><span>Esfuerzo ' + escapeHtml(effortLabel(task.effort)) + '</span></div>' +
-        '<h3>' + escapeHtml(task.title) + '</h3>' +
-        (task.processName ? '<p class="task-card__process">' + escapeHtml(task.processName) + '</p>' : '') +
-        '<p class="task-card__reason">' + escapeHtml(task.reason) + '</p>' +
-        '<div class="task-card__foot"><span>' + escapeHtml(task.periodLabel || "Sin período identificado") + '</span><span>Referencia: ' + escapeHtml(due) + '</span></div>' +
-      '</div>' +
-      '<div class="task-card__actions">' + (task.actionPath ? '<button class="btn btn--small js-open" data-path="' + escapeHtml(task.actionPath) + '" type="button">Abrir carpeta</button>' : '') + '</div>' +
-    '</article>';
+  function key(g) {return g.scope+"|"+g.category+"|"+g.title;}
+  function card(g) {
+    return '<details class="issue-row" data-group="'+esc(key(g))+'"><summary><span class="issue-row__scope">'+esc(g.scope)+'</span><span><strong>'+g.groupCount+' × '+esc(g.title)+'</strong><small>'+esc(g.description)+'</small></span><span class="issue-row__arrow">Ver archivos</span></summary><div class="issue-items"></div></details>';
   }
-
-  function issueCard(issue) {
-    return '<article class="issue-row">' +
-      '<div class="issue-row__scope">' + escapeHtml(issue.scope) + '</div>' +
-      '<div class="issue-row__body"><strong>' + (Number(issue.groupCount || 0) > 1 ? escapeHtml(issue.groupCount) + ' × ' : '') + escapeHtml(issue.title) + '</strong>' +
-        (issue.description ? '<span>' + escapeHtml(issue.description) + '</span>' : '') +
-        (issue.expected ? '<small>Esperado: ' + escapeHtml(issue.expected) + (issue.actual ? ' · Actual: ' + escapeHtml(issue.actual) : '') + '</small>' : '') +
-        (Array.isArray(issue.examples) && issue.examples.length ? '<small>Ejemplos: ' + escapeHtml(issue.examples.join(' · ')) + '</small>' : '') +
-        (issue.pathLabel ? '<small>' + escapeHtml(issue.pathLabel) + '</small>' : '') +
-      '</div>' +
-      '<div>' + (issue.actionPath ? '<button class="btn btn--small js-open" data-path="' + escapeHtml(issue.actionPath) + '" type="button">Abrir</button>' : '') + '</div>' +
-    '</article>';
-  }
-
   function render(vm) {
-    el("todayLabel").textContent = "Corte: " + vm.todayLabel;
-    el("noScanNotice").style.display = vm.noScan ? "block" : "none";
-    el("noScanNotice").textContent = vm.noScan ? "Todavía no hay un escaneo cargado. Ejecuta un escaneo de UGPA o UTET para calcular prioridades." : "";
-    renderSummary(vm);
-
-    el("priorityCount").textContent = vm.tasks.length + " pendientes visibles de " + vm.totalTasks;
-    el("priorityList").innerHTML = vm.tasks.length
-      ? vm.tasks.map(taskCard).join("")
-      : '<div class="empty-state">No hay pendientes que coincidan con los filtros.</div>';
-
-    el("issueCount").textContent = vm.totalInconsistencies + " hallazgos agrupados en " + vm.inconsistencyGroups;
-    el("issueList").innerHTML = vm.inconsistencies.length
-      ? vm.inconsistencies.map(issueCard).join("")
-      : '<div class="empty-state">No hay inconsistencias que coincidan con los filtros.</div>';
+    el("todayLabel").textContent="Cálculo: "+vm.todayLabel;
+    el("scanLabel").textContent="Últimos escaneos: "+vm.scansLabel;
+    el("noScanNotice").style.display=vm.noScan?"block":"none";
+    el("noScanNotice").textContent=vm.noScan?"No hay escaneos disponibles. Selecciona carpetas desde Escaneo.":"";
+    const defs=[["max","Máxima"],["high","Alta"],["medium","Media"],["low","Baja"]];
+    el("summaryGrid").innerHTML=defs.map(d=>'<div class="kpi kpi--'+d[0]+'"><span>'+d[1]+'</span><strong>'+(vm.counts[d[0]]||0)+'</strong></div>').join("")+
+      '<div class="kpi kpi--issue"><span>Inconsistencias visibles</span><strong>'+vm.visibleInconsistencies+'</strong></div>';
+    el("workCounts").textContent="Detectados: "+vm.workCounts.quick+" rápidos · "+vm.workCounts.review+" por verificar · "+vm.workCounts.document+" documentos por elaborar";
+    el("priorityCount").textContent=vm.tasks.length+" visibles de "+vm.totalTasks;
+    el("priorityList").innerHTML=vm.tasks.length?vm.tasks.map(task).join(""):'<div class="empty-state">No hay pendientes en este filtro.</div>';
+    el("issueCount").textContent=vm.visibleInconsistencies+" hallazgos en "+vm.inconsistencyGroups+" grupos";
+    groups=vm.inconsistencies;
+    el("issueList").innerHTML=groups.length?groups.map(card).join(""):'<div class="empty-state">No hay inconsistencias en este filtro.</div>';
   }
-
   function getFilters() {
-    return {
-      scope: el("filterScope").value,
-      area: el("filterArea").value,
-      level: el("filterLevel").value,
-      search: el("filterSearch").value
-    };
+    return {scope:el("filterScope").value,area:el("filterArea").value,level:el("filterLevel").value,
+      workType:el("filterWork").value,status:el("filterStatus").value,search:el("filterSearch").value};
   }
-
   function bindEvents(handlers) {
-    ["filterScope", "filterArea", "filterLevel"].forEach(function each(id) {
-      el(id).addEventListener("change", function () { handlers.onFiltersChange(getFilters()); });
+    ["filterScope","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>el(id).addEventListener("change",()=>handlers.onFiltersChange(getFilters())));
+    el("filterSearch").addEventListener("input",()=>handlers.onFiltersChange(getFilters()));
+    el("btnResetFilters").addEventListener("click",()=>{
+      ["filterScope","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>{el(id).value="all";});
+      el("filterSearch").value="";handlers.onFiltersChange(getFilters());
     });
-    el("filterSearch").addEventListener("input", function () { handlers.onFiltersChange(getFilters()); });
-    el("btnResetFilters").addEventListener("click", function () {
-      el("filterScope").value = "all";
-      el("filterArea").value = "all";
-      el("filterLevel").value = "all";
-      el("filterSearch").value = "";
-      handlers.onFiltersChange(getFilters());
+    el("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
+    el("btnRescanPriority").addEventListener("click",handlers.onRescan);
+    el("btnExportPriorityPdf").addEventListener("click",handlers.onExportPdf);
+    document.addEventListener("click",event=>{
+      const btn=event.target.closest("button");if(!btn)return;
+      if(btn.classList.contains("js-open"))handlers.onOpenPath(btn.dataset.path);
+      if(btn.classList.contains("js-copy"))handlers.onCopy(btn.dataset.name);
+      if(btn.classList.contains("js-mkdir"))handlers.onCreateFolder(btn.dataset.id);
     });
-    el("btnRefreshPriority").addEventListener("click", handlers.onRefresh);
-    el("btnExportPriorityPdf").addEventListener("click", handlers.onExportPdf);
-    document.addEventListener("click", function (event) {
-      const button = event.target.closest(".js-open");
-      if (button) handlers.onOpenPath(button.dataset.path);
+    document.addEventListener("change",event=>{
+      if(event.target.classList.contains("js-status"))handlers.onStatus(event.target.dataset.id,event.target.value);
     });
+    el("issueList").addEventListener("toggle",event=>{
+      const node=event.target;
+      if(!node.matches||!node.matches("details.issue-row")||!node.open)return;
+      const target=node.querySelector(".issue-items");
+      if(target.dataset.ready)return;
+      const g=groups.find(item=>key(item)===node.dataset.group);
+      if(g){target.innerHTML=g.items.map(detail).join("");target.dataset.ready="yes";}
+    },true);
   }
-
-  function setGlobalMessage(message, type) {
-    const host = el("globalMessage");
-    host.className = "global-message" + (type ? " is-" + type : "");
-    host.textContent = safeText(message);
+  function setGlobalMessage(message,type) {
+    const host=el("globalMessage");host.className="global-message"+(type?" is-"+type:"");host.textContent=clean(message);
   }
-
-  window.PriorityUI = {
-    render: render,
-    bindEvents: bindEvents,
-    setGlobalMessage: setGlobalMessage
-  };
+  window.PriorityUI={render,bindEvents,setGlobalMessage};
 })(window, document);
