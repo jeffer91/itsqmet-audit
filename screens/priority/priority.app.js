@@ -1,7 +1,7 @@
 (function (window, document) {
   "use strict";
   let loaded=false;
-  let filters={scope:"all",area:"all",level:"all",workType:"all",status:"all",search:""};
+  let filters={scope:"all",process:"all",area:"all",level:"all",workType:"all",status:"all",search:""};
   const safe=v=>String(v==null?"":v).trim();
   function loadScript(src) {
     return new Promise((resolve,reject)=>{
@@ -52,6 +52,10 @@
           if(!count)throw new Error("No hay carpetas locales registradas. Usa la pestaña Escaneo.");
           refresh("Se escanearon "+count+" carpetas de unidad.");
         } finally {window.AppNav&&window.AppNav.setLoading&&window.AppNav.setLoading(false);}
+      }),
+      onExportExcel:()=>perform(async()=>{
+        const result=await window.PriorityService.exportExcel(filters);
+        window.PriorityUI.setGlobalMessage("Excel guardado en Descargas: "+result.fileName,"success");
       }),
       onExportPdf:()=>perform(async()=>{
         const result=await window.PriorityService.exportPdf(filters);

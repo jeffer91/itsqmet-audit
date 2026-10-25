@@ -170,6 +170,12 @@
 
   function dueFor(stage, period, today) {
     if (!period) return { level: "", dueDate: null, reason: "" };
+    // Una deuda histórica no equivale automáticamente a una urgencia actual.
+    // Revisar POA antes de subir su prioridad.
+    if (period.end.getTime() < addDays(today, -60).getTime()) {
+      return {level:"medium",dueDate:period.end,
+        reason:"Rezago de período histórico: verificar vigencia, evidencias y POA antes de ejecutar."};
+    }
     if (stage === "start") {
       const due = addDays(period.start, Config.graceDays.start);
       if (today.getTime() > due.getTime()) {
@@ -663,6 +669,7 @@
     return {
       id: "issue|" + safeText(finding.id),
       scope: safeText(finding.scope).toUpperCase(),
+      processNumber: processFromFinding(finding),
       category: category,
       area: areaFromPath(finding.relativePath),
       title: safeText(finding.title, "Inconsistencia detectada"),
@@ -679,7 +686,7 @@
   function groupInconsistencies(items) {
     const groups = new Map();
     (Array.isArray(items) ? items : []).forEach(function each(item) {
-      const key = [item.scope, item.category, item.title].join("|");
+      const key = [item.scope, item.processNumber || "", item.category, item.title].join("|");
       if (!groups.has(key)) {
         groups.set(key, { ...item, groupCount: 0, examples: [], items: [] });
       }
@@ -752,6 +759,7 @@
     const search = normalize(filters.search);
     return tasks.filter(function keep(task) {
       if (filters.scope !== "all" && task.scope !== filters.scope) return false;
+      if (filters.process && filters.process !== "all" && task.scope+"-"+task.processNumber !== filters.process) return false;
       if (filters.area !== "all" && task.area !== filters.area) return false;
       if (filters.level !== "all" && task.level !== filters.level) return false;
       if (filters.workType !== "all" && task.workType !== filters.workType) return false;
@@ -780,18 +788,20 @@
     });
     sortTasks(tasks);
 
-    const filtersSafe = Object.assign({scope:"all",area:"all",level:"all",workType:"all",status:"all",search:""},filters || {});
+    const filtersSafe = Object.assign({scope:"all",process:"all",area:"all",level:"all",workType:"all",status:"all",search:""},filters || {});
     const visibleTasks = applyFilters(tasks,filtersSafe);
     const allIssues = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(shared))
       .map(function (issue) { return {...issue,status:progress[issue.id] || "pending"}; });
     const visibleIssues = allIssues.filter(function (issue) {
       return (filtersSafe.scope === "all" || filtersSafe.scope === issue.scope) &&
+        (filtersSafe.process === "all" || (issue.processNumber && issue.scope+"-"+issue.processNumber === filtersSafe.process)) &&
         (filtersSafe.area === "all" || filtersSafe.area === issue.area) &&
         (filtersSafe.workType === "all" || filtersSafe.workType === issue.workType) &&
         (filtersSafe.status === "all" || filtersSafe.status === issue.status) &&
         (!normalize(filtersSafe.search) || haystack(issue).includes(normalize(filtersSafe.search)));
     });
     const grouped = groupInconsistencies(visibleIssues);
+    const processes = window.PriorityProcesses ? window.PriorityProcesses.buildRows(shared,visibleTasks,visibleIssues,filtersSafe) : [];
     const counts = {};
     Config.levels.forEach(function (def) {
       counts[def.id] = visibleTasks.filter(function (item) { return item.level === def.id; }).length;
@@ -808,7 +818,7 @@
     return {
       todayLabel:formatDate(today), scansLabel:scansLabel,
       noScan:!(shared.ugpaResult && shared.ugpaResult.ok) && !(shared.utetResult && shared.utetResult.ok),
-      tasks:visibleTasks, inconsistencies:grouped, counts:counts, workCounts:buckets,
+      tasks:visibleTasks, inconsistencies:grouped, processes:processes, counts:counts, workCounts:buckets,
       totalTasks:tasks.length, totalInconsistencies:allIssues.length,
       visibleInconsistencies:visibleIssues.length, inconsistencyGroups:grouped.length, filters:filtersSafe
     };
@@ -823,6 +833,7 @@
       generatedAt: new Date().toISOString(),
       tasks: vm.tasks,
       inconsistencies: vm.inconsistencies,
+      processes: vm.processes,
       rawInconsistenciesCount: vm.visibleInconsistencies,
       counts: vm.counts,
       scansLabel: vm.scansLabel,
@@ -831,6 +842,20 @@
     if (!response || response.ok !== true) {
       throw new Error(response && response.error ? response.error : "No se pudo generar el PDF de prioridades.");
     }
+    return response;
+  }
+
+  async function exportExcel(filters) {
+    const vm=buildViewModel(filters||{});
+    if(!vm.tasks.length&&!vm.inconsistencies.length)
+      throw new Error("No hay pendientes ni inconsistencias para exportar con los filtros actuales.");
+    if(!window.api||!window.api.excel||!window.api.excel.export)
+      throw new Error("La API de Excel no está disponible.");
+    const response=await window.api.excel.export({
+      tasks:vm.tasks,inconsistencies:vm.inconsistencies,
+      processes:vm.processes,scansLabel:vm.scansLabel,filters:vm.filters
+    });
+    if(!response||!response.ok)throw new Error(response&&response.error||"No se pudo exportar Excel.");
     return response;
   }
 
@@ -852,7 +877,7 @@
     return response;
   }
   window.PriorityService = {
-    buildViewModel: buildViewModel, openPath: openPath, exportPdf: exportPdf,
+    buildViewModel: buildViewModel, openPath: openPath, exportPdf: exportPdf, exportExcel: exportExcel,
     saveProgress: saveProgress, createFolder: createFolder
   };
 })(window);

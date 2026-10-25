@@ -239,9 +239,15 @@ Función:
     const unit = getUnit(scope);
     if (!unit) return false;
     const normalized = normalizeText(fileName);
-    return unit.manualRootPatterns.every(function every(pattern) {
-      return normalized.includes(normalizeText(pattern));
-    });
+    if (!/\.pdf$/i.test(safeText(fileName))) return false;
+    // Código y título descriptivo son denominaciones alternativas.
+    const ownCode=normalizeText(scope+"-MP-ITSQMET");
+    const otherCode=normalizeText((scope==="UGPA"?"UTET":"UGPA")+"-MP-ITSQMET");
+    if(normalized.includes(otherCode))return false;
+    return normalized.includes(ownCode) ||
+      (normalized.includes(normalizeText("Manual de Procesos")) &&
+        (normalized.includes(normalizeText(scope)) ||
+         normalized.includes(normalizeText(scope==="UGPA"?"Gestión de Procesos Académicos":"Titulación y Eficiencia Terminal"))));
   }
 
   window.AuditManualCatalog = {

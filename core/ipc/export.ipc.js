@@ -13,6 +13,7 @@ const fsp = require("fs").promises;
 const path = require("path");
 const { app, ipcMain, BrowserWindow } = require("electron");
 const { buildExportDocument } = require("./export.builder");
+const { savePriorityWorkbook } = require("./export.xlsx");
 
 function sanitizeFileName(name, fallback) {
   return String(name || fallback || "audit_reporte")
@@ -108,6 +109,16 @@ async function exportPdf(payload) {
 }
 
 function registerExportIpc() {
+  ipcMain.handle("excel:export", async (_event, payload = {}) => {
+    try {
+      if (!Array.isArray(payload.tasks) || !Array.isArray(payload.inconsistencies) || !Array.isArray(payload.processes))
+        throw new Error("Información de pendientes incompleta.");
+      const filename="audit_pendientes_"+new Date().toISOString().slice(0,10)+".xlsx";
+      const dest=await ensureUniqueFilePath(path.join(app.getPath("downloads"), filename));
+      await savePriorityWorkbook(dest,payload);
+      return {ok:true,fileName:path.basename(dest),filePath:dest};
+    } catch(error) { return {ok:false,error:error&&error.message||"No se pudo exportar Excel."}; }
+  });
   ipcMain.handle("pdf:export", async function onPdfExport(_event, payload = {}) {
     try {
       return await exportPdf(payload);

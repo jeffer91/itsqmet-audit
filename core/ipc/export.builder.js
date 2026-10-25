@@ -1177,19 +1177,25 @@ function buildPriorityDocument(payload) {
       </tr>
     `;
   }).join("");
-  const quickDetails = payload.workType === "quick"
+  const quickDetails = issues.length
     ? issues.flatMap(function eachGroup(issue) {
         return normalizeArray(issue.items).map(function eachItem(item) {
           return `<tr>
             <td>${escapeHtml(item.scope || "")}</td>
-            <td>${escapeHtml(item.actual || item.title || "")}</td>
-            <td>${escapeHtml(item.suggestedName || "Revisar manualmente")}</td>
+            <td>${escapeHtml(item.title || "")}: ${escapeHtml(item.actual || "")}</td>
+            <td>${escapeHtml(item.suggestedName || item.expected || "Revisar manualmente")}</td>
             <td class="path">${escapeHtml(item.pathLabel || "")}</td>
           </tr>`;
         });
       }).join("")
     : "";
 
+  const processRows = normalizeArray(payload.processes).map(function(p){
+    return "<tr><td>"+escapeHtml(p.id)+"</td><td>"+escapeHtml(p.processName)+"</td>"+
+      "<td>"+escapeHtml(p.state)+"</td><td>"+Number(p.activeTasks||0)+"</td>"+
+      "<td>"+Number(p.issues||0)+"</td><td>"+escapeHtml(p.indicator)+"</td>"+
+      "<td>"+escapeHtml(p.target)+"</td><td>"+escapeHtml(p.indicatorValue)+"</td></tr>";
+  }).join("");
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1236,6 +1242,11 @@ th { background: #eef4ff; color: #173b64; font-size: 8px; text-transform: upperc
   <div class="kpi"><span>Baja</span><strong>${Number(payload.counts && payload.counts.low || 0)}</strong></div>
   <div class="kpi"><span>Inconsistencias</span><strong>${Number(payload.rawInconsistenciesCount || 0)}</strong></div>
 </section>
+<section class="section">
+  <h2>Estado de procesos e indicadores</h2>
+  <div class="note">El inventario documental no demuestra el resultado de los indicadores. No se inventan porcentajes sin los datos de gestión requeridos.</div>
+  <table><thead><tr><th>Proceso</th><th>Nombre</th><th>Situación</th><th>Abiertos</th><th>Observaciones</th><th>Indicador</th><th>Meta</th><th>Resultado</th></tr></thead><tbody>${processRows}</tbody></table>
+</section>
 <section>
   <h2>Pendientes priorizados</h2>
   <table>
@@ -1258,7 +1269,7 @@ ${issueRows ? `
 </section>` : ""}
 ${quickDetails ? `
 <section class="section">
-  <h2>Detalle individual de las correcciones rápidas</h2>
+  <h2>Detalle individual de todas las inconsistencias</h2>
   <table>
     <thead><tr><th style="width:8%">Unidad</th><th style="width:30%">Nombre actual</th><th style="width:30%">Nombre propuesto</th><th style="width:32%">Ubicación</th></tr></thead>
     <tbody>${quickDetails}</tbody>

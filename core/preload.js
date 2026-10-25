@@ -87,6 +87,11 @@ contextBridge.exposeInMainWorld("api", {
       return ipcRenderer.invoke("pdf:export", payload);
     }
   },
+  excel: {
+    export: function exportExcel(payload) {
+      return ipcRenderer.invoke("excel:export", payload);
+    }
+  },
   shell: {
     openPath: function openPath(targetPath) {
       return ipcRenderer.invoke("shell:open-path", { path: safeText(targetPath) });

@@ -33,7 +33,7 @@
       (item.actionPath?'<button class="btn btn--small js-open" data-path="'+esc(item.actionPath)+'">Abrir</button>':"") +
       status(item)+'</div></div>';
   }
-  function key(g) {return g.scope+"|"+g.category+"|"+g.title;}
+  function key(g) {return g.scope+"|"+(g.processNumber||"")+"|"+g.category+"|"+g.title;}
   function card(g) {
     return '<details class="issue-row" data-group="'+esc(key(g))+'"><summary><span class="issue-row__scope">'+esc(g.scope)+'</span><span><strong>'+g.groupCount+' × '+esc(g.title)+'</strong><small>'+esc(g.description)+'</small></span><span class="issue-row__arrow">Ver archivos</span></summary><div class="issue-items"></div></details>';
   }
@@ -45,6 +45,30 @@
     const defs=[["max","Máxima"],["high","Alta"],["medium","Media"],["low","Baja"]];
     el("summaryGrid").innerHTML=defs.map(d=>'<div class="kpi kpi--'+d[0]+'"><span>'+d[1]+'</span><strong>'+(vm.counts[d[0]]||0)+'</strong></div>').join("")+
       '<div class="kpi kpi--issue"><span>Inconsistencias visibles</span><strong>'+vm.visibleInconsistencies+'</strong></div>';
+    const processFilter=el("filterProcess");
+    const selected=processFilter.value;
+    const catalog=window.AuditManualCatalog && window.AuditManualCatalog.catalog || {};
+    const options=[];
+    ["UGPA","UTET"].forEach(scope=>{
+      const unit=catalog[scope];
+      if(!unit || !unit.processes)return;
+      Object.keys(unit.processes).forEach(number=>{
+        options.push([scope+"-"+number,scope+"-PRO-"+number+" · "+unit.processes[number].name]);
+      });
+    });
+    processFilter.innerHTML='<option value="all">Todos los procesos</option>'+
+      options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join("");
+    processFilter.value=options.some(x=>x[0]===selected)?selected:"all";
+    const rows=(vm.processes||[]).map(p=>
+      '<tr><td><strong>'+esc(p.id)+'</strong><small>'+esc(p.processName)+'</small></td>'+
+      '<td>'+esc(p.folderStatus)+'</td><td>'+esc(p.state)+'</td>'+
+      '<td>'+p.activeTasks+' / '+p.tasks+'</td><td>'+p.issues+'</td>'+
+      '<td>'+esc(p.indicator)+'<small>Meta: '+esc(p.target)+' · '+esc(p.indicatorValue)+'</small></td>'+
+      '<td>'+esc(p.nextAction)+'</td></tr>'
+    ).join("");
+    el("processSummary").innerHTML='<div class="process-table-wrap"><table class="process-table">'+
+      '<thead><tr><th>Proceso</th><th>Carpeta</th><th>Situación</th><th>Pendientes abiertos / total</th>'+
+      '<th>Observaciones</th><th>Indicador y meta</th><th>Siguiente acción</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     el("workCounts").textContent="Detectados: "+vm.workCounts.quick+" rápidos · "+vm.workCounts.review+" por verificar · "+vm.workCounts.document+" documentos por elaborar";
     el("priorityCount").textContent=vm.tasks.length+" visibles de "+vm.totalTasks;
     el("priorityList").innerHTML=vm.tasks.length?vm.tasks.map(task).join(""):'<div class="empty-state">No hay pendientes en este filtro.</div>';
@@ -53,18 +77,19 @@
     el("issueList").innerHTML=groups.length?groups.map(card).join(""):'<div class="empty-state">No hay inconsistencias en este filtro.</div>';
   }
   function getFilters() {
-    return {scope:el("filterScope").value,area:el("filterArea").value,level:el("filterLevel").value,
+    return {scope:el("filterScope").value,process:el("filterProcess").value,area:el("filterArea").value,level:el("filterLevel").value,
       workType:el("filterWork").value,status:el("filterStatus").value,search:el("filterSearch").value};
   }
   function bindEvents(handlers) {
-    ["filterScope","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>el(id).addEventListener("change",()=>handlers.onFiltersChange(getFilters())));
+    ["filterScope","filterProcess","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>el(id).addEventListener("change",()=>handlers.onFiltersChange(getFilters())));
     el("filterSearch").addEventListener("input",()=>handlers.onFiltersChange(getFilters()));
     el("btnResetFilters").addEventListener("click",()=>{
-      ["filterScope","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>{el(id).value="all";});
+      ["filterScope","filterProcess","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>{el(id).value="all";});
       el("filterSearch").value="";handlers.onFiltersChange(getFilters());
     });
     el("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
     el("btnRescanPriority").addEventListener("click",handlers.onRescan);
+    el("btnExportPriorityExcel").addEventListener("click",handlers.onExportExcel);
     el("btnExportPriorityPdf").addEventListener("click",handlers.onExportPdf);
     document.addEventListener("click",event=>{
       const btn=event.target.closest("button");if(!btn)return;

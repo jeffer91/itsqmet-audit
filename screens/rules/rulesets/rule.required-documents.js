@@ -97,8 +97,12 @@ Función:
   function matchesFinalDocument(expected, file) {
     if (safeText(file && file.extension).toLowerCase() !== ".pdf") return false;
     if (matchesExpected(expected, { name: file.name, relativePath: "" })) return true;
-    const codes = Array.isArray(expected && expected.codes) ? expected.codes : [];
-    return codes.length > 0 && everyCode(file.name, codes);
+    // Solo un código de formulario + código de proceso identifica un
+    // documento. MEM/OFI/COM generales no acreditan cualquier obligación.
+    const codes=Array.isArray(expected&&expected.codes)?expected.codes:[];
+    const processSpecific=codes.some(c=>/^PRO-\d+$/i.test(safeText(c)));
+    const documentSpecific=codes.some(c=>/(?:^|-)RGI\d+(?:$|-)|(?:^|-)INF(?:$|-)/i.test(safeText(c)));
+    return processSpecific && documentSpecific && everyCode(file.name,codes);
   }
 
   function hasPdfWithin(files, folderRelativePath, expected) {
