@@ -801,7 +801,9 @@
         (!normalize(filtersSafe.search) || haystack(issue).includes(normalize(filtersSafe.search)));
     });
     const grouped = groupInconsistencies(visibleIssues);
-    const processes = window.PriorityProcesses ? window.PriorityProcesses.buildRows(shared,visibleTasks,visibleIssues,filtersSafe) : [];
+    // Los indicadores y el estado de cada proceso representan todo el escaneo,
+    // no solo los elementos visibles bajo filtros de prioridad o tipo de trabajo.
+    const processes = window.PriorityProcesses ? window.PriorityProcesses.buildRows(shared,tasks,allIssues,filtersSafe) : [];
     const counts = {};
     Config.levels.forEach(function (def) {
       counts[def.id] = visibleTasks.filter(function (item) { return item.level === def.id; }).length;

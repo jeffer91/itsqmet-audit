@@ -50,6 +50,7 @@
     const catalog=window.AuditManualCatalog && window.AuditManualCatalog.catalog || {};
     const options=[];
     ["UGPA","UTET"].forEach(scope=>{
+      if (el("filterScope").value !== "all" && el("filterScope").value !== scope) return;
       const unit=catalog[scope];
       if(!unit || !unit.processes)return;
       Object.keys(unit.processes).forEach(number=>{
@@ -60,7 +61,7 @@
       options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join("");
     processFilter.value=options.some(x=>x[0]===selected)?selected:"all";
     const rows=(vm.processes||[]).map(p=>
-      '<tr><td><strong>'+esc(p.id)+'</strong><small>'+esc(p.processName)+'</small></td>'+
+      '<tr><td><strong>'+esc(p.scope+"-PRO-"+p.processNumber)+'</strong><small>'+esc(p.processName)+'</small></td>'+
       '<td>'+esc(p.folderStatus)+'</td><td>'+esc(p.state)+'</td>'+
       '<td>'+p.activeTasks+' / '+p.tasks+'</td><td>'+p.issues+'</td>'+
       '<td>'+esc(p.indicator)+'<small>Meta: '+esc(p.target)+' · '+esc(p.indicatorValue)+'</small></td>'+

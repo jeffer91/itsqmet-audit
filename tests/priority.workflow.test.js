@@ -27,6 +27,7 @@ function setup(options = {}) {
     "screens/rules/rules.types.js",
     "screens/rules/manual/manual.catalog.js",
     "screens/priority/priority.config.js",
+    "screens/priority/priority.processes.js",
     "screens/priority/priority.service.js"
   ]) vm.runInContext(read(script),context,{filename:script});
   return {svc:window.PriorityService,window};
@@ -103,4 +104,15 @@ test("las tareas de carpeta pueden ofrecer crear en fuentes locales",()=>{
 });
 test("la creación de carpeta exige tarea verificable",async()=>{
   await assert.rejects(()=>setup().svc.createFolder({workType:"quick"}),/verificada/);
+});
+
+test("el indicador del proceso no oculta observaciones por filtros de tipo",()=>{
+  const finding=find("filtro-56","Nombre de PDF incorrecto","Plan (2).pdf","Plan.pdf");
+  const {svc}=setup({state:{ugpaResult:null,utetResult:scan("folder"),discardedFindings:[]},
+    findings:[finding]});
+  const view=svc.buildViewModel({scope:"UTET",process:"UTET-56",workType:"document"});
+  assert.equal(view.visibleInconsistencies,0);
+  assert.equal(view.processes.length,1);
+  assert.equal(view.processes[0].issues,1);
+  assert.equal(view.processes[0].state,"Con observaciones");
 });

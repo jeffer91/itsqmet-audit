@@ -1170,7 +1170,7 @@ function buildPriorityDocument(payload) {
   const issueRows = issues.map(function mapIssue(issue) {
     return `
       <tr>
-        <td>${escapeHtml(issue.scope || "")}</td>
+        <td>${escapeHtml(issue.processNumber ? (issue.scope + "-PRO-" + issue.processNumber) : (issue.scope + " · Sin clasificar"))}</td>
         <td><strong>${Number(issue.groupCount || 1)} × ${escapeHtml(issue.title || "")}</strong></td>
         <td>${escapeHtml(issue.description || "")}</td>
         <td class="path">${escapeHtml((issue.examples && issue.examples[0]) || issue.pathLabel || "")}</td>
@@ -1181,7 +1181,7 @@ function buildPriorityDocument(payload) {
     ? issues.flatMap(function eachGroup(issue) {
         return normalizeArray(issue.items).map(function eachItem(item) {
           return `<tr>
-            <td>${escapeHtml(item.scope || "")}</td>
+            <td>${escapeHtml(item.processNumber ? item.scope + "-PRO-" + item.processNumber : item.scope + " · Sin clasificar")}</td>
             <td>${escapeHtml(item.title || "")}: ${escapeHtml(item.actual || "")}</td>
             <td>${escapeHtml(item.suggestedName || item.expected || "Revisar manualmente")}</td>
             <td class="path">${escapeHtml(item.pathLabel || "")}</td>
@@ -1191,7 +1191,7 @@ function buildPriorityDocument(payload) {
     : "";
 
   const processRows = normalizeArray(payload.processes).map(function(p){
-    return "<tr><td>"+escapeHtml(p.id)+"</td><td>"+escapeHtml(p.processName)+"</td>"+
+    return "<tr><td>"+escapeHtml(p.scope+"-PRO-"+p.processNumber)+"</td><td>"+escapeHtml(p.processName)+"</td>"+
       "<td>"+escapeHtml(p.state)+"</td><td>"+Number(p.activeTasks||0)+"</td>"+
       "<td>"+Number(p.issues||0)+"</td><td>"+escapeHtml(p.indicator)+"</td>"+
       "<td>"+escapeHtml(p.target)+"</td><td>"+escapeHtml(p.indicatorValue)+"</td></tr>";
@@ -1263,7 +1263,7 @@ ${issueRows ? `
   <h2>Inconsistencias agrupadas para revisión</h2>
   <div class="note">Estas observaciones no se mezclan con la lista de trabajo prioritario. Se agrupan para evitar cientos de filas repetidas.</div>
   <table>
-    <thead><tr><th style="width:8%">Unidad</th><th style="width:27%">Grupo</th><th style="width:40%">Descripción</th><th style="width:25%">Ejemplo</th></tr></thead>
+    <thead><tr><th style="width:8%">Proceso</th><th style="width:27%">Grupo</th><th style="width:40%">Descripción</th><th style="width:25%">Ejemplo</th></tr></thead>
     <tbody>${issueRows}</tbody>
   </table>
 </section>` : ""}
@@ -1271,7 +1271,7 @@ ${quickDetails ? `
 <section class="section">
   <h2>Detalle individual de todas las inconsistencias</h2>
   <table>
-    <thead><tr><th style="width:8%">Unidad</th><th style="width:30%">Nombre actual</th><th style="width:30%">Nombre propuesto</th><th style="width:32%">Ubicación</th></tr></thead>
+    <thead><tr><th style="width:8%">Proceso</th><th style="width:30%">Nombre actual</th><th style="width:30%">Nombre propuesto</th><th style="width:32%">Ubicación</th></tr></thead>
     <tbody>${quickDetails}</tbody>
   </table>
 </section>` : ""}

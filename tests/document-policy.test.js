@@ -88,3 +88,30 @@ test("PDF de otro documento no acredita obligación", () => {
   scan.files.push(file("UTET-RGI1-01-PRO-56-2026-10.pdf",base));
   assert.equal(w.RuleRequiredDocuments.run({scope:"UTET",scanData:scan}).length, 0);
 });
+
+test("códigos RGI repetidos no acreditan dos entregables diferentes",()=>{
+  const processPath="PROCESOS ESTRATEGICOS/UGPA-PRO-31-Formacion Docente";
+  const sameCodes=["UGPA-RGI1","PRO-31"];
+  const first={id:"diagnostico",label:"Detección de Necesidades de Formación",
+    codes:sameCodes,keywords:["deteccion","necesidades","formacion"]};
+  const second={id:"plan",label:"Plan Anual de Formación Docente",
+    codes:sameCodes,keywords:["plan","anual","formacion"]};
+  let required=[first,second];
+  const w=environment("screens/rules/rulesets/rule.required-documents.js",{
+    RulesTypes:{
+      buildScanIndex:scan=>({files:scan.files,folders:[]}),
+      findProcessFolders:()=>[{name:"UGPA-PRO-31-Formacion Docente",
+        relativePath:processPath,path:"/auditoria/"+processPath,
+        processValidation:{valid:true,processNumber:"31"}}],
+      normalizeRelativePath:x=>String(x||""),
+      buildFindingId:x=>x.ruleId+"|"+x.relativePath+"|"+x.expectedValue
+    },
+    AuditManualCatalog:{getProcess:()=>({name:"Formación Docente",documents:required}),
+      normalizeText:x=>String(x||"").toLowerCase()}
+  });
+  const scan={ok:true,rootPath:"/auditoria",rootName:"UGPA",
+    files:[file("UGPA-RGI1-01-PRO-31-2026-10.pdf",processPath)],folders:[]};
+  assert.equal(w.RuleRequiredDocuments.run({scope:"UGPA",scanData:scan}).length,2);
+  required=[first];
+  assert.equal(w.RuleRequiredDocuments.run({scope:"UGPA",scanData:scan}).length,0);
+});

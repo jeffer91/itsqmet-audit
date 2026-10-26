@@ -94,7 +94,7 @@ Función:
   }
 
   // El nombre del PDF (no solo la carpeta) debe identificar el documento requerido.
-  function matchesFinalDocument(expected, file) {
+  function matchesFinalDocument(expected, file, allDocuments) {
     if (safeText(file && file.extension).toLowerCase() !== ".pdf") return false;
     if (matchesExpected(expected, { name: file.name, relativePath: "" })) return true;
     // Solo un código de formulario + código de proceso identifica un
@@ -102,13 +102,20 @@ Función:
     const codes=Array.isArray(expected&&expected.codes)?expected.codes:[];
     const processSpecific=codes.some(c=>/^PRO-\d+$/i.test(safeText(c)));
     const documentSpecific=codes.some(c=>/(?:^|-)RGI\d+(?:$|-)|(?:^|-)INF(?:$|-)/i.test(safeText(c)));
-    return processSpecific && documentSpecific && everyCode(file.name,codes);
+    // Un mismo código puede referirse a dos documentos en el mismo proceso.
+    // Solo se acepta acreditación por código si identifica un único entregable.
+    const signature=codes.map(c=>normalize(c)).sort().join("|");
+    const ambiguous=(Array.isArray(allDocuments)?allDocuments:[]).some(function(other){
+      return other!==expected &&
+        (Array.isArray(other&&other.codes)?other.codes:[]).map(c=>normalize(c)).sort().join("|")===signature;
+    });
+    return !ambiguous && processSpecific && documentSpecific && everyCode(file.name,codes);
   }
 
-  function hasPdfWithin(files, folderRelativePath, expected) {
+  function hasPdfWithin(files, folderRelativePath, expected, allDocuments) {
     return files.some(function some(file) {
       return isDescendant(file && file.relativePath, folderRelativePath) &&
-        matchesFinalDocument(expected, file);
+        matchesFinalDocument(expected, file, allDocuments);
     });
   }
 
@@ -166,7 +173,7 @@ Función:
     ];
   }
 
-  function evidenceExists(expected, container, index) {
+  function evidenceExists(expected, container, index, allDocuments) {
     const containerRel = rel(container.relativePath);
 
     const matchingFolders = index.folders.filter(function keep(folder) {
@@ -177,7 +184,7 @@ Función:
 
     if (
       matchingFolders.some(function hasPdf(folder) {
-        return hasPdfWithin(index.files, folder.relativePath, expected);
+        return hasPdfWithin(index.files, folder.relativePath, expected, allDocuments);
       })
     ) {
       return true;
@@ -185,7 +192,7 @@ Función:
 
     return index.files.some(function keep(file) {
       if (!isDescendant(file && file.relativePath, containerRel)) return false;
-      return matchesFinalDocument(expected, file);
+      return matchesFinalDocument(expected, file, allDocuments);
     });
   }
 
@@ -278,7 +285,7 @@ Función:
 
       containers.forEach(function eachContainer(container) {
         processInfo.documents.forEach(function eachExpected(expected) {
-          if (!evidenceExists(expected, container, index)) {
+          if (!evidenceExists(expected, container, index, processInfo.documents)) {
             findings.push(
               createFinding(
                 rule,

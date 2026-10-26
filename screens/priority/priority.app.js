@@ -61,7 +61,10 @@
         const result=await window.PriorityService.exportPdf(filters);
         window.PriorityUI.setGlobalMessage("PDF guardado en Descargas: "+result.fileName,"success");
       }),
-      onFiltersChange:next=>{filters=next;refresh();},
+      onFiltersChange:next=>{
+        if(next.scope!=="all" && next.process!=="all" && !next.process.startsWith(next.scope+"-"))next.process="all";
+        filters=next;refresh();
+      },
       onOpenPath:target=>perform(()=>window.PriorityService.openPath(target)),
       onCopy:name=>perform(async()=>{
         const result=await window.api.shell.copyText(name);
