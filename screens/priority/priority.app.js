@@ -1,93 +1,145 @@
 (function (window, document) {
   "use strict";
-  let loaded=false;
-  let filters={scope:"all",process:"all",area:"all",level:"all",workType:"all",status:"all",search:""};
-  const safe=v=>String(v==null?"":v).trim();
+  let loaded = false;
+  let currentBoard = null;
+  const safe = value => String(value == null ? "" : value).trim();
   function loadScript(src) {
-    return new Promise((resolve,reject)=>{
-      const script=document.createElement("script");script.src=src;script.async=false;
-      script.onload=resolve;script.onerror=()=>reject(new Error("No se pudo cargar "+src));
+    return new Promise(function (resolve,reject) {
+      const script=document.createElement("script");
+      script.src=src;script.async=false;script.onload=resolve;
+      script.onerror=()=>reject(new Error("No se pudo cargar "+src));
       document.head.appendChild(script);
     });
   }
   async function loadRules() {
-    if(loaded)return;
+    if (loaded) return;
     const response=await window.api.rules.listFiles();
-    if(!response||!response.ok)throw new Error(response&&response.error||"Error al cargar reglas");
-    for(const rule of response.files||[]) {
-      if(rule.globalName&&Object.prototype.hasOwnProperty.call(window,rule.globalName))continue;
-      for(const file of rule.scripts||[])await loadScript("../rules/rulesets/"+safe(file).replace(/^\/+/, ""));
+    if (!response || !response.ok) throw new Error(response && response.error || "No se pudieron cargar las reglas.");
+    for (const rule of response.files || []) {
+      if (rule.globalName && Object.prototype.hasOwnProperty.call(window,rule.globalName)) continue;
+      for (const file of rule.scripts || [])
+        await loadScript("../rules/rulesets/" + safe(file).replace(/^\/+/, ""));
     }
     loaded=true;
   }
-  function refresh(message) {
-    const vm=window.PriorityService.buildViewModel(filters);
-    window.PriorityUI.render(vm);
-    if(message)window.PriorityUI.setGlobalMessage(message,"success");
-    return vm;
+  function refresh(message,type) {
+    const vm=window.PriorityService.buildViewModel({});
+    const data=window.PriorityStorage.load();
+    const board=window.PriorityQueue.build(vm,data);
+    window.PriorityStorage.setQueue(board.queueIds);
+    currentBoard=board;
+    window.PriorityUI.render(vm,board);
+    if(message)window.PriorityUI.setGlobalMessage(message,type||"success");
+    return board;
   }
   async function perform(callback) {
-    try {return await callback();}
-    catch(error){window.PriorityUI.setGlobalMessage(error&&error.message||"Error inesperado.","error");return null;}
+    try { return await callback(); }
+    catch(error) {
+      window.PriorityUI.setGlobalMessage(error && error.message || "No se pudo completar la acción.","error");
+      return null;
+    }
+  }
+  function getTask(id) {
+    return currentBoard && currentBoard.all.find(item=>item.id===id);
+  }
+  async function rescan(scopes) {
+    const previous=window.AppStore.get();
+    let count=0;
+    const errors=[];
+    for(const scope of scopes || ["UGPA","UTET"]) {
+      const scan=scope==="UGPA"?previous.ugpaResult:previous.utetResult;
+      if (!scan || !scan.ok || !scan.source || scan.source.kind!=="folder") continue;
+      try {
+        const result=await window.api.archive.scanFolderFromPath(
+          scope,scan.source.selectedFolderPath||scan.rootPath);
+        if(!result||!result.ok)throw new Error(result&&result.error||"Error de escaneo.");
+        window.AppStore.setHistory(result.history);
+        count++;
+      } catch(error){errors.push(scope+": "+(error&&error.message||"Error"));}
+    }
+    if(!count&& !errors.length)throw new Error("Selecciona carpetas locales desde Escaneo.");
+    if(errors.length)throw new Error(errors.join(" · "));
+    return count;
   }
   async function initialize() {
-    window.AppNav&&window.AppNav.render("priority");
-    window.AppNav&&window.AppNav.setLoading&&window.AppNav.setLoading(true,"Cargando Priorización…");
+    window.AppNav && window.AppNav.render("priority");
+    window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Cargando prioridades…");
     await loadRules();
     const history=await window.api.history.get();
     if(history&&history.ok&&history.history)window.AppStore.setHistory(history.history);
     window.PriorityUI.bindEvents({
-      onRefresh:()=>refresh("Prioridades recalculadas con el último escaneo."),
+      onRefresh:()=>perform(()=>{
+        window.PriorityStorage.setQueue([]);
+        refresh("Se actualizaron las cinco prioridades.");
+      }),
       onRescan:()=>perform(async()=>{
-        window.AppNav&&window.AppNav.setLoading&&window.AppNav.setLoading(true,"Escaneando carpetas…");
+        window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Escaneando carpetas…");
         try {
-          let count=0;
-          for(const scope of ["UGPA","UTET"]) {
-            const scan=window.AppStore.get()[scope==="UGPA"?"ugpaResult":"utetResult"];
-            if(!scan||!scan.ok||!scan.source||scan.source.kind!=="folder")continue;
-            const result=await window.api.archive.scanFolderFromPath(scope,scan.source.selectedFolderPath||scan.rootPath);
-            if(!result||!result.ok)throw new Error(result&&result.error||"Error en "+scope);
-            window.AppStore.setHistory(result.history);count++;
-          }
-          if(!count)throw new Error("No hay carpetas locales registradas. Usa la pestaña Escaneo.");
-          refresh("Se escanearon "+count+" carpetas de unidad.");
-        } finally {window.AppNav&&window.AppNav.setLoading&&window.AppNav.setLoading(false);}
+          const total=await rescan();
+          refresh("Se revisaron "+total+" unidad(es). El avance registrado se conserva.");
+        } finally {
+          window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(false);
+        }
       }),
       onExportExcel:()=>perform(async()=>{
-        const result=await window.PriorityService.exportExcel(filters);
+        const result=await window.PriorityService.exportExcel({});
         window.PriorityUI.setGlobalMessage("Excel guardado en Descargas: "+result.fileName,"success");
       }),
       onExportPdf:()=>perform(async()=>{
-        const result=await window.PriorityService.exportPdf(filters);
+        const result=await window.PriorityService.exportPdf({});
         window.PriorityUI.setGlobalMessage("PDF guardado en Descargas: "+result.fileName,"success");
       }),
-      onFiltersChange:next=>{
-        if(next.scope!=="all" && next.process!=="all" && !next.process.startsWith(next.scope+"-"))next.process="all";
-        filters=next;refresh();
-      },
-      onOpenPath:target=>perform(()=>window.PriorityService.openPath(target)),
-      onCopy:name=>perform(async()=>{
-        const result=await window.api.shell.copyText(name);
-        if(!result||!result.ok)throw new Error(result&&result.error||"No se pudo copiar.");
-        window.PriorityUI.setGlobalMessage("Nombre sugerido copiado.","success");
+      onOpenPath:path=>perform(async()=>{
+        await window.PriorityService.openPath(path);
       }),
       onStatus:(id,status)=>perform(()=>{
-        window.PriorityService.saveProgress(id,status);
-        refresh("Estado guardado en este equipo; no sustituye la evidencia documental.");
+        const task=getTask(id);
+        if(!task)throw new Error("La tarea ya no está disponible. Actualiza.");
+        let note="";
+        if(status==="blocked"){
+          const entered=window.prompt("¿Qué falta para continuar? (responsable, insumo o aprobación)");
+          if(entered===null)return;
+          note=safe(entered);
+          if(!note)throw new Error("Indica el motivo del bloqueo.");
+        }
+        window.PriorityStorage.setStatus(id,status,note);
+        refresh(status==="done"?"Trabajo registrado; la evidencia sigue pendiente de validación.":
+          status==="blocked"?"Tarea bloqueada; la siguiente recomendación está disponible.":
+          status==="snoozed"?"Tarea pospuesta. Puedes reactivarla en Ver todos.":
+          "Avance guardado.");
+      }),
+      onStep:id=>perform(()=>{
+        const task=getTask(id);
+        if(!task||!task.large)throw new Error("Esta tarea no tiene etapas.");
+        window.PriorityStorage.completeStep(id,task.stepIndex,task.stepCount);
+        refresh(task.stepIndex+1===task.stepCount
+          ?"Se completaron las etapas; la evidencia debe validarse."
+          :"Paso registrado. Ya puedes continuar con la siguiente etapa.");
+      }),
+      onReopen:id=>perform(()=>{
+        window.PriorityStorage.resetTask(id);
+        refresh("La tarea se reactivó.");
       }),
       onCreateFolder:id=>perform(async()=>{
-        const task=window.PriorityService.buildViewModel(filters).tasks.find(item=>item.id===id);
-        if(!task||!task.parentPath||!task.proposedFolderName)throw new Error("Carpeta no disponible.");
-        if(!window.confirm("Crear carpeta en:\n"+task.parentPath+"\n\nNombre:\n"+task.proposedFolderName+"\n\nSe comprobará que no exista."))return;
+        const task=getTask(id);
+        if(!task||!task.parentPath||!task.proposedFolderName)
+          throw new Error("No existe un destino local verificado.");
+        if(!window.confirm("Crear carpeta en:\n"+task.parentPath+"\n\nNombre:\n"+task.proposedFolderName+"\n\nNo se reemplazará ninguna carpeta existente."))return;
         await window.PriorityService.createFolder(task);
-        window.PriorityUI.setGlobalMessage("Carpeta creada. Vuelve a escanear para verificar.","success");
+        try {
+          await rescan([task.scope]);
+          refresh("Carpeta creada y unidad escaneada. Confirma la evidencia antes de validar.");
+        } catch(error) {
+          refresh("La carpeta se creó. Vuelve a escanear para confirmar.", "warning");
+        }
       })
     });
     window.AppStore.subscribe(()=>refresh());
     refresh();
   }
-  document.addEventListener("DOMContentLoaded",()=>{
-    initialize().catch(error=>window.PriorityUI&&window.PriorityUI.setGlobalMessage(error.message,"error"))
-      .finally(()=>window.AppNav&&window.AppNav.setLoading&&window.AppNav.setLoading(false));
+  document.addEventListener("DOMContentLoaded",function () {
+    initialize().catch(error=>window.PriorityUI &&
+      window.PriorityUI.setGlobalMessage(error && error.message || "No se pudo iniciar.","error"))
+      .finally(()=>window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(false));
   });
-})(window, document);
+})(window,document);

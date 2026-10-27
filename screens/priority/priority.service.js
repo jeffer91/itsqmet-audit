@@ -264,6 +264,7 @@
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
     const due = dueFor(stage, period, today);
     const verify = category !== "required-documents" ||
+      (category === "required-documents" && !!safeText(finding.periodLabel) && !period) ||
       (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(finding.missingFileName || finding.expectedValue)));
     const level = verify ? "medium" : due.level || levelFallback(area, category);
     const manualProcess = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
@@ -358,7 +359,7 @@
       levelLabel: levelDef(due.level).label,
       stage: stage,
       stageLabel: stage === "close" ? "Cierre" : "Inicio",
-      effort: profile.effort || "high",
+      effort: missingProcess ? "medium" : "low",
       periodLabel: label,
       dueDate: due.dueDate,
       reason: missingProcess
@@ -498,7 +499,7 @@
         levelLabel: levelDef(due.level).label,
         stage: "start",
         stageLabel: "Inicio bienal",
-        effort: "high",
+        effort: "low",
         periodLabel: periodLabel(currentCycle),
         dueDate: due.dueDate,
         reason: "El proceso trabaja en ciclos de 24 meses. Las nuevas carreras pueden incorporarse cada 6 meses sin crear un nuevo ciclo bienal. " + due.reason,
@@ -639,7 +640,8 @@
     if (!task || task.synthetic || !task.sourceId) return false;
     if (!/carpeta de periodo faltante/i.test(normalize(task.sourceTitle))) return false;
     return syntheticTasks.some(function some(other) {
-      return other.scope === task.scope && other.processNumber === task.processNumber;
+      return other.scope === task.scope && other.processNumber === task.processNumber &&
+        normalize(other.periodLabel) === normalize(task.periodLabel);
     });
   }
 

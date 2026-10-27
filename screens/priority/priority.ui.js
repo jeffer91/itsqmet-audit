@@ -1,117 +1,137 @@
 (function (window, document) {
   "use strict";
-  const el = id => document.getElementById(id);
-  const clean = v => String(v == null ? "" : v).trim();
-  const esc = v => clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-  const workflow = {quick:"Corrección rápida",review:"Por verificar",document:"Por elaborar"};
-  const states = {pending:"Pendiente",doing:"En proceso",review:"En revisión",done:"Completado (por verificar)"};
-  let groups = [];
-  function status(item) {
-    return '<label class="status-field">Estado<select class="js-status" data-id="' + esc(item.id) + '">' +
-      Object.keys(states).map(s=>'<option value="'+s+'"'+(item.status===s?' selected':'')+'>'+states[s]+'</option>').join("") +
-      '</select></label>';
+  const byId = id => document.getElementById(id);
+  const val = v => String(v == null ? "" : v).trim();
+  const esc = v => val(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const STATUS = {pending:"Pendiente",doing:"En proceso",review:"En revisión",
+    done:"Realizado · por verificar",blocked:"Bloqueado",snoozed:"Pospuesto"};
+  let board = {items:[],all:[]};
+  let vm = {processes:[]};
+  let limit = 40;
+  function kind(item) {
+    if (item.large) return "Documento estratégico";
+    if (item.workType === "document") return "Documento por elaborar";
+    if (item.workType === "quick") return "Corrección rápida";
+    return "Verificación";
   }
-  function task(item) {
-    const due = item.dueDate ? new Intl.DateTimeFormat("es-EC",{day:"2-digit",month:"short",year:"numeric",timeZone:"UTC"}).format(item.dueDate) : "Sin fecha exacta";
-    return '<article class="task-card task-card--'+esc(item.level)+'"><div class="task-card__priority"><span class="priority-pill priority-pill--'+esc(item.level)+'">'+esc(item.levelLabel)+'</span></div>' +
-      '<div class="task-card__body"><div class="task-card__meta"><span>'+esc(item.scope+(item.processNumber?"-PRO-"+item.processNumber:""))+'</span><span>'+esc(item.areaLabel)+'</span><span class="work-tag">'+esc(workflow[item.workType]||"Verificar")+'</span><span>Esfuerzo '+(item.effort==="high"?"alto":item.effort==="medium"?"medio":"bajo")+'</span></div>' +
-      '<h3>'+esc(item.title)+'</h3><p class="task-card__reason">'+esc(item.reason)+'</p>' +
-      '<div class="task-card__foot"><span>'+esc(item.periodLabel||"Sin período")+'</span><span>Fecha de referencia estimada: '+esc(due)+'</span></div></div>' +
-      '<div class="task-card__actions">' +
-      (item.actionPath?'<button class="btn btn--small js-open" data-path="'+esc(item.actionPath)+'">Abrir carpeta</button>':"") +
-      (item.parentPath&&item.proposedFolderName?'<button class="btn btn--small btn--action js-mkdir" data-id="'+esc(item.id)+'">Crear carpeta</button>':"") +
-      status(item)+'</div></article>';
+  function taskSummary(item) {
+    if (item.large) return item.nextAction;
+    if (item.origin === "group") return "Revisar " + item.groupCount + " caso(s) relacionados";
+    if (item.workType === "quick") return "Comprobar y realizar la corrección";
+    if (item.workType === "review") return "Comprobar la situación antes de actuar";
+    return "Verificar la obligación y completar el documento";
   }
-  function detail(item) {
-    const canCopy = !!item.suggestedName;
-    return '<div class="issue-detail"><div class="issue-detail__text"><strong>'+esc(item.actual||item.title)+'</strong>' +
-      '<small>'+esc(item.pathLabel)+'</small>'+(item.suggestedName?'<small>Nombre propuesto: '+esc(item.suggestedName)+'</small>':
-        item.expected?'<small>Criterio para revisar: '+esc(item.expected)+'</small>':"")+
-      (item.description?'<small>'+esc(item.description)+'</small>':"")+'</div><div class="issue-detail__actions">' +
-      (canCopy?'<button class="btn btn--small js-copy" data-name="'+esc(item.suggestedName)+'">Copiar nombre</button>':"") +
-      (item.actionPath?'<button class="btn btn--small js-open" data-path="'+esc(item.actionPath)+'">Abrir</button>':"") +
-      status(item)+'</div></div>';
+  function card(item, index) {
+    const title = esc(item.projectTitle || item.title);
+    const meta = esc([item.scope, item.processNumber ? "PRO-" + item.processNumber : "",
+      kind(item)].filter(Boolean).join(" · "));
+    const canCreate = !!(item.parentPath && item.proposedFolderName && item.workType === "quick");
+    const groupDetails = (item.groupItems || []).length
+      ? '<div class="task-items"><strong>Algunos elementos:</strong><ul>' +
+        item.groupItems.map(x => '<li>' + esc(x.actual || x.pathLabel || x.title) + '</li>').join("") +
+        '</ul></div>' : "";
+    const action = item.large
+      ? '<button class="btn js-step" type="button" data-id="' + esc(item.id) + '">Terminé este paso</button>'
+      : '<button class="btn js-status" type="button" data-status="done" data-id="' + esc(item.id) + '">Terminé mi parte</button>';
+    return '<details class="task-card" data-id="' + esc(item.id) + '">' +
+      '<summary><span class="task-number">' + String(index + 1).padStart(2,"0") + '</span>' +
+      '<span class="task-main"><span class="task-title">' + title + '</span>' +
+      '<span class="task-next">' + esc(taskSummary(item)) + (item.large ? ": " + esc(item.nextAction) : "") + '</span>' +
+      '<span class="task-meta">' + meta + (item.status==="doing"?" · En proceso":"") +
+      '</span></span><span class="task-chevron" aria-hidden="true">›</span></summary>' +
+      '<div class="task-detail">' +
+      (item.large ? '<span class="task-step">Paso ' + (item.stepIndex+1) + ' de ' + item.stepCount + '</span>' : "") +
+      '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +
+      (item.periodLabel ? '<span class="task-meta">Período: ' + esc(item.periodLabel) + '</span>' : "") +
+      groupDetails +
+      '<div class="task-actions">' +
+      (item.actionPath ? '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.actionPath) + '">Abrir carpeta</button>' : "") +
+      (canCreate ? '<button class="btn btn-soft js-mkdir" type="button" data-id="' + esc(item.id) + '">Crear carpeta</button>' : "") +
+      action +
+      (item.status !== "doing" ? '<button class="btn btn-light js-status" type="button" data-id="' + esc(item.id) + '" data-status="doing">En proceso</button>' : "") +
+      '<button class="btn btn-light js-status" type="button" data-status="blocked" data-id="' + esc(item.id) + '">Bloquear</button>' +
+      '<button class="btn btn-light js-status" type="button" data-status="snoozed" data-id="' + esc(item.id) + '">Posponer</button>' +
+      '</div></div></details>';
   }
-  function key(g) {return g.scope+"|"+(g.processNumber||"")+"|"+g.category+"|"+g.title;}
-  function card(g) {
-    return '<details class="issue-row" data-group="'+esc(key(g))+'"><summary><span class="issue-row__scope">'+esc(g.scope)+'</span><span><strong>'+g.groupCount+' × '+esc(g.title)+'</strong><small>'+esc(g.description)+'</small></span><span class="issue-row__arrow">Ver archivos</span></summary><div class="issue-items"></div></details>';
-  }
-  function render(vm) {
-    el("todayLabel").textContent="Cálculo: "+vm.todayLabel;
-    el("scanLabel").textContent="Últimos escaneos: "+vm.scansLabel;
-    el("noScanNotice").style.display=vm.noScan?"block":"none";
-    el("noScanNotice").textContent=vm.noScan?"No hay escaneos disponibles. Selecciona carpetas desde Escaneo.":"";
-    const defs=[["max","Máxima"],["high","Alta"],["medium","Media"],["low","Baja"]];
-    el("summaryGrid").innerHTML=defs.map(d=>'<div class="kpi kpi--'+d[0]+'"><span>'+d[1]+'</span><strong>'+(vm.counts[d[0]]||0)+'</strong></div>').join("")+
-      '<div class="kpi kpi--issue"><span>Inconsistencias visibles</span><strong>'+vm.visibleInconsistencies+'</strong></div>';
-    const processFilter=el("filterProcess");
-    const selected=processFilter.value;
-    const catalog=window.AuditManualCatalog && window.AuditManualCatalog.catalog || {};
-    const options=[];
-    ["UGPA","UTET"].forEach(scope=>{
-      if (el("filterScope").value !== "all" && el("filterScope").value !== scope) return;
-      const unit=catalog[scope];
-      if(!unit || !unit.processes)return;
-      Object.keys(unit.processes).forEach(number=>{
-        options.push([scope+"-"+number,scope+"-PRO-"+number+" · "+unit.processes[number].name]);
-      });
+  function backlogRows() {
+    const unit = byId("filterScope").value;
+    const work = byId("filterWork").value;
+    const query = val(byId("filterSearch").value).toLowerCase();
+    return (board.all || []).filter(function (item) {
+      if (unit !== "all" && item.scope !== unit) return false;
+      if (work !== "all" && item.workType !== work) return false;
+      return !query || [item.title,item.processNumber,item.processName,item.scope,item.periodLabel,item.pathLabel]
+        .join(" ").toLowerCase().includes(query);
     });
-    processFilter.innerHTML='<option value="all">Todos los procesos</option>'+
-      options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join("");
-    processFilter.value=options.some(x=>x[0]===selected)?selected:"all";
-    const rows=(vm.processes||[]).map(p=>
-      '<tr><td><strong>'+esc(p.scope+"-PRO-"+p.processNumber)+'</strong><small>'+esc(p.processName)+'</small></td>'+
-      '<td>'+esc(p.folderStatus)+'</td><td>'+esc(p.state)+'</td>'+
-      '<td>'+p.activeTasks+' / '+p.tasks+'</td><td>'+p.issues+'</td>'+
-      '<td>'+esc(p.indicator)+'<small>Meta: '+esc(p.target)+' · '+esc(p.indicatorValue)+'</small></td>'+
-      '<td>'+esc(p.nextAction)+'</td></tr>'
-    ).join("");
-    el("processSummary").innerHTML='<div class="process-table-wrap"><table class="process-table">'+
-      '<thead><tr><th>Proceso</th><th>Carpeta</th><th>Situación</th><th>Pendientes abiertos / total</th>'+
-      '<th>Observaciones</th><th>Indicador y meta</th><th>Siguiente acción</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-    el("workCounts").textContent="Detectados: "+vm.workCounts.quick+" rápidos · "+vm.workCounts.review+" por verificar · "+vm.workCounts.document+" documentos por elaborar";
-    el("priorityCount").textContent=vm.tasks.length+" visibles de "+vm.totalTasks;
-    el("priorityList").innerHTML=vm.tasks.length?vm.tasks.map(task).join(""):'<div class="empty-state">No hay pendientes en este filtro.</div>';
-    el("issueCount").textContent=vm.visibleInconsistencies+" hallazgos en "+vm.inconsistencyGroups+" grupos";
-    groups=vm.inconsistencies;
-    el("issueList").innerHTML=groups.length?groups.map(card).join(""):'<div class="empty-state">No hay inconsistencias en este filtro.</div>';
   }
-  function getFilters() {
-    return {scope:el("filterScope").value,process:el("filterProcess").value,area:el("filterArea").value,level:el("filterLevel").value,
-      workType:el("filterWork").value,status:el("filterStatus").value,search:el("filterSearch").value};
+  function renderBacklog() {
+    const items = backlogRows();
+    byId("backlogList").innerHTML = items.slice(0,limit).map(function (item) {
+      const inactive = ["done","blocked","snoozed"].includes(item.status);
+      return '<div class="backlog-row"><div class="backlog-row__main"><strong>' +
+        esc(item.projectTitle || item.title) + '</strong><small>' +
+        esc([item.scope,item.processNumber ? "PRO-"+item.processNumber : "",kind(item),STATUS[item.status]||"Pendiente"]
+        .filter(Boolean).join(" · ")) + '</small></div>' +
+        '<div class="backlog-row__actions">' +
+        (item.actionPath?'<button type="button" class="btn btn-light js-open" data-path="' +
+        esc(item.actionPath) + '">Abrir</button>':"") +
+        (inactive?'<button type="button" class="btn btn-soft js-reopen" data-id="' +
+        esc(item.id) + '">Reactivar</button>':"") +
+        '</div></div>';
+    }).join("") || '<div class="empty-state">No hay registros con estos filtros.</div>';
+    byId("btnMore").hidden = items.length <= limit;
+  }
+  function renderProcesses() {
+    byId("processSummary").innerHTML = '<table class="process-table"><thead><tr>' +
+      '<th>Proceso</th><th>Estado</th><th>Pendientes</th><th>Evidencias</th><th>Siguiente acción</th></tr></thead><tbody>' +
+      (vm.processes || []).map(function (p) {
+        return '<tr><td><strong>' + esc(p.scope+"-PRO-"+p.processNumber) + '</strong><small>' +
+          esc(p.processName) + '</small></td><td>' + esc(p.state) + '</td><td>' +
+          Number(p.activeTasks || 0) + '</td><td>' + Number(p.issues || 0) +
+          '<small>' + esc(p.indicatorStatus || "No evaluado") + '</small></td><td>' +
+          esc(p.nextAction) + '</td></tr>';
+      }).join("") + '</tbody></table>';
+  }
+  function render(nextVm, nextBoard) {
+    vm = nextVm || {};
+    board = nextBoard || {items:[],all:[]};
+    byId("todayCompleted").textContent = String(board.completedToday || 0);
+    byId("queueSummary").textContent = board.items.length + " acciones en la cola";
+    byId("priorityList").innerHTML = board.items.map(card).join("") ||
+      '<div class="empty-state">No hay acciones activas. Revisa los pendientes o ejecuta un nuevo escaneo.</div>';
+    byId("backlogCount").textContent = "(" + board.all.length + ")";
+    byId("scanLabel").textContent = vm.scansLabel || "";
+    byId("noScanNotice").hidden = !vm.noScan;
+    byId("noScanNotice").textContent = vm.noScan ? "No hay escaneos. Selecciona UGPA o UTET en Escaneo." : "";
+    renderBacklog();
+    renderProcesses();
   }
   function bindEvents(handlers) {
-    ["filterScope","filterProcess","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>el(id).addEventListener("change",()=>handlers.onFiltersChange(getFilters())));
-    el("filterSearch").addEventListener("input",()=>handlers.onFiltersChange(getFilters()));
-    el("btnResetFilters").addEventListener("click",()=>{
-      ["filterScope","filterProcess","filterArea","filterLevel","filterWork","filterStatus"].forEach(id=>{el(id).value="all";});
-      el("filterSearch").value="";handlers.onFiltersChange(getFilters());
+    byId("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
+    byId("btnRescanPriority").addEventListener("click",handlers.onRescan);
+    byId("btnExportPriorityExcel").addEventListener("click",handlers.onExportExcel);
+    byId("btnExportPriorityPdf").addEventListener("click",handlers.onExportPdf);
+    ["filterScope","filterWork"].forEach(id => byId(id).addEventListener("change",function(){
+      limit=40;renderBacklog();
+    }));
+    byId("filterSearch").addEventListener("input",function(){limit=40;renderBacklog();});
+    byId("btnMore").addEventListener("click",function(){limit+=40;renderBacklog();});
+    document.addEventListener("click",function (event) {
+      const button=event.target.closest("button");
+      if (!button) return;
+      const id=button.dataset.id;
+      if (button.classList.contains("js-open")) handlers.onOpenPath(button.dataset.path);
+      else if(button.classList.contains("js-mkdir")) handlers.onCreateFolder(id);
+      else if(button.classList.contains("js-status")) handlers.onStatus(id,button.dataset.status);
+      else if(button.classList.contains("js-step")) handlers.onStep(id);
+      else if(button.classList.contains("js-reopen")) handlers.onReopen(id);
     });
-    el("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
-    el("btnRescanPriority").addEventListener("click",handlers.onRescan);
-    el("btnExportPriorityExcel").addEventListener("click",handlers.onExportExcel);
-    el("btnExportPriorityPdf").addEventListener("click",handlers.onExportPdf);
-    document.addEventListener("click",event=>{
-      const btn=event.target.closest("button");if(!btn)return;
-      if(btn.classList.contains("js-open"))handlers.onOpenPath(btn.dataset.path);
-      if(btn.classList.contains("js-copy"))handlers.onCopy(btn.dataset.name);
-      if(btn.classList.contains("js-mkdir"))handlers.onCreateFolder(btn.dataset.id);
-    });
-    document.addEventListener("change",event=>{
-      if(event.target.classList.contains("js-status"))handlers.onStatus(event.target.dataset.id,event.target.value);
-    });
-    el("issueList").addEventListener("toggle",event=>{
-      const node=event.target;
-      if(!node.matches||!node.matches("details.issue-row")||!node.open)return;
-      const target=node.querySelector(".issue-items");
-      if(target.dataset.ready)return;
-      const g=groups.find(item=>key(item)===node.dataset.group);
-      if(g){target.innerHTML=g.items.map(detail).join("");target.dataset.ready="yes";}
-    },true);
   }
   function setGlobalMessage(message,type) {
-    const host=el("globalMessage");host.className="global-message"+(type?" is-"+type:"");host.textContent=clean(message);
+    const box=byId("globalMessage");
+    box.textContent=val(message);
+    box.className="global-message" + (type ? " is-"+type : "");
   }
-  window.PriorityUI={render,bindEvents,setGlobalMessage};
-})(window, document);
+  window.PriorityUI={render:render,bindEvents:bindEvents,setGlobalMessage:setGlobalMessage};
+})(window,document);

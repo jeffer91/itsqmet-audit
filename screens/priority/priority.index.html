@@ -4,62 +4,69 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Priorización</title>
+  <title>Priorización · AUDIT</title>
   <link rel="stylesheet" href="../shared/app.nav.css" />
   <link rel="stylesheet" href="./priority.styles.css" />
 </head>
 <body>
   <div id="appTopNav"></div>
   <main class="page">
-    <header class="page__header">
+    <header class="page-header">
       <div>
         <p class="eyebrow">Trabajo pendiente</p>
-        <h1>Priorización</h1>
-        <p class="subtitle">Pendientes basados en manuales UGPA y UTET. Los plazos son orientativos hasta contrastarlos con el POA.</p>
+        <h1>Mi trabajo prioritario</h1>
+        <p class="subtitle">Cinco acciones para seguir avanzando, una a la vez.</p>
       </div>
-      <div class="header__actions">
-        <span id="todayLabel" class="today-label"></span>
-        <button id="btnExportPriorityExcel" class="btn btn--ghost" type="button">Excel de pendientes</button>
-        <button id="btnExportPriorityPdf" class="btn btn--ghost" type="button">PDF de pendientes</button>
-        <button id="btnRefreshPriority" class="btn btn--ghost" type="button">Recalcular</button>
-        <button id="btnRescanPriority" class="btn btn--primary" type="button">Volver a escanear</button>
+      <div class="page-header__count">
+        <strong id="todayCompleted">0</strong>
+        <span>acciones realizadas hoy</span>
       </div>
     </header>
+    <div id="globalMessage" class="global-message" role="status" aria-live="polite"></div>
+    <div id="noScanNotice" class="notice" hidden></div>
 
-    <section id="globalMessage" class="global-message" aria-live="polite"></section>
-    <section id="noScanNotice" class="notice"></section>
-    <p class="scan-label" id="scanLabel"></p>
-
-    <section class="panel filters-panel">
-      <div class="panel__head"><h2>Filtros</h2></div>
-      <div class="filters-grid">
-        <div class="field"><label for="filterScope">Unidad</label><select id="filterScope"><option value="all">Todas</option><option value="UGPA">UGPA</option><option value="UTET">UTET</option></select></div>
-        <div class="field"><label for="filterProcess">Proceso</label><select id="filterProcess"><option value="all">Todos los procesos</option></select></div>
-        <div class="field"><label for="filterArea">Área</label><select id="filterArea"><option value="all">Todas</option><option value="strategic">Estratégicos</option><option value="mission">Misionales</option><option value="support">Apoyo</option></select></div>
-        <div class="field"><label for="filterLevel">Prioridad</label><select id="filterLevel"><option value="all">Todas</option><option value="max">Máxima</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option></select></div>
-        <div class="field"><label for="filterWork">Tipo de trabajo</label><select id="filterWork"><option value="all">Todos</option><option value="quick">Corrección rápida</option><option value="review">Por verificar</option><option value="document">Por elaborar</option></select></div>
-        <div class="field"><label for="filterStatus">Seguimiento</label><select id="filterStatus"><option value="all">Todos</option><option value="pending">Pendiente</option><option value="doing">En proceso</option><option value="review">En revisión</option><option value="done">Completado (por verificar)</option></select></div>
-        <div class="field field--search"><label for="filterSearch">Buscar</label><input id="filterSearch" type="text" placeholder="Proceso, documento o período" autocomplete="off" /></div>
-        <button id="btnResetFilters" class="btn btn--ghost" type="button">Limpiar</button>
+    <section class="main-board" aria-labelledby="workHeading">
+      <div class="section-head">
+        <div><h2 id="workHeading">Qué hacer ahora</h2><p id="queueSummary">Seleccionando prioridades…</p></div>
+        <button id="btnRefreshPriority" class="btn btn-light" type="button">Actualizar</button>
       </div>
-    </section>
-
-    <section class="panel summary-panel">
-      <div class="panel__head"><h2>Resumen</h2><span>Solo pendientes</span></div>
-      <div id="summaryGrid" class="summary-grid"></div><p class="work-counts" id="workCounts"></p>
-    </section>
-
-    <section class="panel process-panel"><div class="panel__head"><h2>Procesos e indicadores institucionales</h2><span>El resumen muestra el escaneo completo; los indicadores no se calculan sin datos verificables.</span></div><div id="processSummary" class="process-summary"></div></section>
-
-    <section class="work-section">
-      <div class="section__head"><div><h2>Qué atender primero</h2><p>Orden: urgencia → tipo de proceso → esfuerzo menor. Las tareas rápidas y los documentos se filtran por separado.</p></div><span id="priorityCount"></span></div>
       <div id="priorityList" class="priority-list"></div>
+      <p class="board-hint">Al terminar un paso, el sistema continúa con la siguiente acción. «Realizado» no equivale a evidencia validada.</p>
     </section>
 
-    <section class="work-section issues-section">
-      <div class="section__head"><div><h2>Inconsistencias y estructura</h2><p>Expande cada grupo para ver todos los archivos. Los filtros Unidad, Área, Tipo y Seguimiento también aplican aquí. Las firmas no se modifican automáticamente.</p></div><span id="issueCount"></span></div>
-      <div id="issueList" class="issue-list"></div>
-    </section>
+    <details id="backlogPanel" class="secondary-panel">
+      <summary>Ver todos los pendientes <span id="backlogCount"></span></summary>
+      <div class="panel-body">
+        <div class="filters">
+          <label>Unidad
+            <select id="filterScope"><option value="all">Todas</option><option value="UGPA">UGPA</option><option value="UTET">UTET</option></select>
+          </label>
+          <label>Tipo
+            <select id="filterWork"><option value="all">Todos</option><option value="document">Documentos</option><option value="quick">Correcciones rápidas</option><option value="review">Verificaciones</option></select>
+          </label>
+          <label>Buscar
+            <input id="filterSearch" type="search" placeholder="Documento, proceso o período" autocomplete="off" />
+          </label>
+        </div>
+        <div id="backlogList" class="backlog-list"></div>
+        <button id="btnMore" class="btn btn-light" type="button" hidden>Mostrar más</button>
+      </div>
+    </details>
+
+    <details id="processPanel" class="secondary-panel">
+      <summary>Procesos e indicadores institucionales</summary>
+      <p class="panel-note">La existencia de archivos no acredita por sí sola los indicadores. Las metas no se calculan sin datos verificables.</p>
+      <div id="processSummary" class="process-summary"></div>
+    </details>
+    <details id="toolsPanel" class="secondary-panel">
+      <summary>Herramientas y reportes</summary>
+      <div class="panel-body tools">
+        <button id="btnRescanPriority" class="btn" type="button">Volver a escanear</button>
+        <button id="btnExportPriorityExcel" class="btn" type="button">Exportar Excel</button>
+        <button id="btnExportPriorityPdf" class="btn" type="button">Exportar PDF</button>
+        <span id="scanLabel" class="micro"></span>
+      </div>
+    </details>
   </main>
 
   <script src="../shared/app.store.js"></script>
@@ -73,6 +80,9 @@
   <script src="../rules/rules.engine.js"></script>
   <script src="./priority.config.js"></script>
   <script src="./priority.processes.js"></script>
+  <script src="./priority.storage.js"></script>
+  <script src="./priority.workflow.js"></script>
+  <script src="./priority.queue.js"></script>
   <script src="./priority.service.js"></script>
   <script src="./priority.ui.js"></script>
   <script src="./priority.app.js"></script>
