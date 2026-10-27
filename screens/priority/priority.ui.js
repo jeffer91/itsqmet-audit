@@ -17,13 +17,14 @@
   }
   function taskSummary(item) {
     if (item.large) return item.nextAction;
+    if (item.suggestedAction) return item.suggestedAction;
     if (item.origin === "group") return "Revisar " + item.groupCount + " caso(s) relacionados";
     if (item.workType === "quick") return "Comprobar y realizar la corrección";
     if (item.workType === "review") return "Comprobar la situación antes de actuar";
     return "Verificar la obligación y completar el documento";
   }
   function card(item, index) {
-    const title = esc(item.projectTitle || item.title);
+    const title = esc(item.displayTitle || item.projectTitle || item.title);
     const meta = esc([item.scope, item.processNumber ? "PRO-" + item.processNumber : "",
       kind(item)].filter(Boolean).join(" · "));
     const canCreate = !!(item.parentPath && item.proposedFolderName && item.workType === "quick");
@@ -37,11 +38,15 @@
     return '<details class="task-card" data-id="' + esc(item.id) + '">' +
       '<summary><span class="task-number">' + String(index + 1).padStart(2,"0") + '</span>' +
       '<span class="task-main"><span class="task-title">' + title + '</span>' +
-      '<span class="task-next">' + esc(taskSummary(item)) + (item.large ? ": " + esc(item.nextAction) : "") + '</span>' +
+      '<span class="task-next">' + esc(taskSummary(item)) + '</span>' +
       '<span class="task-meta">' + meta + (item.status==="doing"?" · En proceso":"") +
       '</span></span><span class="task-chevron" aria-hidden="true">›</span></summary>' +
       '<div class="task-detail">' +
       (item.large ? '<span class="task-step">Paso ' + (item.stepIndex+1) + ' de ' + item.stepCount + '</span>' : "") +
+      (item.officialName ? '<span class="task-meta"><strong>Documento del manual:</strong> ' + esc(item.officialName) + '</span>' : "") +
+      (item.sourceFileName ? '<span class="task-meta"><strong>Archivo encontrado:</strong> ' + esc(item.sourceFileName) + '</span>' : "") +
+      (item.expectedTemplate && !item.sourceFileName ? '<span class="task-meta"><strong>Patrón oficial:</strong> ' + esc(item.expectedTemplate) + ' (consecutivo y fecha por confirmar)</span>' : "") +
+      (item.referenceFileName ? '<span class="task-meta"><strong>Referencia de otro período:</strong> ' + esc(item.referenceFileName) + '</span>' : "") +
       '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +
       (item.periodLabel ? '<span class="task-meta">Período: ' + esc(item.periodLabel) + '</span>' : "") +
       groupDetails +
@@ -70,7 +75,7 @@
     byId("backlogList").innerHTML = items.slice(0,limit).map(function (item) {
       const inactive = ["done","blocked","snoozed"].includes(item.status);
       return '<div class="backlog-row"><div class="backlog-row__main"><strong>' +
-        esc(item.projectTitle || item.title) + '</strong><small>' +
+        esc(item.displayTitle || item.projectTitle || item.title) + '</strong><small>' +
         esc([item.scope,item.processNumber ? "PRO-"+item.processNumber : "",kind(item),STATUS[item.status]||"Pendiente"]
         .filter(Boolean).join(" · ")) + '</small></div>' +
         '<div class="backlog-row__actions">' +

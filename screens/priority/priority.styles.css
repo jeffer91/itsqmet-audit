@@ -82,3 +82,5 @@ h1{font-size:27px;line-height:1.2;letter-spacing:-.03em;margin:0 0 5px}
   .backlog-row{align-items:flex-start;flex-wrap:wrap}
   .backlog-row__actions{margin-left:auto}
 }
+
+.task-title,.backlog-row__main strong,.task-meta,.task-reason{overflow-wrap:anywhere;word-break:normal}

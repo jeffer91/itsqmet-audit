@@ -2,7 +2,7 @@
   "use strict";
   const RE = /plan|informe|detecci[oó]n|gu[ií]a curricular|construcci[oó]n curricular/i;
   function isLarge(task) {
-    if (!task || task.area !== "strategic" || task.workType !== "document") return false;
+    if (!task || task.sourceFileName || task.area !== "strategic" || task.workType !== "document") return false;
     const name = String(task.title || "");
     return RE.test(name) && !/^(?:falta )?acta\b|carpeta|fichas de an[aá]lisis/i.test(name);
   }
@@ -32,7 +32,7 @@
   function decorate(task, state) {
     const large = isLarge(task);
     if (!large) return Object.assign({}, task, {
-      large: false, stepIndex: 0, stepCount: 1, nextAction: task.title
+      large: false, stepIndex: 0, stepCount: 1, nextAction: task.suggestedAction || task.title
     });
     const list = steps(task);
     const index = Math.max(0, Math.min(list.length, Number(state && state.stages && state.stages[task.id] || 0)));

@@ -42,10 +42,12 @@
   function eligible(item) { return !["done", "blocked", "snoozed"].includes(item.status); }
   function build(vm, storage) {
     const progress = storage || { statuses: {}, stages: {}, queue: [], activity: [] };
+    const namesContext = window.PriorityNames ? window.PriorityNames.prepare() : null;
     const all = candidateTasks(vm).map(function (item) {
       const saved = progress.statuses && progress.statuses[item.id];
       const status = saved ? saved.status : (item.status || "pending");
-      return window.PriorityWorkflow.decorate(Object.assign({}, item, { status: status }), progress);
+      const named = namesContext ? window.PriorityNames.rename(Object.assign({},item,{status:status}),namesContext) : Object.assign({},item,{status:status});
+      return window.PriorityWorkflow.decorate(named, progress);
     });
     const pool = all.filter(eligible);
     const indexed = new Map(pool.map(item => [item.id, item]));

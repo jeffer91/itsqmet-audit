@@ -293,6 +293,9 @@
         : "Revisar antes de elaborar o corregir: " + safeText(finding.description))
         : due.reason || safeText(finding.description, "Pendiente detectado por las reglas de auditoría."),
       workType: verify ? "review" : "document",
+      sourceCategory: category,
+      detectedName: safeText(finding.foundLabel || finding.actualValue),
+      documentLabel: category === "required-documents" ? title : "",
       title: title,
       pathLabel: safeText(finding.relativePath),
       actionPath: safeText(finding.primaryActionPath || finding.absolutePath || finding.rootPath),
@@ -456,6 +459,9 @@
       dueDate: due.dueDate,
       reason: params.reason + " " + due.reason,
       title: params.title + " · " + params.careerName,
+      documentId: params.documentId,
+      careerName: params.careerName,
+      sourceCategory: "required-documents",
       pathLabel: safeText(params.careerFolder && params.careerFolder.relativePath),
       actionPath: safeText(params.actionPath || (params.careerFolder && params.careerFolder.path)),
       workType: "document",
@@ -828,6 +834,22 @@
     };
   }
 
+  function exportedTasks(tasks) {
+    // Los informes comparten los mismos nombres contrastados con el escaneo y el manual.
+    const ctx=window.PriorityNames ? window.PriorityNames.prepare() : null;
+    return (tasks||[]).map(function (task) {
+      if (!ctx) return task;
+      const named=window.PriorityNames.rename(task,ctx);
+      return Object.assign({},task,{
+        title: named.displayTitle || task.title,
+        officialName: named.officialName,
+        sourceFileName: named.sourceFileName,
+        referenceFileName: named.referenceFileName,
+        expectedTemplate: named.expectedTemplate
+      });
+    });
+  }
+
   async function exportPdf(filters) {
     const vm = buildViewModel(filters || {});
     if (!vm.tasks.length && !vm.inconsistencies.length) throw new Error("No hay pendientes ni inconsistencias para exportar con los filtros actuales.");
@@ -835,7 +857,7 @@
     const response = await window.api.pdf.export({
       mode: "priority",
       generatedAt: new Date().toISOString(),
-      tasks: vm.tasks,
+      tasks: exportedTasks(vm.tasks),
       inconsistencies: vm.inconsistencies,
       processes: vm.processes,
       rawInconsistenciesCount: vm.visibleInconsistencies,
@@ -856,7 +878,7 @@
     if(!window.api||!window.api.excel||!window.api.excel.export)
       throw new Error("La API de Excel no está disponible.");
     const response=await window.api.excel.export({
-      tasks:vm.tasks,inconsistencies:vm.inconsistencies,
+      tasks:exportedTasks(vm.tasks),inconsistencies:vm.inconsistencies,
       processes:vm.processes,scansLabel:vm.scansLabel,filters:vm.filters
     });
     if(!response||!response.ok)throw new Error(response&&response.error||"No se pudo exportar Excel.");
