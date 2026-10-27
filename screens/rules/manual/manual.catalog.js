@@ -42,7 +42,7 @@ Función:
           periodPolicy: { required: true, months: 24, label: "Cada dos años" },
           documents: [
             { id: "rgi1", label: "Acta de Reunión de Colectivos Docentes para el Análisis de la Ficha CCC", codes: ["UGPA-RGI1", "PRO-60"], keywords: ["acta", "colectivos", "ccc"], template: "UGPA-RGI1-0X-PRO-60-AÑO-MES" },
-            { id: "rgi2", label: "Ficha Individual de Análisis por Nivel - Construcción Curricular Continua", codes: ["UGPA-RGI2", "PRO-60"], keywords: ["ficha", "individual", "analisis", "curricular"], template: "UGPA-RGI2-0X-PRO-60-AÑO-MES" },
+            { id: "rgi2", label: "Ficha Individual de Análisis por Nivel - Construcción Curricular Continua", codes: ["UGPA-RGI2", "PRO-60"], keywords: ["ficha", "individual", "analisis", "curricular"], template: "UGPA-RI2-0X-PRO-60-AÑO-MES" },
             { id: "rgi3", label: "Guía Curricular de Aplicación Académica de la Carrera", codes: ["RGI3", "PRO-60"], keywords: ["guia", "curricular", "aplicacion", "academica"], template: "RGI3-0X-PRO-60-AÑO-MES" }
           ]
         },

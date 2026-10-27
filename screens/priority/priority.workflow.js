@@ -2,7 +2,7 @@
   "use strict";
   const RE = /plan|informe|detecci[oó]n|gu[ií]a curricular|construcci[oó]n curricular/i;
   function isLarge(task) {
-    if (!task || task.sourceFileName || task.area !== "strategic" || task.workType !== "document") return false;
+    if (!task || task.resolvedDocumentId === "" || task.sourceFileName || task.area !== "strategic" || task.workType !== "document") return false;
     const name = String(task.title || "");
     return RE.test(name) && !/^(?:falta )?acta\b|carpeta|fichas de an[aá]lisis/i.test(name);
   }

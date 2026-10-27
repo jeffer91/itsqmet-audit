@@ -11,8 +11,9 @@
   let limit = 40;
   function kind(item) {
     if (item.large) return "Documento estratégico";
-    if (item.workType === "document") return "Documento por elaborar";
-    if (item.workType === "quick") return "Corrección rápida";
+    const type = item.displayWorkType || item.workType;
+    if (type === "document") return "Documento pendiente";
+    if (type === "quick") return "Organizar carpeta";
     return "Verificación";
   }
   function taskSummary(item) {
@@ -45,7 +46,8 @@
       (item.large ? '<span class="task-step">Paso ' + (item.stepIndex+1) + ' de ' + item.stepCount + '</span>' : "") +
       (item.officialName ? '<span class="task-meta"><strong>Documento del manual:</strong> ' + esc(item.officialName) + '</span>' : "") +
       (item.sourceFileName ? '<span class="task-meta"><strong>Archivo encontrado:</strong> ' + esc(item.sourceFileName) + '</span>' : "") +
-      (item.expectedTemplate && !item.sourceFileName ? '<span class="task-meta"><strong>Patrón oficial:</strong> ' + esc(item.expectedTemplate) + ' (consecutivo y fecha por confirmar)</span>' : "") +
+      (item.expectedTemplate && item.sourceKind !== "file-coded" ? '<span class="task-meta"><strong>Patrón del manual:</strong> ' + esc(item.expectedTemplate) + ' (0X, AÑO y MES sin completar)</span>' : "") +
+      (item.namingNotice ? '<span class="task-meta"><strong>Observación:</strong> ' + esc(item.namingNotice) + '</span>' : "") +
       (item.referenceFileName ? '<span class="task-meta"><strong>Referencia de otro período:</strong> ' + esc(item.referenceFileName) + '</span>' : "") +
       '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +
       (item.periodLabel ? '<span class="task-meta">Período: ' + esc(item.periodLabel) + '</span>' : "") +
@@ -66,7 +68,7 @@
     return (board.all || []).filter(function (item) {
       if (unit !== "all" && item.scope !== unit) return false;
       if (work !== "all" && item.workType !== work) return false;
-      return !query || [item.title,item.processNumber,item.processName,item.scope,item.periodLabel,item.pathLabel]
+      return !query || [item.displayTitle,item.title,item.officialName,item.sourceFileName,item.processNumber,item.processName,item.scope,item.periodLabel,item.pathLabel]
         .join(" ").toLowerCase().includes(query);
     });
   }
