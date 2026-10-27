@@ -132,8 +132,18 @@
     const sourceFileName=safe(found.current&&found.current.name);
     const sourceFilePath=safe(found.current&&found.current.path);
     const referenceFileName=safe(found.previous&&found.previous.name);
+    // Recuperar el período desde la carpeta cuando el hallazgo solo incluye la ruta.
+    const periodSource=window.PriorityNamingPolicy
+      ? [task.periodLabel].concat(relative(task.pathLabel).split("/").reverse())
+        .find(label=>window.PriorityNamingPolicy.parsePeriod(label)) : "";
+    const namingPolicy=hasDoc && window.PriorityNamingPolicy
+      ? window.PriorityNamingPolicy.policy(task.scope,task.processNumber,doc.id,periodSource)
+      : null;
     const canonical=expectedTemplate
-      ? expectedTemplate+"-"+suffix(doc,task) : officialName+(task.careerName?" · "+task.careerName:"");
+      ? (window.PriorityNamingPolicy
+        ? window.PriorityNamingPolicy.propose(expectedTemplate,officialName,task.careerName,namingPolicy)
+        : expectedTemplate+"-"+suffix(doc,task))
+      : officialName+(task.careerName?" · "+task.careerName:"");
     let displayTitle=safe(task.title),suggestedAction="",sourceKind="",namingNotice="";
     let displayWorkType=safe(task.workType);
     if(task.proposedFolderName && (task.workType==="quick" || task.synthetic)) {
@@ -145,7 +155,14 @@
       const completeCode=sourceFileName && matchesTemplate(sourceFileName,expectedTemplate);
       const samePeriod=sourceFileName && dateMatchesPeriod(sourceFileName,task.periodLabel);
       const validDescription=sourceFileName && docScore(sourceFileName,doc)>=65;
-      const usableName=completeCode && samePeriod && validDescription;
+      const recordedSequence=(sourceFileName.match(/-(\d{1,3})-PRO-\d+(?:-|$)/i)||[])[1]||"";
+      const expectedSequence=!namingPolicy || !namingPolicy.sequence ||
+        recordedSequence.padStart(2,"0")===namingPolicy.sequence;
+      const recordedDate=window.PriorityNamingPolicy
+        ? window.PriorityNamingPolicy.codeOf(sourceFileName) : "";
+      const expectedStageDate=!namingPolicy || !namingPolicy.dateCode ||
+        recordedDate===namingPolicy.dateCode;
+      const usableName=completeCode && samePeriod && validDescription && expectedSequence && expectedStageDate;
       displayTitle=usableName?stripExtension(sourceFileName):canonical;
       sourceKind=sourceFileName?(usableName?"file-coded":"file-to-verify"):"template";
       if(isFolder) {
@@ -165,11 +182,17 @@
           : "Verificar el editable, su código, su período y la versión PDF final";
         if(!completeCode)namingNotice="El archivo localizado no acredita por su nombre la codificación oficial.";
         else if(!samePeriod)namingNotice="La fecha del código del archivo no corresponde al período de la tarea; verificar antes de renombrar o reutilizar.";
+        else if(!expectedSequence)namingNotice="El consecutivo del archivo no coincide con el 01 previsto para este tipo de documento en el período; revisar antes de renombrar.";
+        else if(!expectedStageDate)namingNotice="La fecha del archivo no corresponde al "+(namingPolicy.stageLabel||"momento")+" de este entregable ("+namingPolicy.dateCode+"); revisar antes de reutilizar.";
         else if(!validDescription)namingNotice="El código aparece en un archivo cuyo título no identifica claramente este entregable.";
       } else {
         suggestedAction="Buscar el documento del período antes de redactarlo";
         sourceKind="template";
-        namingNotice="Patrón por completar: confirmar consecutivo, año y mes antes de nombrar el archivo.";
+        namingNotice=namingPolicy && namingPolicy.isComplete
+          ? "Nombre recomendado según el manual y el período. Revisar la evidencia antes de archivarlo."
+          : namingPolicy && namingPolicy.sequence && !namingPolicy.dateCode
+            ? "Consecutivo 01 determinado; falta confirmar el mes real de elaboración o aprobación."
+            : "Faltan datos para determinar automáticamente el consecutivo o el mes de generación.";
       }
       if(task.scope==="UGPA" && safe(task.processNumber)==="60" && doc.id==="rgi2") {
         namingNotice+=(namingNotice?" ":"")+"El manual UGPA escribe RI2 en esta ficha, pero el inventario utiliza RGI2; verificar la codificación antes de renombrar.";
@@ -192,6 +215,10 @@
     }
     return Object.assign(original,{
       displayTitle,officialName,expectedTemplate,sourceFileName,sourceFilePath,
+      namingStageLabel:namingPolicy&&namingPolicy.stageLabel||"",
+      namingDateCode:namingPolicy&&namingPolicy.dateCode||"",
+      namingSequence:namingPolicy&&namingPolicy.sequence||"",
+      namingComplete:!!(namingPolicy&&namingPolicy.isComplete),
       referenceFileName,sourceKind,suggestedAction,namingNotice,
       displayWorkType,
       originalWorkType:task.workType,

@@ -45,8 +45,10 @@
       '<div class="task-detail">' +
       (item.large ? '<span class="task-step">Paso ' + (item.stepIndex+1) + ' de ' + item.stepCount + '</span>' : "") +
       (item.officialName ? '<span class="task-meta"><strong>Documento del manual:</strong> ' + esc(item.officialName) + '</span>' : "") +
+      (item.namingStageLabel ? '<span class="task-meta"><strong>Momento de elaboración:</strong> ' + esc(item.namingStageLabel) + (item.namingDateCode ? ' · ' + esc(item.namingDateCode) : '') + '</span>' : "") +
+      (item.namingSequence ? '<span class="task-meta"><strong>Consecutivo propuesto:</strong> ' + esc(item.namingSequence) + '</span>' : "") +
       (item.sourceFileName ? '<span class="task-meta"><strong>Archivo encontrado:</strong> ' + esc(item.sourceFileName) + '</span>' : "") +
-      (item.expectedTemplate && item.sourceKind !== "file-coded" ? '<span class="task-meta"><strong>Patrón del manual:</strong> ' + esc(item.expectedTemplate) + ' (0X, AÑO y MES sin completar)</span>' : "") +
+      (item.expectedTemplate && !item.namingComplete && item.sourceKind !== "file-coded" ? '<span class="task-meta"><strong>Patrón del manual:</strong> ' + esc(item.expectedTemplate) + ' (campos restantes por confirmar)</span>' : "") +
       (item.namingNotice ? '<span class="task-meta"><strong>Observación:</strong> ' + esc(item.namingNotice) + '</span>' : "") +
       (item.referenceFileName ? '<span class="task-meta"><strong>Referencia de otro período:</strong> ' + esc(item.referenceFileName) + '</span>' : "") +
       '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +

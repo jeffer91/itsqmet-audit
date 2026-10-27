@@ -14,7 +14,7 @@ function setup(files=[]) {
   };
   const ctx=vm.createContext({window,Date,Intl,Set,Map});
   ["screens/rules/rules.types.js","screens/rules/manual/manual.catalog.js",
-    "screens/priority/priority.names.js","screens/priority/priority.workflow.js",
+    "screens/priority/priority.naming-policy.js","screens/priority/priority.names.js","screens/priority/priority.workflow.js",
     "screens/priority/priority.storage.js","screens/priority/priority.queue.js"
   ].forEach(file=>vm.runInContext(read(file),ctx,{filename:file}));
   return window;
@@ -37,8 +37,9 @@ test("un PDF correctamente codificado mantiene su nombre completo",()=>{
   const file="UGPA-RGI1-02-PRO-31-2024-10-Deteccion de Necesidades.pdf";
   const w=setup([pdf(file,p31a)]);
   const out=named(w,{pathLabel:p31a,periodLabel:"Octubre 2024–Septiembre 2025"});
-  assert.equal(out.displayTitle,file.slice(0,-4));
-  assert.equal(out.sourceKind,"file-coded");
+  assert.equal(out.displayTitle,"UGPA-RGI1-01-PRO-31-2024-10-Deteccion de Necesidades de Formacion");
+  assert.equal(out.sourceKind,"file-to-verify");
+  assert.match(out.namingNotice,/consecutivo/);
   assert.equal(out.workType,"review");
   assert.equal(w.PriorityWorkflow.decorate(out,{stages:{}}).large,false);
 });
@@ -46,7 +47,7 @@ test("un PDF sin nombre normalizado conserva la identidad del manual y se muestr
   const file="Informe de Detección_de_formación_2025-2026.pdf";
   const w=setup([pdf(file,p31b)]);
   const out=named(w);
-  assert.equal(out.displayTitle,"UGPA-RGI1-0X-PRO-31-AÑO-MES-Deteccion de Necesidades de Formacion");
+  assert.equal(out.displayTitle,"UGPA-RGI1-01-PRO-31-2025-10-Deteccion de Necesidades de Formacion");
   assert.equal(out.sourceFileName,file);
   assert.equal(out.sourceKind,"file-to-verify");
   assert.equal(out.displayWorkType,"review");
@@ -56,7 +57,7 @@ test("nunca se reutiliza automáticamente una fecha de código ajena al período
   const w=setup([docx(file,p70)]);
   const out=named(w,{id:"p70",processNumber:"70",title:"Detección de Necesidades de Capacitación",
     pathLabel:p70,periodLabel:"Abril 2026–Septiembre 2026"});
-  assert.equal(out.displayTitle,"UGPA-RGI1-0X-PRO-70-AÑO-MES-Deteccion de Necesidades de Capacitacion");
+  assert.equal(out.displayTitle,"UGPA-RGI1-01-PRO-70-2026-04-Deteccion de Necesidades de Capacitacion");
   assert.equal(out.sourceFileName,file);
   assert.match(out.namingNotice,/fecha.*no corresponde/i);
 });
@@ -65,7 +66,7 @@ test("documento de otro período figura como referencia, no acredita el actual",
   const w=setup([pdf(file,p31a)]),out=named(w);
   assert.equal(out.sourceFileName,"");
   assert.equal(out.referenceFileName,file);
-  assert.match(out.displayTitle,/AÑO-MES/);
+  assert.equal(out.displayTitle,"UGPA-RGI1-01-PRO-31-2025-10-Deteccion de Necesidades de Formacion");
 });
 test("identifica Guía Curricular de Administración como RGI3 del manual, no como Falta Guía",()=>{
   const w=setup();
@@ -74,7 +75,7 @@ test("identifica Guía Curricular de Administración como RGI3 del manual, no co
     title:"Falta Guía Curricular de Aplicación Académica · Administración"});
   assert.equal(out.resolvedDocumentId,"rgi3");
   assert.equal(out.expectedTemplate,"RGI3-0X-PRO-60-AÑO-MES");
-  assert.equal(out.displayTitle,"RGI3-0X-PRO-60-AÑO-MES-Guia Curricular de Aplicacion Academica de la Carrera Administracion");
+  assert.equal(out.displayTitle,"RGI3-01-PRO-60-AÑO-MES-Guia Curricular de Aplicacion Academica de la Carrera Administracion");
   assert.equal(w.PriorityWorkflow.decorate(out,{stages:{}}).large,true);
 });
 test("una carpeta RGI2 de Artículo Académico no cambia el código RGI3 del manual",()=>{
@@ -84,7 +85,7 @@ test("una carpeta RGI2 de Artículo Académico no cambia el código RGI3 del man
     sourceCategory:"empty-folders",pathLabel:p56,workType:"review"},
     w.PriorityNames.prepare());
   assert.equal(out.expectedTemplate,"UTET-RGI3-0X-PRO-56-AÑO-MES");
-  assert.equal(out.displayTitle,"UTET-RGI3-0X-PRO-56-AÑO-MES-Planificacion de Articulo Academico");
+  assert.equal(out.displayTitle,"UTET-RGI3-01-PRO-56-2025-04-Planificacion de Articulo Academico");
   assert.match(out.namingNotice,/RGI2.*RGI3/);
 });
 test("una carpeta sin documento identificable muestra su nombre real en vez de mensaje genérico",()=>{
@@ -133,6 +134,70 @@ test("la cola de cinco tareas usa los nombres normalizados sin cambiar IDs del h
     proposedFolderName:"UTET-PRO-164-Abril 2026–Septiembre 2026-"+i,workType:"quick",area:"mission"}))];
   const b=w.PriorityQueue.build({tasks,inconsistencies:[]},w.PriorityStorage.load());
   assert.equal(b.items.length,5);
-  assert.ok(b.all.some(item=>item.id==="task31"&&item.workType==="review"&&item.displayTitle.startsWith("UGPA-RGI1-0X")));
+  assert.ok(b.all.some(item=>item.id==="task31"&&item.workType==="review"&&item.displayTitle.startsWith("UGPA-RGI1-01-PRO-31-2025-10")));
   assert.equal(new Set(b.queueIds).size,5);
+});
+
+test("Detección y plan anual se generan al inicio, informe de cumplimiento al cierre",()=>{
+  const w=setup();
+  const a=named(w);
+  assert.equal(a.namingStageLabel,"Inicio del período");
+  assert.equal(a.namingDateCode,"2025-10");
+  assert.equal(a.namingSequence,"01");
+  const plan=named(w,{id:"plan31",title:"Plan Anual de Formación Docente",documentId:"rgi2"});
+  assert.equal(plan.displayTitle,"UGPA-RGI2-01-PRO-31-2025-10-Plan Anual de Formacion Docente");
+  const report=named(w,{id:"report31",title:"Informe de Cumplimiento del Plan de Formación",documentId:"rgi3"});
+  assert.equal(report.displayTitle,"UGPA-RGI3-01-PRO-31-2026-09-Informe de Cumplimiento del Plan de Formacion");
+  assert.equal(report.namingStageLabel,"Cierre del período");
+});
+test("Capacitación semestral: RGI1 y RGI2 al inicio, RGI3 al cierre",()=>{
+  const w=setup();
+  const context={processNumber:"70",periodLabel:"Abril 2026–Septiembre 2026",pathLabel:p70};
+  const detection=named(w,{...context,documentId:"rgi1",title:"Detección de Necesidades de Capacitación"});
+  const plan=named(w,{...context,documentId:"rgi2",title:"Plan Semestral de Capacitación Docente"});
+  const report=named(w,{...context,documentId:"rgi3",title:"Informe de Cumplimiento del Plan Semestral de Capacitación"});
+  assert.equal(detection.displayTitle,"UGPA-RGI1-01-PRO-70-2026-04-Deteccion de Necesidades de Capacitacion");
+  assert.equal(plan.displayTitle,"UGPA-RGI2-01-PRO-70-2026-04-Plan Semestral de Capacitacion Docente");
+  assert.equal(report.displayTitle,"UGPA-RGI3-01-PRO-70-2026-09-Informe de Cumplimiento del Plan Semestral de Capacitacion");
+});
+test("UTET PRO-95 propone el Informe Final en el mes de cierre",()=>{
+  const w=setup();
+  const report=w.PriorityNames.rename({id:"utet95",scope:"UTET",processNumber:"95",
+    documentId:"inf",title:"Informe Final del Proceso de Titulación",workType:"document",
+    periodLabel:"Abril 2026 – Septiembre 2026",pathLabel:"PROCESOS ESTRATEGICOS/UTET-PRO-95/Evaluacion"},
+    w.PriorityNames.prepare());
+  assert.equal(report.displayTitle,"UTET-INF-01-PRO-95-2026-09-Informe Final del Proceso de Titulacion");
+  assert.equal(report.namingDateCode,"2026-09");
+  assert.equal(report.namingStageLabel,"Cierre del período");
+});
+test("UTET PRO-56: la planificación de Artículo Académico es de inicio",()=>{
+  const w=setup();
+  const result=w.PriorityNames.rename({id:"utet56",scope:"UTET",processNumber:"56",
+    documentId:"rgi3",title:"Planificación de Artículo Académico",
+    periodLabel:"Octubre 2026 – Marzo 2027",workType:"document"},
+    w.PriorityNames.prepare());
+  assert.equal(result.displayTitle,"UTET-RGI3-01-PRO-56-2026-10-Planificacion de Articulo Academico");
+  assert.equal(result.namingStageLabel,"Inicio del período");
+});
+test("Fechas del período desconocidas no se inventan, aunque se conozca el consecutivo",()=>{
+  const w=setup();
+  const report=w.PriorityNames.rename({id:"missingPeriod",scope:"UTET",processNumber:"95",
+    documentId:"inf",title:"Informe Final del Proceso de Titulación",workType:"document",
+    periodLabel:"",pathLabel:"PROCESOS ESTRATEGICOS/UTET-PRO-95"},
+    w.PriorityNames.prepare());
+  assert.equal(report.displayTitle,"UTET-INF-01-PRO-95-AÑO-MES-Informe Final del Proceso de Titulacion");
+  assert.equal(report.namingComplete,false);
+});
+test("Informe con fecha de inicio y secuencia errónea queda como archivo a verificar",()=>{
+  const path="PROCESOS ESTRATEGICOS/UTET-PRO-95/UTET-PRO-95-Abril 2026–Septiembre 2026";
+  const filename="UTET-INF-02-PRO-95-2026-04-Informe Final del Proceso de Titulacion.pdf";
+  const w=setup([pdf(filename,path)]);
+  const out=w.PriorityNames.rename({id:"reportBadDate",scope:"UTET",processNumber:"95",
+    documentId:"inf",title:"Informe Final del Proceso de Titulación",workType:"document",
+    periodLabel:"Abril 2026 – Septiembre 2026",pathLabel:path},
+    w.PriorityNames.prepare());
+  assert.equal(out.displayTitle,"UTET-INF-01-PRO-95-2026-09-Informe Final del Proceso de Titulacion");
+  assert.equal(out.sourceFileName,filename);
+  assert.equal(out.displayWorkType,"review");
+  assert.match(out.namingNotice,/consecutivo|fecha/);
 });
