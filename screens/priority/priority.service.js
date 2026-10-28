@@ -264,7 +264,7 @@
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
     const due = dueFor(stage, period, today);
     const verify = category !== "required-documents" ||
-      (category === "required-documents" && !!safeText(finding.periodLabel) && !period) ||
+      (category === "required-documents" && !period) ||
       (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(finding.missingFileName || finding.expectedValue)));
     const level = verify ? "medium" : due.level || levelFallback(area, category);
     const manualProcess = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
@@ -358,24 +358,24 @@
       processName: safeText(processInfo && processInfo.name),
       area: area,
       areaLabel: areaDef(area).label,
-      level: due.level,
-      levelLabel: levelDef(due.level).label,
+      level: "medium",
+      levelLabel: levelDef("medium").label,
       stage: stage,
-      stageLabel: stage === "close" ? "Cierre" : "Inicio",
-      effort: missingProcess ? "medium" : "low",
+      stageLabel: "Revisión documental",
+      effort: "low",
       periodLabel: label,
-      dueDate: due.dueDate,
+      dueDate: null,
       reason: missingProcess
-        ? "No existe la carpeta del proceso estratégico en el escaneo. " + due.reason
-        : "No existe la carpeta de este período. " + due.reason,
+        ? "No se localizó la carpeta de este proceso en el escaneo. Revisar otras ubicaciones antes de crearla."
+        : "No se localizó una carpeta específica para este período. La frecuencia del proceso no acredita por sí sola que sea obligatoria.",
       title: missingProcess
-        ? "Crear carpeta de " + scope + "-PRO-" + processNumber
-        : "Crear carpeta del período",
+        ? "Localizar la carpeta de " + scope + "-PRO-" + processNumber
+        : "Verificar la ubicación documental del período",
       pathLabel: safeText(processFolder && processFolder.relativePath),
       actionPath: actionPath,
-      parentPath: !missingProcess ? actionPath : "",
-      proposedFolderName: !missingProcess ? scope + "-PRO-" + processNumber + "-" + label : "",
-      workType: missingProcess ? "review" : "quick",
+      parentPath: "",
+      proposedFolderName: "",
+      workType: "review",
       synthetic: true
     };
   }
@@ -442,22 +442,28 @@
   }
 
   function buildPro60DocumentTask(params) {
-    const due = dueFor("close", params.cycle, params.today);
+    // La aprobación de fichas, no el cierre calendario + 15 días,
+    // determina cuándo puede elaborarse la guía curricular RGI3.
+    const p = params.period || params.cycle;
+    const isGuide = params.documentId === "guia";
+    const priority = isGuide ? "high" : "medium";
     return {
-      id: ["pro60", params.careerKey, params.documentId, periodLabel(params.cycle)].join("|"),
+      id: ["pro60", params.careerKey, params.documentId, periodLabel(p)].join("|"),
       scope: "UGPA",
       processNumber: "60",
       processName: "Proceso de Construcción Curricular Continua",
       area: "strategic",
       areaLabel: Config.areas.strategic.label,
-      level: due.level,
-      levelLabel: levelDef(due.level).label,
-      stage: "close",
-      stageLabel: "Cierre bienal",
+      level: priority,
+      levelLabel: levelDef(priority).label,
+      stage: isGuide ? "after-approval" : "review",
+      stageLabel: isGuide ? "Después de aprobar las fichas" : "Revisión documental",
       effort: "high",
-      periodLabel: periodLabel(params.cycle),
-      dueDate: due.dueDate,
-      reason: params.reason + " " + due.reason,
+      periodLabel: periodLabel(p),
+      dueDate: null,
+      reason: params.reason + (isGuide
+        ? " Se localizaron fichas de análisis; confirmar su aprobación antes de elaborar la guía. No se ha verificado un vencimiento específico."
+        : " Verificar otras ubicaciones y la vigencia del período antes de elaborar el documento."),
       title: params.title + " · " + params.careerName,
       documentId: params.documentId,
       careerName: params.careerName,
@@ -563,6 +569,10 @@
       const latestBase = career.folders.slice().sort(function sort(a, b) {
         return rel(b.relativePath).localeCompare(rel(a.relativePath), "es");
       })[0];
+      const actualContainer = periodFolders.find(function find(folder) {
+        return isDirectChild(latestBase.relativePath, folder.relativePath);
+      });
+      const actualPeriod = actualContainer && periodFromName(actualContainer.name, "60", "UGPA") || previousCycle;
       function targetPath(kind) {
         const wanted = kind === "acta" ? "acta" : kind === "ficha" ? "fichas" : "";
         const found = careerFolders.find(function find(folder) {
@@ -575,19 +585,19 @@
         careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
         documentId: "acta", title: "Falta Acta de reunión de colectivos docentes",
         reason: "No se encontró el Acta RGI1 de esta carrera dentro del ciclo bienal.",
-        actionPath: targetPath("acta"), cycle: previousCycle, today: today
+        actionPath: targetPath("acta"), cycle: previousCycle, period: actualPeriod, today: today
       }));
       if (!hasFicha) tasks.push(buildPro60DocumentTask({
         careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
         documentId: "ficha", title: "Faltan fichas de análisis curricular",
         reason: "No se encontraron fichas de nivel de esta carrera. Se aceptan las fichas históricas por carrera y el formato UGPA-RGI2 vigente.",
-        actionPath: targetPath("ficha"), cycle: previousCycle, today: today
+        actionPath: targetPath("ficha"), cycle: previousCycle, period: actualPeriod, today: today
       }));
       if (!hasGuide) tasks.push(buildPro60DocumentTask({
         careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
         documentId: "guia", title: "Falta Guía Curricular de Aplicación Académica",
         reason: "No se encontró la guía curricular RGI3 de esta carrera dentro del ciclo bienal.",
-        actionPath: targetPath("guide"), cycle: previousCycle, today: today
+        actionPath: targetPath("guide"), cycle: previousCycle, period: actualPeriod, today: today
       }));
     });
 
@@ -623,7 +633,9 @@
         if (strategicProfile) return;
         const processInfo = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
         const policy = processInfo && processInfo.periodPolicy;
-        if (!policy || !policy.required) return;
+        // Una frecuencia semestral/anual no impone por sí sola un directorio de ese período.
+        // Solo se crean hallazgos de carpeta cuando una política explícita lo exige.
+        if (!policy || !policy.required || processInfo.periodFolderRequired !== true) return;
         const cadence = cadenceForDate(policy, today);
         if (cadence !== 6 && cadence !== 12) return;
         const area = areaFromPath(processFolder.relativePath);
