@@ -171,7 +171,11 @@ Función:
         },
         "164": {
           name: "Proceso de Ejecución del Trabajo de Titulación",
+          // Frecuencia del proceso no obliga a crear subcarpetas semestrales.
+          // Documentos académicos por estudiante, no un PDF único por período.
           periodPolicy: { required: true, months: 6, label: "Semestral" },
+          periodFolderRequired: false,
+          documentGranularity: "per-student",
           documents: [
             { id: "plan", label: "Plan de Trabajo de Titulación", keywords: ["plan", "trabajo", "titulacion"], template: "Plan de Trabajo de Titulación" },
             { id: "borrador1", label: "Trabajo de Titulación (Borrador 1)", keywords: ["trabajo", "titulacion", "borrador", "1"], template: "Trabajo de Titulación (Borrador 1)" },
@@ -185,6 +189,8 @@ Función:
         "57": {
           name: "Proceso de Gestión de Artículo Académico",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
+          periodFolderRequired: false,
+          documentGranularity: "per-student",
           documents: [
             { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "cronograma", label: "Cronograma de Artículo Académico - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "articulo", "academico"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
