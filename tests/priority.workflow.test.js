@@ -97,10 +97,10 @@ test("las tareas de carpeta no muestran creación en escaneos ZIP",()=>{
   assert.ok(vmResult.tasks.length>0);
   assert.ok(vmResult.tasks.every(t=>!t.parentPath && !t.proposedFolderName));
 });
-test("las tareas de carpeta pueden ofrecer crear en fuentes locales",()=>{
+test("la periodicidad del proceso no crea automáticamente carpetas locales",()=>{
   const {svc}=setup({state:{ugpaResult:null,utetResult:scan("folder"),discardedFindings:[]}});
-  const vmResult=svc.buildViewModel({workType:"quick"});
-  assert.ok(vmResult.tasks.some(t=>t.parentPath && t.proposedFolderName));
+  const vmResult=svc.buildViewModel();
+  assert.ok(vmResult.tasks.every(t=>!t.parentPath && !t.proposedFolderName));
 });
 test("la creación de carpeta exige tarea verificable",async()=>{
   await assert.rejects(()=>setup().svc.createFolder({workType:"quick"}),/verificada/);
