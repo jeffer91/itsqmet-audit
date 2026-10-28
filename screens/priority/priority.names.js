@@ -213,8 +213,30 @@
       namingNotice=actual?"Ejemplo: "+actual:"";
       sourceKind="group";
     }
+    // Un nombre no convencional no demuestra que el entregable esté ausente.
+    // La existencia del PDF tampoco prueba firmas, contenido ni vigencia.
+    const pdfCandidate = hasDoc && /\.pdf$/i.test(sourceFileName);
+    const editableOnly = hasDoc && !!sourceFileName && !pdfCandidate;
+    const evidenceState = pdfCandidate ? "pdf-candidate" : editableOnly ? "editable-only" :
+      referenceFileName ? "other-period-candidate" : "not-found";
+    let reviewedReason = task.reason;
+    if (pdfCandidate) {
+      reviewedReason = "Se localizó un PDF candidato: " + sourceFileName +
+        ". Verificar contenido, período, codificación y aprobación antes de validar la evidencia.";
+    } else if (editableOnly) {
+      reviewedReason = "Se localizó un editable: " + sourceFileName +
+        ". Verificar su correspondencia y localizar o generar la versión PDF aprobada.";
+    } else if (referenceFileName) {
+      reviewedReason = "Existe un archivo candidato en otra ubicación o período: " +
+        referenceFileName + ". Comprobar su vigencia antes de elaborar otro documento.";
+    }
+    const reviewedLevel = (pdfCandidate || editableOnly) && ["max","high"].includes(task.level)
+      ? "medium" : task.level;
+    const levelLabel = reviewedLevel === "medium" && reviewedLevel !== task.level
+      ? "Media" : task.levelLabel;
     return Object.assign(original,{
       displayTitle,officialName,expectedTemplate,sourceFileName,sourceFilePath,
+      evidenceState,reason:reviewedReason,level:reviewedLevel,levelLabel,
       namingStageLabel:namingPolicy&&namingPolicy.stageLabel||"",
       namingDateCode:namingPolicy&&namingPolicy.dateCode||"",
       namingSequence:namingPolicy&&namingPolicy.sequence||"",
