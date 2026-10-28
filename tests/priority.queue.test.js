@@ -34,13 +34,23 @@ test("sin escaneo no se inventan acciones",()=>{
   const e=env();const board=e.window.PriorityQueue.build({tasks:[],inconsistencies:[]},e.window.PriorityStorage.load());
   assert.equal(board.items.length,0);
 });
-test("se seleccionan cinco acciones con variedad de procesos y tipos",()=>{
+test("las cinco acciones favorecen urgencias reales sin reservar cuotas a correcciones menores",()=>{
   const e=env(),board=e.window.PriorityQueue.build(sample(),e.window.PriorityStorage.load());
   assert.equal(board.items.length,5);
-  assert.ok(board.items.some(x=>x.workType==="quick"));
-  assert.ok(board.items.some(x=>x.workType==="review"));
+  assert.ok(board.items.every(x=>x.level==="max"||x.level==="high"));
   assert.ok(board.items.filter(x=>x.workType==="document"&&x.area==="strategic").length>=2);
   assert.equal(new Set(board.queueIds).size,5);
+});
+test("una obligación más urgente desplaza una tarea pendiente previamente guardada",()=>{
+  const e=env(),vm=sample();
+  let board=e.window.PriorityQueue.build(vm,e.window.PriorityStorage.load());
+  e.window.PriorityStorage.setQueue(board.queueIds);
+  const incoming=task("UTET-NEW","strategic","document","max","999");
+  incoming.status="doing";
+  vm.tasks.push(incoming);
+  board=e.window.PriorityQueue.build(vm,e.window.PriorityStorage.load());
+  assert.ok(board.queueIds.includes(incoming.id));
+  assert.equal(board.items.length,5);
 });
 test("la cola se conserva y repone una tarea terminada sin perder avances",()=>{
   const e=env();let board=e.window.PriorityQueue.build(sample(),e.window.PriorityStorage.load());
