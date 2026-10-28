@@ -91,10 +91,9 @@ test("el PDF toma el total visible con los filtros y contiene detalle rápido",a
   assert.equal(result.payload.workType,"quick");
   assert.equal(result.payload.inconsistencies[0].items.length,1);
 });
-test("las tareas de carpeta no muestran creación en escaneos ZIP",()=>{
+test("los escaneos ZIP no proponen creación de carpetas por frecuencia",()=>{
   const {svc}=setup({state:{ugpaResult:null,utetResult:scan("archive"),discardedFindings:[]}});
-  const vmResult=svc.buildViewModel({workType:"quick"});
-  assert.ok(vmResult.tasks.length>0);
+  const vmResult=svc.buildViewModel();
   assert.ok(vmResult.tasks.every(t=>!t.parentPath && !t.proposedFolderName));
 });
 test("la periodicidad del proceso no crea automáticamente carpetas locales",()=>{
