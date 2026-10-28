@@ -37,7 +37,9 @@
     if(!words.length||!contained.length)return 0;
     const ratio=contained.length/words.length;
     const heads=["deteccion","plan","informe","acta","ficha","guia","planificacion","reporte","registro","instrumento","comunicado"];
-    const first=heads.find(word=>words.includes(word));
+    // El encabezado es el primer sustantivo documental del entregable.
+    // No se debe exigir "plan" en un "Informe de cumplimiento del plan".
+    const first=words.find(word=>heads.includes(word));
     if(first && !value.split(" ").includes(first))return 0;
     return ratio>=0.64 ? 45+Math.round(ratio*50) : 0;
   }
