@@ -50,7 +50,8 @@
     if (!id || !VALID.has(status)) throw new Error("Estado no válido.");
     const data = load();
     if (status === "pending") data.statuses[id] = { status: "pending", updatedAt: new Date().toISOString() };
-    else data.statuses[id] = { status: status, note: String(note || ""), updatedAt: new Date().toISOString() };
+    else data.statuses[id] = { status: status, note: String(note || ""),
+      updatedAt: new Date().toISOString(), evidenceVerified: false };
     record(data, id, status, note);
     persist(data);
     return data;
