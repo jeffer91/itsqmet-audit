@@ -8,6 +8,14 @@
   }
   function steps(task) {
     const title = String(task.title || "").toLowerCase();
+    if (task.scope === "UGPA" && String(task.processNumber) === "60" &&
+        (task.documentId === "guia" || task.resolvedDocumentId === "rgi3")) return [
+      "Verificar el acta y las fichas de análisis curricular por nivel",
+      "Confirmar la aprobación de las fichas con los responsables",
+      "Reunir los insumos curriculares y resultados de las fichas",
+      "Elaborar la Guía Curricular de Aplicación Académica",
+      "Tramitar aprobación y archivar el PDF definitivo"
+    ];
     if (/informe/.test(title)) return [
       "Localizar antecedentes e informe anterior", "Reunir resultados y evidencias",
       "Organizar indicadores y análisis", "Redactar el informe",
