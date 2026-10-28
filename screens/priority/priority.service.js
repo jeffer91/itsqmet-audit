@@ -499,7 +499,6 @@
     });
 
     if (!currentHasContainer) {
-      const due = dueFor("start", currentCycle, today);
       tasks.push({
         id: "pro60|cycle|" + periodLabel(currentCycle),
         scope: "UGPA",
@@ -507,20 +506,20 @@
         processName: "Proceso de Construcción Curricular Continua",
         area: "strategic",
         areaLabel: Config.areas.strategic.label,
-        level: due.level,
-        levelLabel: levelDef(due.level).label,
-        stage: "start",
-        stageLabel: "Inicio bienal",
+        level: "medium",
+        levelLabel: levelDef("medium").label,
+        stage: "review",
+        stageLabel: "Revisión de ciclo",
         effort: "low",
         periodLabel: periodLabel(currentCycle),
-        dueDate: due.dueDate,
-        reason: "El proceso trabaja en ciclos de 24 meses. Las nuevas carreras pueden incorporarse cada 6 meses sin crear un nuevo ciclo bienal. " + due.reason,
-        title: "Iniciar ciclo bienal de Construcción Curricular",
+        dueDate: null,
+        reason: "No se identificó un contenedor para el ciclo bienal actual. Revisar la estructura real y las incorporaciones de carreras antes de crear nuevas carpetas.",
+        title: "Verificar organización del nuevo ciclo curricular",
         pathLabel: processRel,
         actionPath: safeText(processFolder.path),
-        parentPath: safeText(processFolder.path),
-        proposedFolderName: "UGPA-PRO-60-" + periodLabel(currentCycle),
-        workType: "quick",
+        parentPath: "",
+        proposedFolderName: "",
+        workType: "review",
         synthetic: true
       });
     }
