@@ -163,7 +163,10 @@
       const expectedStageDate=!namingPolicy || !namingPolicy.dateCode ||
         recordedDate===namingPolicy.dateCode;
       const usableName=completeCode && samePeriod && validDescription && expectedSequence && expectedStageDate;
-      displayTitle=usableName?stripExtension(sourceFileName):canonical;
+      // No presentar AÑO-MES ni 0X como un nombre de archivo definitivo.
+      const humanTitle=officialName+(task.careerName?" · "+task.careerName:"");
+      displayTitle=usableName?stripExtension(sourceFileName):
+        (namingPolicy && namingPolicy.isComplete ? canonical : humanTitle);
       sourceKind=sourceFileName?(usableName?"file-coded":"file-to-verify"):"template";
       if(isFolder) {
         suggestedAction="Revisar la carpeta y comprobar si contiene el documento oficial";
