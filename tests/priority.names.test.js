@@ -75,7 +75,7 @@ test("identifica Guía Curricular de Administración como RGI3 del manual, no co
     title:"Falta Guía Curricular de Aplicación Académica · Administración"});
   assert.equal(out.resolvedDocumentId,"rgi3");
   assert.equal(out.expectedTemplate,"RGI3-0X-PRO-60-AÑO-MES");
-  assert.equal(out.displayTitle,"RGI3-01-PRO-60-AÑO-MES-Guia Curricular de Aplicacion Academica de la Carrera Administracion");
+  assert.equal(out.displayTitle,"Guía Curricular de Aplicación Académica de la Carrera · Administración");
   assert.equal(w.PriorityWorkflow.decorate(out,{stages:{}}).large,true);
 });
 test("una carpeta RGI2 de Artículo Académico no cambia el código RGI3 del manual",()=>{
@@ -185,7 +185,7 @@ test("Fechas del período desconocidas no se inventan, aunque se conozca el cons
     documentId:"inf",title:"Informe Final del Proceso de Titulación",workType:"document",
     periodLabel:"",pathLabel:"PROCESOS ESTRATEGICOS/UTET-PRO-95"},
     w.PriorityNames.prepare());
-  assert.equal(report.displayTitle,"UTET-INF-01-PRO-95-AÑO-MES-Informe Final del Proceso de Titulacion");
+  assert.equal(report.displayTitle,"Informe Final del Proceso de Titulación");
   assert.equal(report.namingComplete,false);
 });
 test("Informe con fecha de inicio y secuencia errónea queda como archivo a verificar",()=>{
