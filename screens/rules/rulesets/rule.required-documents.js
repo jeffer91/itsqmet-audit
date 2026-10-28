@@ -275,6 +275,9 @@ Función:
 
       const processInfo = Manual.getProcess(scope, parsed.processNumber);
       if (!processInfo || !Array.isArray(processInfo.documents)) return;
+      // Los entregables individuales no son un documento global por proceso.
+      // Su ausencia solo puede evaluarse con un padrón de estudiantes y período.
+      if (processInfo.documentGranularity === "per-student") return;
 
       const containers = buildPeriodContainers(
         index,
