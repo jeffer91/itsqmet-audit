@@ -51,6 +51,11 @@
       (item.expectedTemplate && !item.namingComplete && item.sourceKind !== "file-coded" ? '<span class="task-meta"><strong>Patrón del manual:</strong> ' + esc(item.expectedTemplate) + ' (campos restantes por confirmar)</span>' : "") +
       (item.namingNotice ? '<span class="task-meta"><strong>Observación:</strong> ' + esc(item.namingNotice) + '</span>' : "") +
       (item.referenceFileName ? '<span class="task-meta"><strong>Referencia de otro período:</strong> ' + esc(item.referenceFileName) + '</span>' : "") +
+      (item.evidenceState === "pdf-candidate" ? '<span class="task-meta"><strong>Evidencia:</strong> PDF localizado, pendiente de validar</span>' :
+        item.evidenceState === "editable-only" ? '<span class="task-meta"><strong>Evidencia:</strong> Editable localizado, PDF por verificar</span>' : "") +
+      (item.levelLabel ? '<span class="task-meta"><strong>Prioridad:</strong> ' + esc(item.levelLabel) + '</span>' : "") +
+      (item.dueDate ? '<span class="task-meta"><strong>Fecha de referencia:</strong> ' +
+        esc(new Date(item.dueDate).toLocaleDateString("es-EC", {year:"numeric",month:"long",day:"numeric",timeZone:"UTC"})) + '</span>' : "") +
       '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +
       (item.periodLabel ? '<span class="task-meta">Período: ' + esc(item.periodLabel) + '</span>' : "") +
       groupDetails +
