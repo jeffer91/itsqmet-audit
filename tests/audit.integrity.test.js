@@ -48,7 +48,7 @@ test("un ZIP dañado conserva la extracción anterior", async t => {
 test("firmas usa el inventario, incorpora solicitudes solapadas y señala fuentes inaccesibles", async t => {
   await setup(t);
   const validator = path.join(directory, "validator.js");
-  await fs.writeFile(validator, 'process.stdout.write(JSON.stringify({status:"no-electronic-signature"}))');
+  await fs.writeFile(validator, 'process.stdout.write(JSON.stringify({status:"no-electronic-signature",cover:{version:1,status:"inspected",slots:[]}}))');
   // A Node subprocess standing in for Python receives validate_pdf.py as its script.
   // Use a preload to provide a deterministic validator on all supported platforms.
   const oldPython = process.env.AUDIT_PYTHON, oldOptions = process.env.NODE_OPTIONS;
@@ -75,6 +75,12 @@ test("firmas usa el inventario, incorpora solicitudes solapadas y señala fuente
   const [, latest] = await Promise.all([first, signatures.scan()]);
   assert.deepEqual(latest.records.map(r => r.scope).sort(), ["UGPA", "UTET"]);
   assert.ok(latest.records.every(r => r.name === "activo.pdf" && r.status === "no-electronic-signature"));
+  assert.equal((await signatures.scan()).stats.reused, 2);
+  const stored = path.join(directory, "signature-validation-v2.json");
+  const legacy = JSON.parse(await fs.readFile(stored, "utf8"));
+  for (const record of Object.values(legacy.records)) delete record.cover;
+  await fs.writeFile(stored, JSON.stringify(legacy));
+  assert.equal((await signatures.scan()).stats.scanned, 2);
   await fs.rm(utet.rootPath, { recursive: true });
   const partial = await signatures.scan();
   assert.ok(partial.stats.partial);

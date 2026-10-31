@@ -42,7 +42,7 @@ screens/signatures/signatures.app.js: filtros, listado y ejecución del análisi
 screens/signatures/signatures.styles.css: presentación visual.
 
 LÍMITES CONOCIDOS
-La validación depende de Python/pyHanko y de una política de confianza de certificados. No se han completado la detección de firmas manuscritas ni la aplicación de plazos específicos de los manuales. No confundir el margen de priorización de 15 días con una fecha normativa.
+La validación depende de Python/pyHanko y de una política de confianza de certificados. core/signatures/cover_review.py examina espacios de firma en la primera página cuando el PDF carece de firmas digitales. Los trazos son indicios para revisión. Los plazos específicos de los manuales siguen pendientes. No confundir el margen de priorización de 15 días con una fecha normativa.
 La lista anterior cubre componentes comprobados; no pretende ser un inventario exhaustivo de todo el repositorio.
 
 MANTENIMIENTO

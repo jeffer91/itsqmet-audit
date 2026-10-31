@@ -28,8 +28,6 @@
     loaded=true;
   }
   function refresh(message,type) {
-    // Only confirmed invalid cryptographic signatures create automatic tasks.
-    // Missing/unverifiable signatures are displayed in their own module.
     const signatureTasks = signatureRecords.filter(x => x.status === "invalid" && !x.stale).map(x => ({
       id: "signature-invalid|" + x.scope + "|" + x.path,
       scope: x.scope, processNumber: (String(x.path).match(/PRO[-_ ]*(\d+)/i)||[])[1] || "",
@@ -39,6 +37,22 @@
       reason: "El análisis criptográfico detectó una firma inválida. Confirmar antes de reemplazar evidencias.",
       actionPath: x.path, pathLabel: x.path, effort: "medium", evidenceState: "invalid-signature"
     }));
+    for (const record of signatureRecords) {
+      if (record.stale || record.status !== "no-electronic-signature") continue;
+      const pending = (record.cover?.slots || []).filter(slot => slot.required &&
+        ["empty", "review"].includes(slot.status));
+      if (!pending.length) continue;
+      signatureTasks.push({
+        id: "cover-required|" + record.scope + "|" + record.path,
+        scope: record.scope, processNumber: (String(record.path).match(/PRO[-_ ]*(\d+)/i) || [])[1] || "",
+        area: "other", level: "medium", levelLabel: "Media", workType: "review",
+        title: "Revisar casilla de firma en portada: " + record.name,
+        suggestedAction: "Contrastar los espacios señalados con la portada original",
+        reason: "La portada identifica como obligatorias estas casillas pendientes de revisión: " +
+          pending.map(slot => slot.label).join(", "),
+        actionPath: record.path, pathLabel: record.path, effort: "medium", evidenceState: "cover-review"
+      });
+    }
     window.PriorityService.setExternalTasks(signatureTasks);
     const vm=window.PriorityService.buildViewModel({});
     const data=window.PriorityStorage.load();

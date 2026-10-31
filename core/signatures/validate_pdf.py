@@ -17,7 +17,7 @@ def run(filename):
         with open(filename, "rb") as stream:
             reader = PdfFileReader(stream)
             signatures = []
-            for sig in reader.embedded_signatures:
+            for sig in reader.embedded_regular_signatures:
                 item = {"field": sig.field_name, "signingTime": iso(sig.self_reported_timestamp)}
                 try:
                     status = validate_pdf_signature(sig, signer_validation_context=ValidationContext(allow_fetching=False))
@@ -32,7 +32,8 @@ def run(filename):
                     item["error"] = str(exc)
                 signatures.append(item)
             if not signatures:
-                return {"status": "no-electronic-signature", "signatures": []}
+                from cover_review import review
+                return {"status": "no-electronic-signature", "signatures": [], "cover": review(filename)}
             if any(s.get("integrity") is False or s.get("cryptographicValid") is False for s in signatures):
                 result = "invalid"
             elif all(s.get("bottomLine") is True for s in signatures):
@@ -45,6 +46,6 @@ def run(filename):
 
 if __name__ == "__main__":
     try:
-        print(json.dumps(run(sys.argv[1]), ensure_ascii=False, default=str))
+        print(json.dumps(run(sys.argv[1]), ensure_ascii=True, default=str))
     except Exception as exc:
-        print(json.dumps({"status": "unverifiable", "reason": str(exc)}, ensure_ascii=False))
+        print(json.dumps({"status": "unverifiable", "reason": str(exc)}, ensure_ascii=True))

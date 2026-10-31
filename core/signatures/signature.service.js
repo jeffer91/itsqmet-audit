@@ -58,13 +58,15 @@ async function performScan() {
         const hash = await hashFile(file);
         const previous = store.records[key];
         // Certificate trust can change even when the signed bytes remain identical.
-        if (previous && previous.sha256 === hash && previous.status === "no-electronic-signature") {
+        if (previous && previous.sha256 === hash && previous.status === "no-electronic-signature" &&
+            previous.cover?.version === 1 && !previous.cover.retry) {
           stats.reused++;
         } else {
           const result = await validate(file);
           store.records[key] = { scope, path: file, name: entry.name, size: stat.size,
             mtimeMs: stat.mtimeMs, sha256: hash, checkedAt: new Date().toISOString(), ...result };
           stats.scanned++;
+          if (result.cover?.retry) errors.push(file + ": " + result.cover.reason);
           if (result.status === "unverifiable") errors.push(file + ": " + (result.reason || "Firma no verificable"));
         }
         current.add(key);
