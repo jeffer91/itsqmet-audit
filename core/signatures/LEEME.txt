@@ -1,6 +1,6 @@
 CARPETA core/signatures — INSPECCIÓN DE FIRMAS
 =============================================
-signature.service.js: recorre carpetas configuradas, identifica PDF, calcula SHA-256, conserva caché y ejecuta validación; serializa análisis concurrentes.
+signature.service.js: toma los PDF del inventario guardado, calcula SHA-256, conserva caché y ejecuta validación; serializa análisis concurrentes.
 validate_pdf.py: inspecciona firmas PDF mediante pyHanko. Distingue firmas verificadas, inválidas, no verificables y PDF sin firma electrónica.
 requirements.txt: dependencia Python del validador.
 README.md: instrucciones de instalación y límites conocidos.

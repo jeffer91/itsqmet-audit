@@ -51,14 +51,25 @@ async function ensureHistoryDirectory() {
   await fsp.mkdir(getHistoryDirPath(), { recursive: true });
 }
 
+let pending = Promise.resolve();
+
+function serialized(operation) {
+  const result = pending.then(operation);
+  pending = result.catch(() => {});
+  return result;
+}
+
 async function writeHistory(history) {
   await ensureHistoryDirectory();
   const normalized = normalizeHistory(history);
-  await fsp.writeFile(
-    getHistoryFilePath(),
-    JSON.stringify(normalized, null, 2),
-    "utf8"
-  );
+  const target = getHistoryFilePath();
+  const temporary = target + "." + process.pid + ".tmp";
+  try {
+    await fsp.writeFile(temporary, JSON.stringify(normalized, null, 2), "utf8");
+    await fsp.rename(temporary, target);
+  } finally {
+    await fsp.rm(temporary, { force: true });
+  }
   return normalized;
 }
 
@@ -69,7 +80,10 @@ async function loadHistory() {
     const raw = await fsp.readFile(getHistoryFilePath(), "utf8");
     return normalizeHistory(JSON.parse(raw));
   } catch (error) {
-    if (error && (error.code === "ENOENT" || error.name === "SyntaxError")) {
+    if (error instanceof SyntaxError) {
+      throw new Error("El historial está dañado. Se conservó el archivo para recuperarlo: " + getHistoryFilePath());
+    }
+    if (error && error.code === "ENOENT") {
       const empty = createDefaultHistory();
       await writeHistory(empty);
       return empty;
@@ -184,10 +198,10 @@ async function saveDiscardedFindings(entries) {
 
 module.exports = {
   getHistoryFilePath,
-  loadHistory,
-  saveHistory,
-  setSourcePath,
-  upsertScanResult,
-  clearScanResult,
-  saveDiscardedFindings
+  loadHistory: (...args) => serialized(() => loadHistory(...args)),
+  saveHistory: (...args) => serialized(() => saveHistory(...args)),
+  setSourcePath: (...args) => serialized(() => setSourcePath(...args)),
+  upsertScanResult: (...args) => serialized(() => upsertScanResult(...args)),
+  clearScanResult: (...args) => serialized(() => clearScanResult(...args)),
+  saveDiscardedFindings: (...args) => serialized(() => saveDiscardedFindings(...args))
 };

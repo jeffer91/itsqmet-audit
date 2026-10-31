@@ -18,10 +18,8 @@ const {
 } = require("../archive/archive.normalize");
 const historyStore = require("../history/history.store");
 const signatureService = require("../signatures/signature.service");
-let signatureJob = null;
 function queueSignatureScan() {
-  if (signatureJob) return;
-  signatureJob = signatureService.scan().catch(() => null).finally(() => { signatureJob = null; });
+  signatureService.scan().catch(error => console.error("Error en el análisis de firmas:", error.message));
 }
 
 const VALID_TYPES = new Set(["UGPA", "UTET"]);
@@ -98,7 +96,9 @@ async function runArchiveImport(type, archivePath) {
     workspaceRoot: buildWorkspaceRoot(safeType)
   });
 
-  return buildPersistedResponse(safeType, result);
+  const response = await buildPersistedResponse(safeType, result);
+  queueSignatureScan();
+  return response;
 }
 
 async function runFolderScan(type, folderPath, onProgress) {

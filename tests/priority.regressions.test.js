@@ -120,3 +120,20 @@ test("un Word de capacitación es editable localizado y no acredita PDF final",(
   assert.equal(item.workType,"review");
   assert.match(item.reason,/editable/i);
 });
+
+test("Excel y PDF respetan bloqueo y postergación de la tarea", async () => {
+  const w = boot({ ugpaResult: null, utetResult: null, discardedFindings: [] });
+  const task = { id: "firma", scope: "UGPA", title: "Verificar firma", level: "max", workType: "review" };
+  w.PriorityService.setExternalTasks([task]);
+  let expected;
+  const capture = async payload => {
+    assert.equal(payload.tasks[0].status, expected);
+    return { ok: true };
+  };
+  w.api = { pdf: { export: capture }, excel: { export: capture } };
+  for (expected of ["blocked", "snoozed"]) {
+    w.PriorityStorage.setStatus(task.id, expected);
+    await w.PriorityService.exportExcel({});
+    await w.PriorityService.exportPdf({});
+  }
+});

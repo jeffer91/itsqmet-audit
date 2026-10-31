@@ -140,31 +140,37 @@ async function importArchiveFile(params) {
   const extension = ensureSupportedArchiveExtension(originalArchivePath);
   await ensureDirectory(workspaceRoot);
 
-  const storedArchivePath = await copyArchiveToWorkspace(
-    originalArchivePath,
-    workspaceRoot
-  );
+  const generation = await fsp.mkdtemp(path.join(workspaceRoot, "import-"));
+  try {
+    const storedArchivePath = await copyArchiveToWorkspace(
+      originalArchivePath,
+      generation
+    );
 
-  const extractionRootPath = path.join(workspaceRoot, "current");
-  const extractionInfo = await extractArchive(
-    storedArchivePath,
-    extractionRootPath,
-    extension
-  );
+    const extractionRootPath = path.join(generation, "current");
+    const extractionInfo = await extractArchive(
+      storedArchivePath,
+      extractionRootPath,
+      extension
+    );
 
-  const resolvedRoot = await resolveEffectiveRoot(extractionRootPath);
+    const resolvedRoot = await resolveEffectiveRoot(extractionRootPath);
 
-  return scanArchiveDirectory({
-    type: type,
-    rootPath: resolvedRoot.rootPath,
-    directFolders: resolvedRoot.directFolders,
-    validation: resolvedRoot.validation,
-    originalArchivePath: originalArchivePath,
-    storedArchivePath: storedArchivePath,
-    extractionRootPath: extractionRootPath,
-    archiveExtension: extension,
-    extractor: extractionInfo.extractor
-  });
+    return await scanArchiveDirectory({
+      type: type,
+      rootPath: resolvedRoot.rootPath,
+      directFolders: resolvedRoot.directFolders,
+      validation: resolvedRoot.validation,
+      originalArchivePath: originalArchivePath,
+      storedArchivePath: storedArchivePath,
+      extractionRootPath: extractionRootPath,
+      archiveExtension: extension,
+      extractor: extractionInfo.extractor
+    });
+  } catch (error) {
+    await fsp.rm(generation, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 module.exports = {

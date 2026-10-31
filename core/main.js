@@ -58,16 +58,26 @@ function registerAppIpc() {
   registerSignaturesIpc();
 }
 
-app.whenReady().then(function onReady() {
-  registerAppIpc();
-  createMainWindow();
-
-  app.on("activate", function onActivate() {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
     }
   });
-});
+  app.whenReady().then(function onReady() {
+    registerAppIpc();
+    createMainWindow();
+
+    app.on("activate", function onActivate() {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createMainWindow();
+      }
+    });
+  });
+}
 
 app.on("window-all-closed", function onWindowAllClosed() {
   if (process.platform !== "darwin") {

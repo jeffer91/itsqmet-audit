@@ -19,8 +19,8 @@ En Windows se usa `python` y en macOS/Linux `python3`. La variable `AUDIT_PYTHON
 - Antes de distribuir una versión instalable, empaquetar Python/pyHanko y configurar certificados de confianza para Ecuador; de lo contrario, el módulo requiere una instalación local adicional.
 
 ## Integridad y sincronización
-- La caché compara SHA-256 del archivo, no solo tamaño y fecha.
-- Los escaneos concurrentes comparten una misma ejecución.
+- El servicio usa el inventario de cada escaneo. Solo reutiliza el resultado «sin firma electrónica» cuando coincide el SHA-256. Revalida las firmas en cada ejecución para considerar cambios en la confianza del certificado.
+- Si se guarda otro escaneo durante la validación, el servicio vuelve a leer el inventario antes de finalizar.
 - Si la carpeta está inaccesible o el recorrido es parcial, se conservan resultados anteriores marcados como obsoletos.
 - Las tareas de firmas inválidas se incluyen en el modelo de Priorización y sus exportaciones. No se generan tareas desde resultados obsoletos.
 - No se ha ejecutado una prueba integral del instalador ni con certificados reales de Ecuador. No usar el estado «verificado» como dictamen jurídico.

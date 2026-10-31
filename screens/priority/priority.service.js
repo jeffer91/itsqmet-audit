@@ -234,6 +234,10 @@
   }
   const PROGRESS_KEY = "audit_priority_progress_v1";
   function progressMap() {
+    if (window.PriorityStorage) {
+      const { statuses } = window.PriorityStorage.load();
+      return Object.fromEntries(Object.entries(statuses).map(([id, entry]) => [id, entry.status]));
+    }
     try {
       const value = JSON.parse(window.localStorage.getItem(PROGRESS_KEY) || "{}");
       return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -242,6 +246,7 @@
   function saveProgress(id, status) {
     if (!id || !["pending", "doing", "review", "done"].includes(status))
       throw new Error("Estado de seguimiento no válido.");
+    if (window.PriorityStorage) return window.PriorityStorage.setStatus(id, status);
     const map = progressMap();
     if (status === "pending") delete map[id];
     else map[id] = status;
@@ -812,7 +817,10 @@
     const filtersSafe = Object.assign({scope:"all",process:"all",area:"all",level:"all",workType:"all",status:"all",search:""},filters || {});
     const visibleTasks = applyFilters(tasks,filtersSafe);
     const allIssues = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(shared))
-      .map(function (issue) { return {...issue,status:progress[issue.id] || "pending"}; });
+      .map(function (issue) {
+        const groupId = ["group", issue.scope, issue.processNumber || "", issue.category || "", issue.title].join("|");
+        return { ...issue, status: progress[groupId] || progress[issue.id] || "pending" };
+      });
     const visibleIssues = allIssues.filter(function (issue) {
       return (filtersSafe.scope === "all" || filtersSafe.scope === issue.scope) &&
         (filtersSafe.process === "all" || (issue.processNumber && issue.scope+"-"+issue.processNumber === filtersSafe.process)) &&
