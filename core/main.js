@@ -16,6 +16,7 @@ const { registerShellIpc } = require("./ipc/shell.ipc");
 const { registerRulesIpc } = require("./ipc/rules.ipc");
 const { registerArchiveIpc } = require("./ipc/archive.ipc");
 const { registerHistoryIpc } = require("./ipc/history.ipc");
+const { registerSignaturesIpc } = require("./ipc/signatures.ipc");
 
 let mainWindow = null;
 
@@ -54,6 +55,7 @@ function registerAppIpc() {
   registerExportIpc();
   registerShellIpc();
   registerRulesIpc();
+  registerSignaturesIpc();
 }
 
 app.whenReady().then(function onReady() {
