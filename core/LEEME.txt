@@ -1,0 +1,8 @@
+CARPETA core — PROCESO PRINCIPAL
+================================
+main.js: inicia Electron, crea la ventana y registra IPC.
+preload.js: expone operaciones seguras a las pantallas.
+ipc/: canales del proceso principal.
+history/: persistencia del historial documental.
+signatures/: motor de validación de firmas PDF.
+Las pantallas no deben acceder directamente al sistema de archivos. Mantener los originales intactos.
