@@ -1,0 +1,8 @@
+CARPETA screens/signatures — FIRMAS Y VALIDACIÓN
+===============================================
+signatures.index.html: estructura HTML y controles del módulo.
+signatures.app.js: obtiene resultados desde window.api.signatures, filtra por unidad/estado y muestra el detalle de cada PDF.
+signatures.styles.css: estilos de tarjetas, indicadores y filtros.
+CONEXIÓN: core/preload.js -> core/ipc/signatures.ipc.js -> core/signatures/signature.service.js -> validate_pdf.py.
+RESULTADOS: verificada, inválida, no verificable o sin firma electrónica. Los registros obsoletos se identifican explícitamente.
+PENDIENTE: fechas normativas, firmas manuscritas y distribución autónoma de dependencias Python.
