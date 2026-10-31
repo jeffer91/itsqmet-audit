@@ -1,0 +1,11 @@
+CARPETA screens/priority — PRIORIZACIÓN
+======================================
+priority.config.js: niveles de urgencia, áreas, perfiles y márgenes de priorización.
+priority.service.js: transforma hallazgos y reglas en tareas; genera el modelo utilizado por pantalla y exportaciones.
+priority.queue.js: selecciona hasta cinco acciones principales y respeta estados de seguimiento.
+priority.storage.js: persistencia de seguimiento y cola.
+priority.app.js: orquesta carga de reglas, hallazgos de firmas, cola y presentación.
+priority.workflow.js: reglas del ciclo de vida de las tareas.
+priority.processes.js: agrupación y estado de procesos.
+Los hallazgos de firmas inválidas entran como tareas de revisión. Los resultados inconclusos y obsoletos no equivalen a incumplimientos.
+IMPORTANTE: el margen interno de 15 días de cierre no representa una fecha normativa del manual.
