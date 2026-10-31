@@ -37,7 +37,7 @@ async function scan(){
  const roots=[];
  for(const scope of ["UGPA","UTET"]){
   const result=scope==="UGPA"?history.ugpaResult:history.utetResult;
-  const root=result&&result.source&&(result.source.selectedFolderPath||result.rootPath);
+  const root=(result&&result.source&&(result.source.selectedFolderPath||result.rootPath)) || history[scope.toLowerCase()+"SourcePath"];
   if(root&&fs.existsSync(root)&&fs.statSync(root).isDirectory())roots.push({scope,root});
  }
  const store=readStore(),current=new Set(),stats={scanned:0,reused:0,errors:0};
