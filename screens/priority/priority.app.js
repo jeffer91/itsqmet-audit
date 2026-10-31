@@ -28,19 +28,19 @@
     loaded=true;
   }
   function refresh(message,type) {
-    const vm=window.PriorityService.buildViewModel({});
     // Only confirmed invalid cryptographic signatures create automatic tasks.
     // Missing/unverifiable signatures are displayed in their own module.
-    const signatureTasks = signatureRecords.filter(x => x.status === "invalid").map(x => ({
+    const signatureTasks = signatureRecords.filter(x => x.status === "invalid" && !x.stale).map(x => ({
       id: "signature-invalid|" + x.scope + "|" + x.path,
-      scope: x.scope, processNumber: (String(x.path).match(/PRO[-_ ]*(\\d+)/i)||[])[1] || "",
+      scope: x.scope, processNumber: (String(x.path).match(/PRO[-_ ]*(\d+)/i)||[])[1] || "",
       area: "other", level: "max", levelLabel: "Máxima", workType: "review",
       title: "Verificar firma electrónica inválida: " + x.name,
       nextAction: "Abrir el PDF y gestionar una versión firmada válida",
       reason: "El análisis criptográfico detectó una firma inválida. Confirmar antes de reemplazar evidencias.",
       actionPath: x.path, pathLabel: x.path, effort: "medium", evidenceState: "invalid-signature"
     }));
-    vm.tasks = (vm.tasks || []).concat(signatureTasks);
+    window.PriorityService.setExternalTasks(signatureTasks);
+    const vm=window.PriorityService.buildViewModel({});
     const data=window.PriorityStorage.load();
     const board=window.PriorityQueue.build(vm,data);
     window.PriorityStorage.setQueue(board.queueIds);
@@ -94,6 +94,7 @@
         window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Escaneando carpetas…");
         try {
           const total=await rescan();
+          if (window.api.signatures && window.api.signatures.scan) await window.api.signatures.scan();
           await loadSignatureFindings();
           refresh("Se revisaron "+total+" unidad(es). El avance registrado se conserva.");
         } finally {
