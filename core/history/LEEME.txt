@@ -1,0 +1,5 @@
+CARPETA core/history — HISTORIAL LOCAL
+=====================================
+history.store.js: recupera y guarda el historial de los escaneos y rutas configuradas.
+Lo utiliza el servicio de firmas para encontrar las carpetas UGPA y UTET.
+NO CONFUNDIR: historial de escaneo con evidencia de autenticidad de firma. Evitar eliminar datos ante carpetas temporalmente inaccesibles.
