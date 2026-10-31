@@ -64,6 +64,10 @@ contextBridge.exposeInMainWorld("api", {
       };
     }
   },
+  signatures: {
+    list: function () { return ipcRenderer.invoke("signatures:list"); },
+    scan: function () { return ipcRenderer.invoke("signatures:scan"); }
+  },
   history: {
     get: function get() {
       return ipcRenderer.invoke("history:get");
