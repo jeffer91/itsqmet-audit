@@ -4,7 +4,7 @@
   window.PriorityConfig = {
     graceDays: {
       start: 30,
-      close: 90
+      close: 15
     },
     levels: [
       { id: "max", label: "Máxima", rank: 4 },
