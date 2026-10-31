@@ -1,44 +1,41 @@
-"""Read-only cryptographic PDF signature inspection. Requires pyhanko >=0.38."""
+"""Read-only PDF signature validation; never treats untrusted certificates as verified."""
 import json
 import sys
 from datetime import datetime
 
 def iso(value):
-    if not value:
-        return None
-    if isinstance(value, datetime):
-        return value.isoformat()
-    return str(value)
+    return value.isoformat() if isinstance(value, datetime) else (str(value) if value else None)
 
-def run(path):
+def run(filename):
     try:
         from pyhanko.pdf_utils.reader import PdfFileReader
         from pyhanko.sign.validation import validate_pdf_signature
         from pyhanko_certvalidator import ValidationContext
     except ImportError:
-        return {"status": "unverifiable", "reason": "Instale pyhanko>=0.38 en el Python local"}
+        return {"status": "unverifiable", "reason": "Dependencia pyHanko no instalada"}
     try:
-        with open(path, "rb") as stream:
+        with open(filename, "rb") as stream:
             reader = PdfFileReader(stream)
             signatures = []
             for sig in reader.embedded_signatures:
-                info = {"field": sig.field_name, "signingTime": iso(sig.self_reported_timestamp)}
+                item = {"field": sig.field_name, "signingTime": iso(sig.self_reported_timestamp)}
                 try:
                     status = validate_pdf_signature(sig, signer_validation_context=ValidationContext(allow_fetching=False))
-                    info.update({
-                        "integrity": bool(status.intact),
-                        "cryptographicValid": bool(status.valid),
-                        "trusted": bool(status.trusted),
+                    item.update({
+                        "integrity": status.intact,
+                        "cryptographicValid": status.valid,
+                        "trusted": status.trusted,
+                        "bottomLine": status.bottom_line,
                         "summary": status.summary(),
                     })
                 except Exception as exc:
-                    info.update({"integrity": None, "cryptographicValid": None, "trusted": False, "error": str(exc)})
-                signatures.append(info)
+                    item["error"] = str(exc)
+                signatures.append(item)
             if not signatures:
                 return {"status": "no-electronic-signature", "signatures": []}
-            if any(s.get("cryptographicValid") is False or s.get("integrity") is False for s in signatures):
+            if any(s.get("integrity") is False or s.get("cryptographicValid") is False for s in signatures):
                 result = "invalid"
-            elif all(s.get("cryptographicValid") and s.get("trusted") for s in signatures):
+            elif all(s.get("bottomLine") is True for s in signatures):
                 result = "verified"
             else:
                 result = "unverifiable"
@@ -47,4 +44,7 @@ def run(path):
         return {"status": "unverifiable", "reason": str(exc)}
 
 if __name__ == "__main__":
-    print(json.dumps(run(sys.argv[1]), ensure_ascii=False))
+    try:
+        print(json.dumps(run(sys.argv[1]), ensure_ascii=False, default=str))
+    except Exception as exc:
+        print(json.dumps({"status": "unverifiable", "reason": str(exc)}, ensure_ascii=False))
