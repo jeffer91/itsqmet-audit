@@ -1,0 +1,5 @@
+CARPETA screens/shared — COMPONENTES COMUNES
+============================================
+app.nav.js: construye los enlaces del menú y reconoce el apartado Firmas y Validación.
+app.nav.css: estilos del menú compartido.
+Si se añade una pantalla, actualizar rutas relativas, identificador del módulo y navegación en las pantallas.
