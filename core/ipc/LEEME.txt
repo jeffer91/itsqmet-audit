@@ -1,0 +1,10 @@
+CARPETA core/ipc — CANALES ENTRE INTERFAZ Y SISTEMA
+==================================================
+archive.ipc.js: operaciones de escaneo, generación de respuesta persistida e inicio del análisis de firmas.
+signatures.ipc.js: registra signatures:list (consultar) y signatures:scan (analizar).
+history.ipc.js: canales del historial.
+export.ipc.js: operaciones de exportación.
+shell.ipc.js: operaciones del sistema de archivos habilitadas para la interfaz.
+rules.ipc.js: operaciones relacionadas con reglas.
+DEPENDENCIAS: main.js registra los handlers; preload.js expone funciones limitadas a la UI.
+RIESGO: cambiar un nombre de canal requiere actualizar handler, preload y pantalla.
