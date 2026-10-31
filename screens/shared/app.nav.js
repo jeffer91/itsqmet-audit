@@ -11,7 +11,7 @@ Función o funciones:
 
   function normalizePage(currentPage) {
     const safe = String(currentPage || "").trim().toLowerCase();
-    if (["rules", "dashboard", "scan", "priority"].includes(safe)) return safe;
+    if (["rules", "dashboard", "scan", "priority", "signatures"].includes(safe)) return safe;
     return "scan";
   }
 
@@ -23,7 +23,8 @@ Función o funciones:
       scanHref: current === "scan" ? "./scan.index.html" : base + "scan/scan.index.html",
       dashboardHref: current === "dashboard" ? "./dashboard.index.html" : base + "dashboard/dashboard.index.html",
       rulesHref: current === "rules" ? "./rules.index.html" : base + "rules/rules.index.html",
-      priorityHref: current === "priority" ? "./priority.index.html" : base + "priority/priority.index.html"
+      priorityHref: current === "priority" ? "./priority.index.html" : base + "priority/priority.index.html",
+      signaturesHref: current === "signatures" ? "./signatures.index.html" : base + "signatures/signatures.index.html"
     };
   }
 
@@ -35,7 +36,8 @@ Función o funciones:
       ["scan", "Escaneo", links.scanHref],
       ["dashboard", "Dashboard", links.dashboardHref],
       ["rules", "Reglas", links.rulesHref],
-      ["priority", "Priorización", links.priorityHref]
+      ["priority", "Priorización", links.priorityHref],
+      ["signatures", "Firmas y Validación", links.signaturesHref]
     ];
 
     host.innerHTML = `
