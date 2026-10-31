@@ -5,6 +5,8 @@
   const Types = window.RulesTypes || {};
   const Manual = window.AuditManualCatalog || {};
   const DAY = 24 * 60 * 60 * 1000;
+  let externalTasks = [];
+  function setExternalTasks(items) { externalTasks = Array.isArray(items) ? items.slice() : []; }
   const MONTHS = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -186,10 +188,10 @@
     if (stage === "close") {
       const due = addDays(period.end, Config.graceDays.close);
       if (today.getTime() > due.getTime()) {
-        return { level: "max", dueDate: due, reason: "Superó los 15 días de gracia posteriores al cierre del período." };
+        return { level: "max", dueDate: due, reason: "Superó el plazo general de referencia posterior al cierre del período (confirmar manual)." };
       }
       if (today.getTime() >= period.end.getTime()) {
-        return { level: "high", dueDate: due, reason: "El período cerró y está dentro de los 15 días de gracia." };
+        return { level: "high", dueDate: due, reason: "El período cerró y está dentro del plazo general de referencia (confirmar manual)." };
       }
       return { level: "low", dueDate: due, reason: "Corresponde al cierre del período; todavía no vence." };
     }
@@ -798,7 +800,7 @@
     const fromRules = findings.map(function (finding) { return taskFromFinding(finding, today); }).filter(Boolean);
     const tasks = synthetic.concat(fromRules.filter(function (task) {
       return !duplicateGenericMissingPeriod(task, synthetic);
-    })).map(function (task) {
+    }),externalTasks).map(function (task) {
       const scan = scanForScope(shared, task.scope);
       const localFolder = !!(scan && scan.source && scan.source.kind === "folder");
       return {...task, status: progress[task.id] || "pending",
@@ -914,7 +916,7 @@
     return response;
   }
   window.PriorityService = {
-    buildViewModel: buildViewModel, openPath: openPath, exportPdf: exportPdf, exportExcel: exportExcel,
+    buildViewModel: buildViewModel, setExternalTasks: setExternalTasks, openPath: openPath, exportPdf: exportPdf, exportExcel: exportExcel,
     saveProgress: saveProgress, createFolder: createFolder
   };
 })(window);
