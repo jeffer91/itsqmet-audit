@@ -17,6 +17,12 @@ const {
   validateTopLevelProcessFolders
 } = require("../archive/archive.normalize");
 const historyStore = require("../history/history.store");
+const signatureService = require("../signatures/signature.service");
+let signatureJob = null;
+function queueSignatureScan() {
+  if (signatureJob) return;
+  signatureJob = signatureService.scan().catch(() => null).finally(() => { signatureJob = null; });
+}
 
 const VALID_TYPES = new Set(["UGPA", "UTET"]);
 
@@ -122,6 +128,7 @@ async function runFolderScan(type, folderPath, onProgress) {
     processed: Number(result.summary && result.summary.totalFolders || 0) + Number(result.summary && result.summary.totalFiles || 0)
   });
   const response = await buildPersistedResponse(safeType, result);
+  queueSignatureScan();
   report({
     phase: "done",
     folders: Number(result.summary && result.summary.totalFolders || 0),
