@@ -1,0 +1,7 @@
+CARPETA screens — INTERFACES
+===========================
+shared/: navegación y estilos comunes.
+scan/: pantalla inicial y flujo de escaneo de UGPA/UTET.
+priority/: lista de pendientes, cola de cinco prioridades y seguimiento.
+signatures/: módulo independiente de firmas y validación.
+Las pantallas utilizan window.api, expuesta por core/preload.js; no deben leer directamente archivos del sistema mediante Node.
