@@ -1,0 +1,15 @@
+ITSQMET AUDIT — GUÍA DE MANTENIMIENTO
+====================================
+1. Trabajar sobre el código real del repositorio. No documentar funciones supuestas.
+2. Antes de editar: leer el archivo, sus dependencias, su LEEME.txt y la configuración del módulo.
+3. Conservar los PDF/Word originales y los registros históricos. No transformar hallazgos inciertos en incumplimientos confirmados.
+4. Mantener separadas: evidencia documental, resultado de validación y estado de tarea.
+5. Verificar que un hallazgo de firmas se refleje de forma coherente en Priorización, la cola de cinco elementos y exportaciones.
+6. Si cambian reglas temporales, identificar la fuente normativa y registrar su vigencia. Los márgenes internos no son plazos legales.
+7. Después de cambiar código: ejecutar comprobaciones de sintaxis, pruebas automatizadas, pruebas funcionales Electron y pruebas con PDF reales antes de declarar la versión estable.
+8. Si Python o pyHanko no están disponibles, mostrar «no verificable» y explicar la dependencia.
+9. No incluir datos personales ni certificados privados en pruebas o documentación pública.
+10. Actualizar los TXT de las carpetas afectadas en el mismo cambio de código.
+
+ESTADO DE LA DOCUMENTACIÓN
+Documentación técnica descriptiva. No acredita una prueba integral del instalador ni de los certificados ecuatorianos.
