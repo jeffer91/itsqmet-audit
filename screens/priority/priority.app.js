@@ -2,6 +2,11 @@
   "use strict";
   let loaded = false;
   let currentBoard = null;
+  let signatureRecords = [];
+  async function loadSignatureFindings() {
+    try { const result = await window.api.signatures.list(); signatureRecords = result.records || []; }
+    catch (_error) { signatureRecords = []; }
+  }
   const safe = value => String(value == null ? "" : value).trim();
   function loadScript(src) {
     return new Promise(function (resolve,reject) {
@@ -24,6 +29,18 @@
   }
   function refresh(message,type) {
     const vm=window.PriorityService.buildViewModel({});
+    // Only confirmed invalid cryptographic signatures create automatic tasks.
+    // Missing/unverifiable signatures are displayed in their own module.
+    const signatureTasks = signatureRecords.filter(x => x.status === "invalid").map(x => ({
+      id: "signature-invalid|" + x.scope + "|" + x.path,
+      scope: x.scope, processNumber: (String(x.path).match(/PRO[-_ ]*(\\d+)/i)||[])[1] || "",
+      area: "other", level: "max", levelLabel: "Máxima", workType: "review",
+      title: "Verificar firma electrónica inválida: " + x.name,
+      nextAction: "Abrir el PDF y gestionar una versión firmada válida",
+      reason: "El análisis criptográfico detectó una firma inválida. Confirmar antes de reemplazar evidencias.",
+      actionPath: x.path, pathLabel: x.path, effort: "medium", evidenceState: "invalid-signature"
+    }));
+    vm.tasks = (vm.tasks || []).concat(signatureTasks);
     const data=window.PriorityStorage.load();
     const board=window.PriorityQueue.build(vm,data);
     window.PriorityStorage.setQueue(board.queueIds);
@@ -65,6 +82,7 @@
     window.AppNav && window.AppNav.render("priority");
     window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Cargando prioridades…");
     await loadRules();
+    await loadSignatureFindings();
     const history=await window.api.history.get();
     if(history&&history.ok&&history.history)window.AppStore.setHistory(history.history);
     window.PriorityUI.bindEvents({
@@ -76,6 +94,7 @@
         window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Escaneando carpetas…");
         try {
           const total=await rescan();
+          await loadSignatureFindings();
           refresh("Se revisaron "+total+" unidad(es). El avance registrado se conserva.");
         } finally {
           window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(false);
