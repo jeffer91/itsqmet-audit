@@ -1,0 +1,6 @@
+CARPETA screens/scan — ESCANEO DOCUMENTAL
+=========================================
+scan.index.html: pantalla inicial cargada por core/main.js.
+El escaneo de carpetas institucionales se comunica con core/ipc/archive.ipc.js.
+Los resultados guardados se reutilizan por Auditoría, Priorización y Firmas y Validación.
+No asumir que un archivo no encontrado nunca existió.
