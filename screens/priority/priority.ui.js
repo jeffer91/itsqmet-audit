@@ -107,6 +107,13 @@
           esc(p.nextAction) + '</td></tr>';
       }).join("") + '</tbody></table>';
   }
+  function activeFilters(){
+    return {
+      scope:byId("filterScope").value,
+      workType:byId("filterWork").value,
+      search:val(byId("filterSearch").value)
+    };
+  }
   function render(nextVm, nextBoard) {
     vm = nextVm || {};
     board = nextBoard || {items:[],all:[]};
@@ -124,8 +131,8 @@
   function bindEvents(handlers) {
     byId("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
     byId("btnRescanPriority").addEventListener("click",handlers.onRescan);
-    byId("btnExportPriorityExcel").addEventListener("click",handlers.onExportExcel);
-    byId("btnExportPriorityPdf").addEventListener("click",handlers.onExportPdf);
+    byId("btnExportPriorityExcel").addEventListener("click",()=>handlers.onExportExcel(activeFilters()));
+    byId("btnExportPriorityPdf").addEventListener("click",()=>handlers.onExportPdf(activeFilters()));
     ["filterScope","filterWork"].forEach(id => byId(id).addEventListener("change",function(){
       limit=40;renderBacklog();
     }));

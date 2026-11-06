@@ -56,22 +56,7 @@ La API para abrir archivos locales solo permite rutas provenientes de las fuente
 El estado compartido incluye getSnapshot() para reutilizar índices y evitar duplicar miles de rutas en cada actualización de Priorización. get() conserva copias defensivas; el snapshot estable es exclusivamente de lectura y se invalida cuando cambia el historial.
 
 
-POLÍTICA DE ENTREGABLES UTET — MANUAL DE PROCESOS V2 (06/11/2026)
-El catálogo UTET conserva exactamente diez procesos: 56,95,58,59,88,93,96,164,57,97.
-PRO-94 se excluye por decisión del responsable, incluidos todos sus documentos.
-La tabla final del manual contiene 37 documentos, pero sólo 25 tienen código con
-campos marcados en rojo (0X, AÑO, MES); los otros 12 se mantienen como referencias
-y no generan tareas automáticas de elaboración.
-La Ficha de Posibles Temas de Trabajo de Titulación (PRO-96) se conserva
-como evidencia documental, pero su ausencia no se transforma en trabajo pendiente.
-El Acta de Seguimiento de Requisitos (PRO-58) es condicional: se genera sólo si
-el porcentaje de cumplimiento es bajo; sin evidencia de esa condición, no se
-genera automáticamente la obligación ni una fecha vencida.
-La distinción se implementa mediante AuditManualCatalog.isCodedDocument() e
-isAutomaticDocument() y se utiliza tanto en RuleRequiredDocuments como en PriorityService.
-Se preserva la política de UGPA sin cambios.
-
-El motor de reglas excluye las novedades correspondientes a rutas del UTET-PRO-94, sin alterar carpetas originales.
+POLÍTICA UTET: ver la rectificación definitiva de inventario al final de este documento.
 
 RECTIFICACIÓN DE INVENTARIO UTET APROBADO (06/11/2026)
 La lista definitiva proporcionada por el responsable contiene 24 documentos en 9 procesos:
@@ -85,3 +70,9 @@ Los documentos no aprobados en esos procesos (incluidos borradores estudiantiles
 no se exigen ni generan tareas de creación. Los documentos de PRO-164 y PRO-57
 son institucionales; no se presumen entregables individuales por estudiante.
 Se reemplaza la política anterior de 37 documentos y 10 procesos.
+
+REVISIÓN OPERATIVA: se separan observaciones de carpetas de las 24 obligaciones UTET;
+se identifica PDF candidato sin declarar ausencia; las alertas de firmas en
+Priorización excluyen procesos UTET no aprobados; no se fabrican vencimientos
+UTET a partir de fechas de inicio/cierre de período. Las exportaciones respetan
+los filtros visibles de unidad, tipo y búsqueda.

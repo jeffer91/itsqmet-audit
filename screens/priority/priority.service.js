@@ -262,7 +262,10 @@
     if (!["required-documents", "empty-folders", "folders-without-pdf"].includes(category)) return null;
     const scope = safeText(finding.scope).toUpperCase();
     const processNumber = processFromFinding(finding);
-    if (scope === "UTET" && (processNumber === "94" || processNumber === "59")) return null;
+    // Solo los documentos aprobados originan trabajo de elaboración en UTET.
+    // Las carpetas vacías y otros problemas siguen en Reglas/Dashboard como observaciones.
+    if (scope === "UTET" && category !== "required-documents") return null;
+    if (scope === "UTET" && !Manual.getProcess(scope,processNumber)) return null;
     // PRO-60 se evalúa aparte por ciclo bienal y por carrera. La regla genérica
     // del manual no distingue las incorporaciones semestrales ni el formato
     // histórico de fichas, por lo que aquí se evita convertirla en falsos pendientes.
@@ -279,8 +282,12 @@
     const area = areaFromPath(finding.relativePath);
     const stage = stageFromFinding(finding, processNumber, scope);
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
-    const due = dueFor(stage, period, today);
-    const verify = category !== "required-documents" ||
+    // En UTET no se han acreditado fechas límite por cada entregable.
+    // Un período cerrado, por sí solo, no establece mora ni prioridad máxima.
+    const due = scope === "UTET"
+      ? {level:"",dueDate:null,reason:"Documento del período: verificar aplicabilidad y fecha institucional antes de elaborar."}
+      : dueFor(stage, period, today);
+    const verify = !!finding.candidateFileName || category !== "required-documents" ||
       (category === "required-documents" && !period) ||
       (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(finding.missingFileName || finding.expectedValue)));
     const level = verify ? "medium" : due.level || levelFallback(area, category);
@@ -305,13 +312,16 @@
       effort: effortFor(area, processNumber, finding),
       periodLabel: period ? periodLabel(period) : safeText(finding.periodLabel),
       dueDate: due.dueDate,
-      reason: verify ? (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(title))
+      reason: finding.candidateFileName
+        ? "PDF candidato localizado: "+safeText(finding.candidateFileName)+". Verificar título, contenido, período y aprobación antes de declarar ausencia."
+        : verify ? (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(title))
         ? "Planificación de Artículo Académico: verificar si aplica a este período antes de elaborar."
         : "Revisar antes de elaborar o corregir: " + safeText(finding.description))
         : due.reason || safeText(finding.description, "Pendiente detectado por las reglas de auditoría."),
       workType: verify ? "review" : "document",
       sourceCategory: category,
-      detectedName: safeText(finding.foundLabel || finding.actualValue),
+      detectedName: safeText(finding.candidateFileName || finding.foundLabel || finding.actualValue),
+      candidateFileName: safeText(finding.candidateFileName),
       documentLabel: category === "required-documents" ? title : "",
       title: title,
       pathLabel: safeText(finding.relativePath),

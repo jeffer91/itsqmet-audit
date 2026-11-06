@@ -196,13 +196,25 @@ Función:
     });
   }
 
+  // Candidatos por código sin título verificable: no acreditar ni declarar ausente
+  // automáticamente un PDF genérico que podría corresponder a otro entregable.
+  function findCodeCandidate(expected, container, index) {
+    const codes=Array.isArray(expected&&expected.codes)?expected.codes:[];
+    if(!codes.length)return null;
+    const location=rel(container.relativePath);
+    return index.files.find(function(file){
+      return safeText(file.extension).toLowerCase()===".pdf" &&
+        isDescendant(file.relativePath,location) && everyCode(file.name,codes);
+    })||null;
+  }
+
   function buildExpectedLocation(container, expected) {
     const base = rel(container && container.relativePath);
     const label = safeText(expected && expected.label);
     return base ? base + " → " + label : label;
   }
 
-  function createFinding(rule, scope, scanData, processNumber, processInfo, container, expected) {
+  function createFinding(rule, scope, scanData, processNumber, processInfo, container, expected, candidate) {
     const periodLabel = safeText(container && container.periodLabel);
     const finding = {
       ruleId: rule.id,
@@ -210,8 +222,11 @@ Función:
       category: "required-documents",
       scope: scope,
       severity: rule.severity,
-      title: "Documento obligatorio sin PDF final",
+      title: candidate ? "PDF candidato por verificar" : "Documento obligatorio sin PDF final",
       description:
+        (candidate
+          ? "Se encontró un PDF con el código compatible, pero su nombre no permite confirmar el documento. No se acredita el cumplimiento ni se declara ausencia. "
+          : "No se identificó el PDF final del documento aprobado. ") +
         "El Manual de Procesos establece este documento dentro del proceso " +
         scope +
         "-PRO-" +
@@ -234,6 +249,10 @@ Función:
       periodLabel: periodLabel,
       missingPeriodLabel: periodLabel,
       missingFileName: safeText(expected && expected.label),
+      candidateFileName: safeText(candidate&&candidate.name),
+      candidateFilePath: safeText(candidate&&candidate.path),
+      foundFileName: safeText(candidate&&candidate.name),
+      foundRelativePath: rel(candidate&&candidate.relativePath),
       missingExpectedPath: buildExpectedLocation(container, expected),
       primaryActionLabel: "Abrir carpeta",
       primaryActionPath: safeText(container && container.path) || scanData.rootPath || ""
@@ -291,6 +310,7 @@ Función:
           if (Manual.isAutomaticDocument &&
               !Manual.isAutomaticDocument(scope, parsed.processNumber, expected)) return;
           if (!evidenceExists(expected, container, index, processInfo.documents)) {
+            const candidate=findCodeCandidate(expected,container,index);
             findings.push(
               createFinding(
                 rule,
@@ -299,7 +319,8 @@ Función:
                 parsed.processNumber,
                 processInfo,
                 container,
-                expected
+                expected,
+                candidate
               )
             );
           }
@@ -316,7 +337,7 @@ Función:
     scope: "BOTH",
     severity: "warning",
     description:
-      "Compara los documentos codificados exigibles por proceso/período. En UTET, conserva los documentos sin código como referencias y excluye los condicionales sin evidencia del supuesto.",
+      "Comprueba únicamente documentos aprobados y aplicables. Los PDF con códigos compatibles pero títulos ambiguos son candidatos por verificar, no ausencia definitiva.",
     run: function runRule(context) {
       return run(context.scope, context.scanData, this);
     }

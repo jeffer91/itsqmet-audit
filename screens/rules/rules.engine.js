@@ -108,6 +108,8 @@
       editableStatus: safeText(safeFinding.editableStatus),
       relatedPdfPath: safeText(safeFinding.relatedPdfPath),
       missingFileName: safeText(safeFinding.missingFileName),
+      candidateFileName: safeText(safeFinding.candidateFileName),
+      candidateFilePath: safeText(safeFinding.candidateFilePath),
       foundRelativePath: normalizeRelativePath(
         safeFinding.foundRelativePath || safeFinding.relativePath
       ),

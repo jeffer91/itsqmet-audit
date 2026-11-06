@@ -33,8 +33,13 @@
     }
     loaded=true;
   }
+  function approvedSignatureRecord(record) {
+    if (record.scope !== "UTET") return true;
+    const number=(String(record.path||"").match(/UTET-PRO[-_ ]*(\d+)/i)||[])[1];
+    return !!(number && window.AuditManualCatalog.getProcess("UTET",number));
+  }
   function refresh(message,type) {
-    const signatureTasks = signatureRecords.filter(x => x.status === "invalid" && !x.stale).map(x => ({
+    const signatureTasks = signatureRecords.filter(x => x.status === "invalid" && !x.stale && approvedSignatureRecord(x)).map(x => ({
       id: "signature-invalid|" + x.scope + "|" + x.path,
       scope: x.scope, processNumber: (String(x.path).match(/PRO[-_ ]*(\d+)/i)||[])[1] || "",
       area: "other", level: "max", levelLabel: "Máxima", workType: "review",
@@ -44,7 +49,7 @@
       actionPath: x.path, pathLabel: x.path, effort: "medium", evidenceState: "invalid-signature"
     }));
     for (const record of signatureRecords) {
-      if (record.stale || record.status !== "no-electronic-signature") continue;
+      if (record.stale || !approvedSignatureRecord(record) || record.status !== "no-electronic-signature") continue;
       const pending = (record.cover?.slots || []).filter(slot => slot.required &&
         ["empty", "review"].includes(slot.status));
       if (!pending.length) continue;
@@ -124,12 +129,12 @@
           window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(false);
         }
       }),
-      onExportExcel:()=>perform(async()=>{
-        const result=await window.PriorityService.exportExcel({});
+      onExportExcel:filters=>perform(async()=>{
+        const result=await window.PriorityService.exportExcel(filters||{});
         window.PriorityUI.setGlobalMessage("Excel guardado en Descargas: "+result.fileName,"success");
       }),
-      onExportPdf:()=>perform(async()=>{
-        const result=await window.PriorityService.exportPdf({});
+      onExportPdf:filters=>perform(async()=>{
+        const result=await window.PriorityService.exportPdf(filters||{});
         window.PriorityUI.setGlobalMessage("PDF guardado en Descargas: "+result.fileName,"success");
       }),
       onOpenPath:path=>perform(async()=>{
