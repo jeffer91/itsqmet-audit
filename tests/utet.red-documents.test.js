@@ -118,3 +118,19 @@ test("el motor de auditoría no publica novedades de UTET PRO-94 ni PRO-59",()=>
   assert.equal(result.findings.length,1);
   assert.match(result.findings[0].relativePath,/UTET-PRO-96/);
 });
+
+test("PDF genérico con código compatible es candidato y no documento ausente confirmado",()=>{
+  const w=setup(),data=scan("96");
+  const root=data.folders[1].relativePath;
+  data.files.push({
+    name:"MEM-ITSQMET-UTET-2026-09-01.pdf",
+    relativePath:root+"/MEM-ITSQMET-UTET-2026-09-01.pdf",
+    path:"C:/UTET/"+root+"/MEM-ITSQMET-UTET-2026-09-01.pdf",extension:".pdf"
+  });
+  const findings=w.RuleRequiredDocuments.run({scope:"UTET",scanData:data});
+  const cronograma=findings.find(x=>x.missingFileName==="Cronograma de Trabajo de Titulación");
+  assert.ok(cronograma);
+  assert.equal(cronograma.title,"PDF candidato por verificar");
+  assert.equal(cronograma.candidateFileName,"MEM-ITSQMET-UTET-2026-09-01.pdf");
+  assert.match(cronograma.description,/No se acredita/);
+});

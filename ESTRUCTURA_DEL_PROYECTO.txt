@@ -76,3 +76,11 @@ se identifica PDF candidato sin declarar ausencia; las alertas de firmas en
 Priorización excluyen procesos UTET no aprobados; no se fabrican vencimientos
 UTET a partir de fechas de inicio/cierre de período. Las exportaciones respetan
 los filtros visibles de unidad, tipo y búsqueda.
+
+REVISIÓN DE ESTABILIDAD (NOVIEMBRE 2026)
+Las consultas de firmas aceptan paginación real y filtros. El historial dañado se
+restaura solo si existe respaldo validado; se preserva una copia del archivo roto.
+Las importaciones ZIP/RAR tienen cuotas explícitas por tamaño y número de archivos.
+El listado UTET incluye 24 documentos aprobados en 9 procesos, de los cuales 23
+tienen código; el acta condicional PRO-58 no genera pendiente sin evidencia del
+supuesto. El historial y los PDF institucionales nunca se eliminan automáticamente.

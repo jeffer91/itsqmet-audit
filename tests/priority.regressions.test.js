@@ -144,3 +144,25 @@ test("Excel y PDF respetan bloqueo y postergación de la tarea", async () => {
     await w.PriorityService.exportPdf({});
   }
 });
+
+test("UTET no convierte carpetas vacías en documentos ni inventa fechas límite",()=>{
+  const root="PROCESOS MISIONALES/UTET-PRO-164-Ejecución del Trabajo de Titulación";
+  const period=root+"/UTET-PRO-164-Abril 2026 – Septiembre 2026";
+  const data=scan("UTET",["PROCESOS MISIONALES",root,period]);
+  const findings=[
+    {id:"folder-test",scope:"UTET",ruleId:"empty-folders",category:"empty-folders",
+      title:"Carpeta vacía",relativePath:root+"/Borrador 1",expectedValue:"PDF"},
+    {id:"document-test",scope:"UTET",ruleId:"required-documents",category:"required-documents",
+      title:"Documento obligatorio sin PDF final",
+      missingFileName:"Porcentaje de Plagio",expectedValue:"Porcentaje de Plagio",
+      relativePath:period,periodLabel:"Abril 2026 – Septiembre 2026"}
+  ];
+  const w=boot({ugpaResult:null,utetResult:data,discardedFindings:[]},findings);
+  const vmResult=w.PriorityService.buildViewModel({});
+  assert.equal(vmResult.tasks.some(t=>t.sourceId==="folder-test"),false);
+  const doc=vmResult.tasks.find(t=>t.sourceId==="document-test");
+  assert.ok(doc);
+  assert.equal(doc.dueDate,null);
+  assert.notEqual(doc.level,"max");
+  assert.doesNotMatch(doc.reason,/vencido|superó.*plazo/i);
+});

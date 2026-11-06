@@ -141,8 +141,8 @@
     const hasDoc=!!doc;
     const isFolder=["empty-folders","folders-without-pdf"].includes(category);
     const found=hasDoc?matchFiles(task,index,doc):{current:null,previous:null};
-    const sourceFileName=safe(found.current&&found.current.name);
-    const sourceFilePath=safe(found.current&&found.current.path);
+    const sourceFileName=safe(found.current&&found.current.name)||safe(task.candidateFileName);
+    const sourceFilePath=safe(found.current&&found.current.path)||safe(task.candidateFilePath);
     const referenceFileName=safe(found.previous&&found.previous.name);
     // Recuperar el período desde la carpeta cuando el hallazgo solo incluye la ruta.
     const periodSource=window.PriorityNamingPolicy

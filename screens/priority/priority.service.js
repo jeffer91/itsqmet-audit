@@ -322,6 +322,7 @@
       sourceCategory: category,
       detectedName: safeText(finding.candidateFileName || finding.foundLabel || finding.actualValue),
       candidateFileName: safeText(finding.candidateFileName),
+      candidateFilePath: safeText(finding.candidateFilePath),
       documentLabel: category === "required-documents" ? title : "",
       title: title,
       pathLabel: safeText(finding.relativePath),
