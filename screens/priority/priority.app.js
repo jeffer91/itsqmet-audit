@@ -60,7 +60,7 @@
       });
     }
     window.PriorityService.setExternalTasks(signatureTasks);
-    const shared=window.AppStore.get();
+    const shared=window.AppStore.getSnapshot ? window.AppStore.getSnapshot() : window.AppStore.get();
     const vm=window.PriorityService.buildViewModel({},shared);
     const data=window.PriorityStorage.load();
     const namesContext=window.PriorityNames ? window.PriorityNames.prepare(shared) : null;

@@ -52,3 +52,5 @@ Al agregar, renombrar o retirar un archivo, actualizar el LEEME.txt de su carpet
 MEJORAS DE ESTABILIDAD (NOVIEMBRE 2026)
 Priorización consulta el último inventario de firmas sin esperar al análisis criptográfico activo; las pantallas reciben notificaciones de finalización. Las búsquedas de candidatos se agrupan por documento y proceso durante cada actualización. La vista de firmas presenta los resultados por lotes. Los historiales conservan un respaldo .bak al ser reemplazados.
 La API para abrir archivos locales solo permite rutas provenientes de las fuentes seleccionadas o el historial; se bloquea la ejecución de archivos potencialmente peligrosos. Electron mantiene aislamiento de contexto y usa sandbox en las ventanas.
+
+El estado compartido incluye getSnapshot() para reutilizar índices y evitar duplicar miles de rutas en cada actualización de Priorización. get() conserva copias defensivas; el snapshot estable es exclusivamente de lectura y se invalida cuando cambia el historial.

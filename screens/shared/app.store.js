@@ -12,6 +12,9 @@
 
   const STORAGE_KEY = "audit_app_store_v5";
   const listeners = new Set();
+  // Snapshot compartido de solo lectura por convención para cálculos repetidos.
+  // get() mantiene su contrato de copia defensiva para consumidores externos.
+  let cachedSnapshot = null;
 
   const state = {
     ugpaResult: null,
@@ -85,6 +88,7 @@
   }
 
   function applyState(nextState) {
+    cachedSnapshot = null;
     state.ugpaResult =
       nextState && nextState.ugpaResult && typeof nextState.ugpaResult === "object"
         ? clone(nextState.ugpaResult)
@@ -118,6 +122,11 @@
 
   function get() {
     return clone(state);
+  }
+
+  function getSnapshot() {
+    if (!cachedSnapshot) cachedSnapshot = clone(state);
+    return cachedSnapshot;
   }
 
   function set(nextState) {
@@ -217,6 +226,7 @@
 
   window.AppStore = {
     get: get,
+    getSnapshot: getSnapshot,
     set: set,
     update: update,
     clear: clear,

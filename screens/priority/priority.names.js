@@ -15,7 +15,8 @@
   };
   const fileCandidatesCache=new WeakMap();
   function prepare(sharedState) {
-    const state=sharedState || (window.AppStore && window.AppStore.get ? window.AppStore.get() : {});
+    const state=sharedState || (window.AppStore && window.AppStore.getSnapshot
+      ? window.AppStore.getSnapshot() : window.AppStore && window.AppStore.get ? window.AppStore.get() : {});
     const indices={};
     ["UGPA","UTET"].forEach(function (scope) {
       const scan=state[scope==="UGPA"?"ugpaResult":"utetResult"];

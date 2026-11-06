@@ -795,7 +795,8 @@
   }
 
   function buildViewModel(filters, sharedOverride) {
-    const shared = sharedOverride || window.AppStore.get();
+    const shared = sharedOverride ||
+      (window.AppStore.getSnapshot ? window.AppStore.getSnapshot() : window.AppStore.get());
     const today = todayUtc();
     const progress = progressMap();
     const findings = activeFindings(shared);
