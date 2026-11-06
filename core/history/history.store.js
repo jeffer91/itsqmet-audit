@@ -52,6 +52,30 @@ async function ensureHistoryDirectory() {
 }
 
 let pending = Promise.resolve();
+let recoveryInfo=null;
+function getRecoveryInfo(){return recoveryInfo ? {...recoveryInfo}:null;}
+async function recoverHistory(original){
+  const backup=original+".bak";
+  let restored;
+  try{
+    const raw=JSON.parse(await fsp.readFile(backup,"utf8"));
+    if(!raw || typeof raw!=="object" || Array.isArray(raw) ||
+      !Number.isInteger(raw.version) || typeof raw.ugpaSourcePath!=="string" ||
+      typeof raw.utetSourcePath!=="string" || !Array.isArray(raw.discardedFindings)){
+      throw new Error("Copia de seguridad incompleta.");
+    }
+    restored=normalizeHistory(raw);
+  }catch(error){
+    throw new Error("El historial está dañado y no hay una copia de seguridad válida. Se conservan los archivos originales: "+original,{cause:error});
+  }
+  const damaged=original+".corrupt-"+Date.now();
+  await fsp.rename(original,damaged);
+  try{await fsp.copyFile(backup,original);}
+  catch(error){await fsp.rename(damaged,original).catch(()=>{});throw error;}
+  recoveryInfo={restoredAt:new Date().toISOString(),damagedFilePath:damaged,
+    message:"Se restauró la última copia del historial. El archivo dañado se conservó. Revisa los últimos cambios."};
+  return restored;
+}
 
 function serialized(operation) {
   const result = pending.then(operation);
@@ -87,7 +111,7 @@ async function loadHistory() {
     return normalizeHistory(JSON.parse(raw));
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error("El historial está dañado. Se conservó el archivo para recuperarlo: " + getHistoryFilePath());
+      return recoverHistory(getHistoryFilePath());
     }
     if (error && error.code === "ENOENT") {
       const empty = createDefaultHistory();
@@ -204,6 +228,7 @@ async function saveDiscardedFindings(entries) {
 
 module.exports = {
   getHistoryFilePath,
+  getRecoveryInfo,
   loadHistory: (...args) => serialized(() => loadHistory(...args)),
   saveHistory: (...args) => serialized(() => saveHistory(...args)),
   setSourcePath: (...args) => serialized(() => setSourcePath(...args)),

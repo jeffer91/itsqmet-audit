@@ -261,6 +261,8 @@
 
       state.hydrateFromHistory(response.history || {}, response.historyFilePath || "");
       syncAppStore(response.history || {});
+      if(response.recovery && response.recovery.message)
+        state.patchMessage("warning",response.recovery.message);
     } catch (error) {
       state.patchMessage(
         "error",

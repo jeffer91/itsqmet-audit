@@ -31,6 +31,7 @@ function registerHistoryIpc() {
       return {
         ok: true,
         history: history,
+        recovery: historyStore.getRecoveryInfo(),
         historyFilePath: historyStore.getHistoryFilePath()
       };
     } catch (error) {

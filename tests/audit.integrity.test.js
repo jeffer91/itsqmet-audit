@@ -22,15 +22,19 @@ async function setup(t) {
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
 }
 
-test("el historial serializa cambios y conserva un archivo dañado", async t => {
+test("el historial serializa cambios y restaura una copia válida", async t => {
   await setup(t);
   await Promise.all([history.setSourcePath("UGPA", "unidad-a"), history.setSourcePath("UTET", "unidad-b")]);
   const saved = await history.loadHistory();
   assert.equal(saved.ugpaSourcePath, "unidad-a");
   assert.equal(saved.utetSourcePath, "unidad-b");
   await fs.writeFile(history.getHistoryFilePath(), "{");
-  await assert.rejects(history.setSourcePath("UGPA", "otro"), /historial está dañado/);
-  assert.equal(await fs.readFile(history.getHistoryFilePath(), "utf8"), "{");
+  const restored=await history.loadHistory();
+  assert.equal(restored.ugpaSourcePath,"unidad-a");
+  const recovery=history.getRecoveryInfo();
+  assert.equal(await fs.readFile(recovery.damagedFilePath,"utf8"),"{");
+  await history.setSourcePath("UGPA","otro");
+  assert.equal((await history.loadHistory()).ugpaSourcePath,"otro");
 });
 
 test("un ZIP dañado conserva la extracción anterior", async t => {
@@ -97,4 +101,13 @@ test("cada actualización del historial conserva una copia de la versión anteri
   const current=await history.loadHistory();
   assert.equal(previous.ugpaSourcePath,"unidad-inicial");
   assert.equal(current.ugpaSourcePath,"unidad-actualizada");
+});
+
+test("sin copia válida el historial corrupto permanece intacto",async t=>{
+  await setup(t);
+  const location=history.getHistoryFilePath();
+  await fs.writeFile(location,"{corrupto");
+  await fs.writeFile(location+".bak","{corrupto");
+  await assert.rejects(history.loadHistory(),/no hay una copia de seguridad válida/);
+  assert.equal(await fs.readFile(location,"utf8"),"{corrupto");
 });
