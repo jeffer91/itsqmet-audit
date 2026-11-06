@@ -10,7 +10,13 @@
     review:"Revisión necesaria"};
   const PAGE_SIZE=40;
   let records=[];
-  let visibleCount=PAGE_SIZE;
+  let pageIndex=0;
+  const previous=document.createElement("button");
+  previous.type="button";
+  previous.className="btn";
+  previous.textContent="Página anterior";
+  previous.hidden=true;
+  more.insertAdjacentElement("beforebegin",previous);
   let matchedCount=0;
   let summaryCounts={verified:0,invalid:0,unverifiable:0};
   let loading=false;
@@ -63,16 +69,18 @@
       summaryCounts.verified+" verificados · "+
       summaryCounts.invalid+" inválidos · "+
       summaryCounts.unverifiable+" no verificables";
-    $("results").innerHTML=filtered.slice(0,visibleCount).map(itemHtml).join("")||
+    $("results").innerHTML=filtered.map(itemHtml).join("")||
       "<p>No hay documentos para mostrar. Selecciona carpetas en Escaneo y ejecuta el análisis.</p>";
-    more.hidden=matchedCount<=Math.min(visibleCount,200);
-    if(!more.hidden)more.textContent="Mostrar más ("+(matchedCount-Math.min(visibleCount,200))+" pendientes de visualizar)";
+    previous.hidden=pageIndex===0;
+    more.hidden=(pageIndex+1)*PAGE_SIZE>=matchedCount;
+    if(!more.hidden)more.textContent="Siguiente página ("+
+      (matchedCount-Math.min(matchedCount,(pageIndex+1)*PAGE_SIZE))+" restantes)";
   }
   async function load(){
     const requested=++requestId;
     const result=await window.api.signatures.list({
       scope:$("scope").value,status:$("status").value,
-      search:$("search").value,limit:Math.min(visibleCount,200),
+      search:$("search").value,limit:PAGE_SIZE,offset:pageIndex*PAGE_SIZE,
       includePreviews:true
     });
     if(requested!==requestId)return;
@@ -103,11 +111,15 @@
     }
   });
   for(const id of ["scope","status","search"]){
-    $(id).addEventListener("input",()=>{visibleCount=PAGE_SIZE;load().catch(error=>$("message").textContent="Error: "+error.message);});
+    $(id).addEventListener("input",()=>{pageIndex=0;load().catch(error=>$("message").textContent="Error: "+error.message);});
   }
   more.addEventListener("click",()=>{
-    if(visibleCount>=200){visibleCount=PAGE_SIZE;return load().catch(error=>$("message").textContent="Error: "+error.message);}
-    visibleCount+=PAGE_SIZE;load().catch(error=>$("message").textContent="Error: "+error.message);
+    pageIndex++;
+    load().catch(error=>$("message").textContent="Error: "+error.message);
+  });
+  previous.addEventListener("click",()=>{
+    pageIndex=Math.max(0,pageIndex-1);
+    load().catch(error=>$("message").textContent="Error: "+error.message);
   });
   if(window.api.signatures.onUpdated){
     window.api.signatures.onUpdated(update=>{
