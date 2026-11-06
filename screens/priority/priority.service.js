@@ -794,8 +794,8 @@
     });
   }
 
-  function buildViewModel(filters) {
-    const shared = window.AppStore.get();
+  function buildViewModel(filters, sharedOverride) {
+    const shared = sharedOverride || window.AppStore.get();
     const today = todayUtc();
     const progress = progressMap();
     const findings = activeFindings(shared);

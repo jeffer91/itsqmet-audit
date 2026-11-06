@@ -62,9 +62,9 @@
     return !["done", "blocked", "snoozed"].includes(item.status);
   }
 
-  function build(vm, storage) {
+  function build(vm, storage, preparedNamesContext) {
     const progress = storage || { statuses: {}, stages: {}, queue: [], activity: [] };
-    const namesContext = window.PriorityNames ? window.PriorityNames.prepare() : null;
+    const namesContext = preparedNamesContext || (window.PriorityNames ? window.PriorityNames.prepare() : null);
     const all = candidateTasks(vm).map(function(item) {
       const saved = progress.statuses && progress.statuses[item.id];
       const status = saved ? saved.status : (item.status || "pending");

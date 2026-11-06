@@ -13,8 +13,9 @@
     const a=relative(value).toLowerCase(),b=relative(folder).toLowerCase();
     return !!b && (a===b || a.startsWith(b+"/"));
   };
-  function prepare() {
-    const state=window.AppStore && window.AppStore.get ? window.AppStore.get() : {};
+  const fileCandidatesCache=new WeakMap();
+  function prepare(sharedState) {
+    const state=sharedState || (window.AppStore && window.AppStore.get ? window.AppStore.get() : {});
     const indices={};
     ["UGPA","UTET"].forEach(function (scope) {
       const scan=state[scope==="UGPA"?"ugpaResult":"utetResult"];
@@ -76,18 +77,25 @@
   }
   function matchFiles(task,index,doc) {
     if(!index||!Array.isArray(index.files)||!doc)return {current:null,previous:null};
+    let cache=fileCandidatesCache.get(index);
+    if(!cache){cache=new Map();fileCandidatesCache.set(index,cache);}
+    const prefix=(String(task.scope)+"-PRO-"+String(task.processNumber)).toUpperCase();
+    const key=prefix+"|"+safe(doc.id)+"|"+safe(doc.label);
+    if(!cache.has(key)){
+      const ranked=index.files.map(file=>{
+        const parts=relative(file.relativePath).toUpperCase().split("/");
+        if(!parts.some(part=>part===prefix||part.startsWith(prefix+"-")))return null;
+        const candidate=candidateScore(file,doc);
+        if(candidate<65)return null;
+        return {file,score:candidate+(/\.pdf$/i.test(file.name)?10:0)};
+      }).filter(Boolean).sort((a,b)=>b.score-a.score||
+        safe(a.file.name).localeCompare(safe(b.file.name),"es")).map(x=>x.file);
+      cache.set(key,ranked);
+    }
     const base=relative(task.pathLabel);
-    const prefix=String(task.scope)+"-PRO-"+String(task.processNumber);
-    const all=index.files.filter(file => {
-      const filepath=relative(file.relativePath);
-      return filepath.toUpperCase().split("/").some(part=>part.toUpperCase().startsWith(prefix.toUpperCase()+"-")) &&
-        candidateScore(file,doc)>=65;
-    });
-    const pick=list=>list.map(file=>({file,score:candidateScore(file,doc)+(/\.pdf$/i.test(file.name)?10:0)}))
-      .sort((a,b)=>b.score-a.score||safe(a.file.name).localeCompare(safe(b.file.name),"es"))
-      .map(item=>item.file)[0]||null;
-    return {current:pick(all.filter(file=>inFolder(file.relativePath,base))),
-      previous:pick(all.filter(file=>!inFolder(file.relativePath,base)))};
+    const all=cache.get(key);
+    return {current:all.find(file=>inFolder(file.relativePath,base))||null,
+      previous:all.find(file=>!inFolder(file.relativePath,base))||null};
   }
   function matchesTemplate(fileName,template) {
     if(!template || !/0X|AÑO-MES/i.test(template))return false;

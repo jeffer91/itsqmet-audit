@@ -5,9 +5,13 @@ const crypto=require("crypto");
 const {spawn}=require("child_process");
 const {app}=require("electron");
 const {loadHistory}=require("../history/history.store");
+const {EventEmitter}=require("events");
 const STORE="signature-validation-v2.json";
 let rescanRequested = false;
 let activeScan=null;
+const events=new EventEmitter();
+function onChange(listener){events.on("change",listener);return ()=>events.off("change",listener);}
+function notify(change){events.emit("change",change);}
 function fileStore(){return path.join(app.getPath("userData"),STORE);}
 function readStore() {
   try {
@@ -88,35 +92,50 @@ async function performScan() {
   return { ok: true, stats, errors, records: Object.values(store.records) };
 }
 async function drainScans() {
+  let update={phase:"completed"};
   try {
     let result;
     do {
       rescanRequested = false;
       result = await performScan();
     } while (rescanRequested);
+    update={phase:"completed",stats:result.stats};
     return result;
+  } catch (error) {
+    update={phase:"failed",error:error && error.message || "Error al analizar firmas"};
+    throw error;
   } finally {
     activeScan = null;
+    notify(update);
   }
 }
 function scan() {
   rescanRequested = true;
-  if (!activeScan) activeScan = drainScans();
+  if (!activeScan) {
+    notify({phase:"started"});
+    activeScan = drainScans();
+  }
   return activeScan;
 }
-async function list() {
-  if (activeScan) await activeScan;
-  const data = readStore();
-  const history = await loadHistory();
-  const inventory = new Set();
-  for (const scan of [history.ugpaResult, history.utetResult]) {
+// Consultar el último resultado NUNCA debe esperar el escaneo en curso.
+async function list(options={}) {
+  const analyzing=!!activeScan;
+  const includePreviews=options.includePreviews!==false;
+  const data=readStore();
+  const history=await loadHistory();
+  const inventory=new Set();
+  for (const scan of [history.ugpaResult,history.utetResult]) {
     if (!scan || !scan.ok) continue;
-    for (const entry of scan.files || []) inventory.add(scan.type + "|" + entry.path);
+    for (const entry of scan.files || []) inventory.add(scan.type+"|"+entry.path);
   }
-  for (const [key, record] of Object.entries(data.records)) {
-    if (!inventory.has(key)) record.stale = true;
-  }
-  return { ok: true, updatedAt: data.updatedAt || null, partial: !!data.partial,
-    errors: data.errors || [], records: Object.values(data.records) };
+  const records=Object.entries(data.records).map(([key,record])=>{
+    const stale=!inventory.has(key);
+    const withStatus={...record,stale};
+    if (includePreviews || !record.cover) return withStatus;
+    const cover={...record.cover,slots:(record.cover.slots||[]).map(({preview,...slot})=>slot)};
+    return {...withStatus,cover};
+  });
+  return {ok:true,analyzing,updatedAt:data.updatedAt||null,partial:!!data.partial,
+    errors:data.errors||[],records};
 }
-module.exports = { scan, list };
+module.exports={scan,list,onChange};

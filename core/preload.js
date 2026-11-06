@@ -65,8 +65,20 @@ contextBridge.exposeInMainWorld("api", {
     }
   },
   signatures: {
-    list: function () { return ipcRenderer.invoke("signatures:list"); },
-    scan: function () { return ipcRenderer.invoke("signatures:scan"); }
+    list: function (options = {}) {
+      return ipcRenderer.invoke("signatures:list", {
+        includePreviews: options.includePreviews !== false
+      });
+    },
+    scan: function () { return ipcRenderer.invoke("signatures:scan"); },
+    onUpdated: function (listener) {
+      if (typeof listener !== "function") return function noop() {};
+      const handler = function (_event, update) { listener(update || {}); };
+      ipcRenderer.on("signatures:updated", handler);
+      return function unsubscribe() {
+        ipcRenderer.removeListener("signatures:updated", handler);
+      };
+    }
   },
   history: {
     get: function get() {

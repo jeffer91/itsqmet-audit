@@ -4,8 +4,14 @@
   let currentBoard = null;
   let signatureRecords = [];
   async function loadSignatureFindings() {
-    try { const result = await window.api.signatures.list(); signatureRecords = result.records || []; }
-    catch (_error) { signatureRecords = []; }
+    try {
+      const result = await window.api.signatures.list({includePreviews:false});
+      if (!result || !result.ok) throw new Error(result && result.error || "No se pudieron consultar las firmas.");
+      signatureRecords = Array.isArray(result.records) ? result.records : [];
+    } catch (error) {
+      signatureRecords = [];
+      window.console && window.console.warn("Firmas no disponibles:",error);
+    }
   }
   const safe = value => String(value == null ? "" : value).trim();
   function loadScript(src) {
@@ -54,9 +60,11 @@
       });
     }
     window.PriorityService.setExternalTasks(signatureTasks);
-    const vm=window.PriorityService.buildViewModel({});
+    const shared=window.AppStore.get();
+    const vm=window.PriorityService.buildViewModel({},shared);
     const data=window.PriorityStorage.load();
-    const board=window.PriorityQueue.build(vm,data);
+    const namesContext=window.PriorityNames ? window.PriorityNames.prepare(shared) : null;
+    const board=window.PriorityQueue.build(vm,data,namesContext);
     window.PriorityStorage.setQueue(board.queueIds);
     currentBoard=board;
     window.PriorityUI.render(vm,board);
@@ -169,6 +177,16 @@
       })
     });
     window.AppStore.subscribe(()=>refresh());
+    if(window.api.signatures && typeof window.api.signatures.onUpdated==="function"){
+      window.api.signatures.onUpdated(update=>{
+        if(update.phase==="completed"){
+          loadSignatureFindings().then(()=>refresh())
+            .catch(error=>window.PriorityUI.setGlobalMessage(error.message||"Error al actualizar firmas.","error"));
+        }else if(update.phase==="failed"){
+          window.PriorityUI.setGlobalMessage("El análisis de firmas falló. Las prioridades siguen disponibles.","error");
+        }
+      });
+    }
     refresh();
   }
   document.addEventListener("DOMContentLoaded",function () {
