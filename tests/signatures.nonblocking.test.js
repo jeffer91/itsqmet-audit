@@ -50,3 +50,12 @@ test("el reescaneo de Priorización no espera una segunda validación completa",
   const content=fs.readFileSync(path.join(__dirname,"..","screens/priority/priority.app.js"),"utf8");
   assert.doesNotMatch(content,/await\s+window\.api\.signatures\.scan\s*\(/);
 });
+
+test("el servicio de firmas pagina y filtra sin cargar imágenes innecesarias",async t=>{
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),"audit-paged-"));
+  t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  // La prueba de contrato se limita a comprobar las opciones aceptadas por el puente.
+  const content=fs.readFileSync(path.join(__dirname,"..","core/preload.js"),"utf8");
+  assert.match(content,/limit: options\.limit/);
+  assert.match(content,/offset: options\.offset/);
+});

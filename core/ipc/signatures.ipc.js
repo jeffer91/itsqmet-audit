@@ -5,7 +5,11 @@ const service=require("../signatures/signature.service");
 let eventsRegistered=false;
 function registerSignaturesIpc(){
   ipcMain.handle("signatures:list",async(_event,options={})=>{
-    try{return await service.list({includePreviews:options.includePreviews!==false});}
+    try{return await service.list({
+      includePreviews:options.includePreviews!==false,
+      scope:options.scope,status:options.status,search:options.search,
+      limit:options.limit,offset:options.offset
+    });}
     catch(error){return {ok:false,error:error && error.message || "No se pudieron consultar las firmas."};}
   });
   ipcMain.handle("signatures:scan",async()=>{

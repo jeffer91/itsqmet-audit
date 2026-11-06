@@ -67,7 +67,12 @@ contextBridge.exposeInMainWorld("api", {
   signatures: {
     list: function (options = {}) {
       return ipcRenderer.invoke("signatures:list", {
-        includePreviews: options.includePreviews !== false
+        includePreviews: options.includePreviews !== false,
+        scope: String(options.scope || "").slice(0,5),
+        status: String(options.status || "").slice(0,45),
+        search: String(options.search || "").slice(0,300),
+        limit: options.limit,
+        offset: options.offset
       });
     },
     scan: function () { return ipcRenderer.invoke("signatures:scan"); },

@@ -13,9 +13,9 @@ const events=new EventEmitter();
 function onChange(listener){events.on("change",listener);return ()=>events.off("change",listener);}
 function notify(change){events.emit("change",change);}
 function fileStore(){return path.join(app.getPath("userData"),STORE);}
-function readStore() {
+async function readStore() {
   try {
-    const data = JSON.parse(fs.readFileSync(fileStore(), "utf8"));
+    const data = JSON.parse(await fs.promises.readFile(fileStore(), "utf8"));
     if (!data || !data.records || typeof data.records !== "object" || Array.isArray(data.records))
       throw new Error("Registro de firmas no válido");
     return data;
@@ -24,7 +24,14 @@ function readStore() {
     throw error;
   }
 }
-function saveStore(data){const dest=fileStore();fs.mkdirSync(path.dirname(dest),{recursive:true});const tmp=dest+"."+process.pid+".tmp";fs.writeFileSync(tmp,JSON.stringify(data,null,2));fs.renameSync(tmp,dest);}
+async function saveStore(data){
+  const dest=fileStore(),tmp=dest+"."+process.pid+".tmp";
+  await fs.promises.mkdir(path.dirname(dest),{recursive:true});
+  try{
+    await fs.promises.writeFile(tmp,JSON.stringify(data,null,2));
+    await fs.promises.rename(tmp,dest);
+  }finally{await fs.promises.rm(tmp,{force:true}).catch(()=>{});}
+}
 function hashFile(file){return new Promise((resolve,reject)=>{const hash=crypto.createHash("sha256");const stream=fs.createReadStream(file);stream.on("data",d=>hash.update(d));stream.on("error",reject);stream.on("end",()=>resolve(hash.digest("hex")));});}
 function validate(file){return new Promise(resolve=>{
  // Permite utilizar un validador de prueba multiplataforma sin depender de NODE_OPTIONS.
@@ -41,7 +48,7 @@ function validate(file){return new Promise(resolve=>{
 });}
 async function performScan() {
   const history = await loadHistory();
-  const store = readStore();
+  const store = await readStore();
   const stats = { scanned: 0, reused: 0, errors: 0, partial: false };
   const errors = [];
   const current = new Set();
@@ -99,7 +106,7 @@ async function performScan() {
   store.updatedAt = new Date().toISOString();
   store.partial = stats.partial;
   store.errors = errors;
-  saveStore(store);
+  await saveStore(store);
   return { ok: true, stats, errors, records: Object.values(store.records) };
 }
 async function drainScans() {
@@ -132,21 +139,47 @@ function scan() {
 async function list(options={}) {
   const analyzing=!!activeScan;
   const includePreviews=options.includePreviews!==false;
-  const data=readStore();
+  const data=await readStore();
   const history=await loadHistory();
   const inventory=new Set();
   for (const scan of [history.ugpaResult,history.utetResult]) {
     if (!scan || !scan.ok) continue;
     for (const entry of scan.files || []) inventory.add(scan.type+"|"+entry.path);
   }
-  const records=Object.entries(data.records).map(([key,record])=>{
+  const scope=String(options.scope||"").toUpperCase();
+  const status=String(options.status||"");
+  const search=String(options.search||"").toLowerCase().slice(0,300);
+  function matches(record){
+    if(scope && record.scope!==scope)return false;
+    if(status){
+      if(status.startsWith("visual-")){
+        if(record.status!=="no-electronic-signature")return false;
+        const flag=status.slice(7);
+        const slots=(record.cover&&record.cover.slots)||[];
+        if(!slots.some(slot=>slot.status===flag) &&
+          !(flag==="review"&&record.cover&&record.cover.status!=="inspected"))return false;
+      }else if(record.status!==status)return false;
+    }
+    return !search || String(record.path||"").toLowerCase().includes(search);
+  }
+  const selected=Object.entries(data.records).filter(([,record])=>matches(record));
+  const totalMatched=selected.length;
+  const summaryCounts={verified:0,invalid:0,unverifiable:0};
+  for(const [,record] of selected){
+    if((record.status in summaryCounts)&&inventory.has(record.scope+"|"+record.path))
+      summaryCounts[record.status]++;
+  }
+  const paged=Number.isInteger(options.limit)&&options.limit>0;
+  const limit=paged?Math.min(options.limit,200):totalMatched;
+  const offset=paged?Math.max(0,Math.floor(Number(options.offset)||0)):0;
+  const records=selected.slice(offset,offset+limit).map(([key,record])=>{
     const stale=!inventory.has(key);
     const withStatus={...record,stale};
-    if (includePreviews || !record.cover) return withStatus;
+    if(includePreviews||!record.cover)return withStatus;
     const cover={...record.cover,slots:(record.cover.slots||[]).map(({preview,...slot})=>slot)};
     return {...withStatus,cover};
   });
   return {ok:true,analyzing,updatedAt:data.updatedAt||null,partial:!!data.partial,
-    errors:data.errors||[],records};
+    errors:data.errors||[],records,totalMatched,summaryCounts,offset,limit};
 }
 module.exports={scan,list,onChange};

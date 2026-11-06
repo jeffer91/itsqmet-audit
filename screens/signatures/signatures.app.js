@@ -11,7 +11,10 @@
   const PAGE_SIZE=40;
   let records=[];
   let visibleCount=PAGE_SIZE;
+  let matchedCount=0;
+  let summaryCounts={verified:0,invalid:0,unverifiable:0};
   let loading=false;
+  let requestId=0;
   const more=document.createElement("button");
   more.type="button";
   more.className="btn";
@@ -56,19 +59,27 @@
     const scope=$("scope").value,status=$("status").value,query=$("search").value.toLowerCase();
     const filtered=records.filter(r=>(!scope||r.scope===scope)&&matchesStatus(r,status)&&
       (!query||(r.path||"").toLowerCase().includes(query)));
-    $("summary").textContent=filtered.length+" PDF · "+
-      filtered.filter(r=>r.status==="verified"&&!r.stale).length+" verificados · "+
-      filtered.filter(r=>r.status==="invalid"&&!r.stale).length+" inválidos · "+
-      filtered.filter(r=>r.status==="unverifiable"&&!r.stale).length+" no verificables";
+    $("summary").textContent=matchedCount+" PDF · "+
+      summaryCounts.verified+" verificados · "+
+      summaryCounts.invalid+" inválidos · "+
+      summaryCounts.unverifiable+" no verificables";
     $("results").innerHTML=filtered.slice(0,visibleCount).map(itemHtml).join("")||
       "<p>No hay documentos para mostrar. Selecciona carpetas en Escaneo y ejecuta el análisis.</p>";
-    more.hidden=filtered.length<=visibleCount;
-    if(!more.hidden)more.textContent="Mostrar más ("+(filtered.length-visibleCount)+" pendientes de visualizar)";
+    more.hidden=matchedCount<=Math.min(visibleCount,200);
+    if(!more.hidden)more.textContent="Mostrar más ("+(matchedCount-Math.min(visibleCount,200))+" pendientes de visualizar)";
   }
   async function load(){
-    const result=await window.api.signatures.list();
+    const requested=++requestId;
+    const result=await window.api.signatures.list({
+      scope:$("scope").value,status:$("status").value,
+      search:$("search").value,limit:Math.min(visibleCount,200),
+      includePreviews:true
+    });
+    if(requested!==requestId)return;
     if(!result||!result.ok)throw new Error(result&&result.error||"No se pudieron consultar firmas.");
     records=Array.isArray(result.records)?result.records:[];
+    matchedCount=Number(result.totalMatched)||0;
+    summaryCounts=result.summaryCounts||{verified:0,invalid:0,unverifiable:0};
     if(result.analyzing&&!loading)$("message").textContent="Se están analizando firmas. Se muestran los últimos resultados disponibles.";
     else if(result.partial&&!loading)$("message").textContent="Revisión parcial: "+(result.errors||[]).join(" · ");
     render();
@@ -92,9 +103,12 @@
     }
   });
   for(const id of ["scope","status","search"]){
-    $(id).addEventListener("input",()=>{visibleCount=PAGE_SIZE;render();});
+    $(id).addEventListener("input",()=>{visibleCount=PAGE_SIZE;load().catch(error=>$("message").textContent="Error: "+error.message);});
   }
-  more.addEventListener("click",()=>{visibleCount+=PAGE_SIZE;render();});
+  more.addEventListener("click",()=>{
+    if(visibleCount>=200){visibleCount=PAGE_SIZE;return load().catch(error=>$("message").textContent="Error: "+error.message);}
+    visibleCount+=PAGE_SIZE;load().catch(error=>$("message").textContent="Error: "+error.message);
+  });
   if(window.api.signatures.onUpdated){
     window.api.signatures.onUpdated(update=>{
       if(update.phase==="completed"){
