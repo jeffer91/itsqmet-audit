@@ -127,6 +127,13 @@
     return finding;
   }
 
+  function isExcludedUTETFinding(finding) {
+    if (!finding || normalizeScope(finding.scope) !== "UTET") return false;
+    return [finding.relativePath,finding.absolutePath,finding.foundRelativePath,
+      finding.missingExpectedPath,finding.primaryActionPath,finding.secondaryActionPath]
+      .some(value=>/(?:^|[\\/])UTET-PRO-94(?:-|[\\/]|$)/i.test(safeText(value)));
+  }
+
   function executeRule(rule, scope, scanData, sharedState) {
     if (!rule || typeof rule.run !== "function") {
       return [];
@@ -145,7 +152,7 @@
           return normalizeFinding(rule, scope, scanData, item);
         })
         .filter(function keep(item) {
-          return !!item;
+          return !!item && !isExcludedUTETFinding(item);
         });
     } catch (error) {
       return [

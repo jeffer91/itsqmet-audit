@@ -65,3 +65,20 @@ test("en UGPA la regla conserva el comportamiento anterior",()=>{
   const doc=w.AuditManualCatalog.getProcess("UGPA","70").documents[0];
   assert.equal(w.AuditManualCatalog.isAutomaticDocument("UGPA","70",doc),true);
 });
+
+test("el motor de auditoría no publica novedades de UTET PRO-94",()=>{
+  const scanData=scan("96");
+  const window={RulesCatalog:{getAll:()=>[{
+    id:"prueba",name:"Regla de prueba",scope:"UTET",severity:"warning",
+    run:()=>[
+      {scope:"UTET",relativePath:"PROCESOS MISIONALES/UTET-PRO-94-Normativa/carpeta",title:"Antigua"},
+      {scope:"UTET",relativePath:"PROCESOS MISIONALES/UTET-PRO-96-Trabajo/carpeta",title:"Vigente"}
+    ]
+  }]}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,"..","screens/rules/rules.engine.js"),"utf8"),{
+    window,Date,Set,Map
+  });
+  const result=window.RulesEngine.analyze({ugpaResult:null,utetResult:scanData,discardedFindings:[]});
+  assert.equal(result.findings.length,1);
+  assert.match(result.findings[0].relativePath,/UTET-PRO-96/);
+});

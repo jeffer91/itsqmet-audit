@@ -70,3 +70,5 @@ genera automáticamente la obligación ni una fecha vencida.
 La distinción se implementa mediante AuditManualCatalog.isCodedDocument() e
 isAutomaticDocument() y se utiliza tanto en RuleRequiredDocuments como en PriorityService.
 Se preserva la política de UGPA sin cambios.
+
+El motor de reglas excluye las novedades correspondientes a rutas del UTET-PRO-94, sin alterar carpetas originales.
