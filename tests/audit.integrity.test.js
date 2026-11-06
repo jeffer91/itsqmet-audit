@@ -106,6 +106,7 @@ test("cada actualización del historial conserva una copia de la versión anteri
 test("sin copia válida el historial corrupto permanece intacto",async t=>{
   await setup(t);
   const location=history.getHistoryFilePath();
+  await fs.mkdir(path.dirname(location),{recursive:true});
   await fs.writeFile(location,"{corrupto");
   await fs.writeFile(location+".bak","{corrupto");
   await assert.rejects(history.loadHistory(),/no hay una copia de seguridad válida/);
