@@ -16,7 +16,6 @@
       "56":["Planificaciones entregadas oportunamente","95%"],
       "95":["Informes de resultados entregados","95%"],
       "58":["Estudiantes con requisitos cumplidos en plazo","95%"],
-      "59":["Guías aprobadas dentro del plazo","95%"],
       "88":["Estudiantes que aprueban seminarios","95%"],
       "93":["Estudiantes que aprueban examen complexivo","95%"],
       "96":["Temas de titulación entregados oportunamente","95%"],

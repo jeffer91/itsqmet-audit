@@ -137,6 +137,7 @@
     const doc=manualDoc(task,manual);
     const officialName=doc&&safe(doc.label)||safe(task.documentLabel);
     const expectedTemplate=doc&&safe(doc.template)||"";
+    const noOfficialCode=!!doc && task.scope==="UTET" && doc.codeStatus==="no-especificado";
     const hasDoc=!!doc;
     const isFolder=["empty-folders","folders-without-pdf"].includes(category);
     const found=hasDoc?matchFiles(task,index,doc):{current:null,previous:null};
@@ -147,7 +148,7 @@
     const periodSource=window.PriorityNamingPolicy
       ? [task.periodLabel].concat(relative(task.pathLabel).split("/").reverse())
         .find(label=>window.PriorityNamingPolicy.parsePeriod(label)) : "";
-    const namingPolicy=hasDoc && window.PriorityNamingPolicy
+    const namingPolicy=hasDoc && !noOfficialCode && window.PriorityNamingPolicy
       ? window.PriorityNamingPolicy.policy(task.scope,task.processNumber,doc.id,periodSource)
       : null;
     const canonical=expectedTemplate
@@ -194,15 +195,20 @@
         suggestedAction=/\.pdf$/i.test(sourceFileName)
           ? usableName?"Verificar contenido y vigencia del PDF localizado":"Revisar el nombre, período y contenido del PDF"
           : "Verificar el editable, su código, su período y la versión PDF final";
-        if(!completeCode)namingNotice="El archivo localizado no acredita por su nombre la codificación oficial.";
+        if(noOfficialCode)namingNotice="Documento sin código especificado en el manual: validar título, contenido, período y aprobación; no inventar código.";
+        else if(!completeCode)namingNotice="El archivo localizado no acredita por su nombre la codificación oficial.";
         else if(!samePeriod)namingNotice="La fecha del código del archivo no corresponde al período de la tarea; verificar antes de renombrar o reutilizar.";
         else if(!expectedSequence)namingNotice="El consecutivo del archivo no coincide con el 01 previsto para este tipo de documento en el período; revisar antes de renombrar.";
         else if(!expectedStageDate)namingNotice="La fecha del archivo no corresponde al "+(namingPolicy.stageLabel||"momento")+" de este entregable ("+namingPolicy.dateCode+"); revisar antes de reutilizar.";
         else if(!validDescription)namingNotice="El código aparece en un archivo cuyo título no identifica claramente este entregable.";
       } else {
-        suggestedAction="Buscar el documento del período antes de redactarlo";
+        suggestedAction=noOfficialCode
+          ? "Buscar el Plan de Estudios del Núcleo Complexivo aprobado antes de elaborarlo"
+          : "Buscar el documento del período antes de redactarlo";
         sourceKind="template";
-        namingNotice=namingPolicy && namingPolicy.isComplete
+        namingNotice=noOfficialCode
+          ? "Documento aprobado sin código especificado en el manual. No asignar consecutivo ni código por inferencia."
+          : namingPolicy && namingPolicy.isComplete
           ? "Nombre recomendado según el manual y el período. Revisar la evidencia antes de archivarlo."
           : namingPolicy && namingPolicy.sequence && !namingPolicy.dateCode
             ? "Consecutivo 01 determinado; falta confirmar el mes real de elaboración o aprobación."

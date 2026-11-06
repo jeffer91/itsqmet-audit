@@ -72,3 +72,16 @@ isAutomaticDocument() y se utiliza tanto en RuleRequiredDocuments como en Priori
 Se preserva la política de UGPA sin cambios.
 
 El motor de reglas excluye las novedades correspondientes a rutas del UTET-PRO-94, sin alterar carpetas originales.
+
+RECTIFICACIÓN DE INVENTARIO UTET APROBADO (06/11/2026)
+La lista definitiva proporcionada por el responsable contiene 24 documentos en 9 procesos:
+UTET-PRO-56 (3), PRO-95 (1), PRO-58 (3), PRO-88 (3), PRO-93 (2),
+PRO-96 (2), PRO-164 (3), PRO-57 (5), PRO-97 (2).
+Solo 23 documentos están codificados; el Plan de Estudios del Núcleo Complexivo
+(PRO-88) está aprobado sin código especificado en el manual y se exige por título,
+sin fabricar consecutivos. El acta PRO-58 sigue siendo condicional a que se constate
+bajo cumplimiento. PRO-59 y PRO-94 dejan de generar obligaciones o novedades.
+Los documentos no aprobados en esos procesos (incluidos borradores estudiantiles)
+no se exigen ni generan tareas de creación. Los documentos de PRO-164 y PRO-57
+son institucionales; no se presumen entregables individuales por estudiante.
+Se reemplaza la política anterior de 37 documentos y 10 procesos.

@@ -122,23 +122,13 @@ Función:
             { id: "rgi2", label: "Reporte Final de Requisitos para Ingreso a Titulación", codes: ["UTET-RGI2", "PRO-58"], keywords: ["reporte", "final", "requisitos", "ingreso"], template: "UTET-RGI2-0X-PRO-58-AÑO-MES" }
           ]
         },
-        "59": {
-          name: "Proceso de Gestión de Guías de Integración Curricular",
-          periodPolicy: { required: true, months: 6, label: "Semestral" },
-          documents: [
-            { id: "formato-guia", label: "Formato de Guía de Integración Curricular", keywords: ["formato", "guia", "integracion", "curricular"], template: "Formato de Guía de Integración Curricular" },
-            { id: "guia", label: "Guía de Integración Curricular", keywords: ["guia", "integracion", "curricular"], template: "Guía de Integración Curricular" }
-          ]
-        },
         "88": {
           name: "Proceso de Ejecución de Seminarios Complexivos",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
-          note: "El listado/título del manual identifica este proceso como UTET-PRO-88; la tabla final lo rotula como UTET-PRO-45. Se aplica la jerarquía acordada y se conserva PRO-88.",
           documents: [
-            { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "cronograma", label: "Cronograma de Exámenes Complexivo - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "examenes", "complexivo"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "guias", label: "Guías de Integración Curricular", keywords: ["guias", "integracion", "curricular"], template: "Guías de Integración Curricular" },
-            { id: "plan-estudios", label: "Plan de Estudios del Núcleo Complexivo", keywords: ["plan", "estudios", "nucleo", "complexivo"], template: "Plan de Estudios del Núcleo Complexivo" }
+            { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
+            { id: "cronograma", label: "Cronograma de Exámenes Complexivo", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "examenes", "complexivo"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
+            { id: "plan-estudios", label: "Plan de Estudios del Núcleo Complexivo", keywords: ["plan", "estudios", "nucleo", "complexivo"], template: "", codeStatus: "no-especificado" }
           ]
         },
         "93": {
@@ -153,25 +143,19 @@ Función:
           name: "Proceso de Ingreso al Trabajo de Titulación",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
-            { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "cronograma", label: "Cronograma de Trabajo de Titulación - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "trabajo", "titulacion"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "rgi1", label: "Designación de Tutores para la Gestión de Trabajo de Titulación", codes: ["UTET-RGI1", "PRO-96"], keywords: ["designacion", "tutores", "trabajo", "titulacion"], template: "UTET-RGI1-0X-PRO-96-AÑO-MES" },
-            { id: "temas", label: "Ficha de Posibles Temas de Trabajo de Titulación", keywords: ["ficha", "posibles", "temas", "titulacion"], template: "Ficha de Posibles Temas de Trabajo de Titulación" }
+            { id: "cronograma", label: "Cronograma de Trabajo de Titulación", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "trabajo", "titulacion"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
+            { id: "rgi1", label: "Designación de Tutores para la Gestión de Trabajo de Titulación", codes: ["UTET-RGI1", "PRO-96"], keywords: ["designacion", "tutores", "trabajo", "titulacion"], template: "UTET-RGI1-0X-PRO-96-AÑO-MES" }
           ]
         },
         "164": {
           name: "Proceso de Ejecución del Trabajo de Titulación",
-          // Frecuencia del proceso no obliga a crear subcarpetas semestrales.
-          // Documentos académicos por estudiante, no un PDF único por período.
           periodPolicy: { required: true, months: 6, label: "Semestral" },
           periodFolderRequired: false,
-          documentGranularity: "per-student",
+          // Solo se auditan los tres documentos de gestión institucional aprobados.
+          // Borradores y trabajo final de estudiantes no se exigen como documentos globales.
+          documentGranularity: "institutional",
           documents: [
-            { id: "plan", label: "Plan de Trabajo de Titulación", keywords: ["plan", "trabajo", "titulacion"], template: "Plan de Trabajo de Titulación" },
-            { id: "borrador1", label: "Trabajo de Titulación (Borrador 1)", keywords: ["trabajo", "titulacion", "borrador", "1"], template: "Trabajo de Titulación (Borrador 1)" },
-            { id: "borrador2", label: "Trabajo de Titulación (Borrador 2)", keywords: ["trabajo", "titulacion", "borrador", "2"], template: "Trabajo de Titulación (Borrador 2)" },
-            { id: "final", label: "Trabajo de Titulación (Final)", keywords: ["trabajo", "titulacion", "final"], template: "Trabajo de Titulación (Final)" },
-            { id: "plagio", label: "Porcentaje de Plagio - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["porcentaje", "plagio"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
+            { id: "plagio", label: "Porcentaje de Plagio", codes: ["MEM-ITSQMET-UTET"], keywords: ["porcentaje", "plagio"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "com", label: "Comunicado del Proceso de Titulación y Evaluación", codes: ["COM-ITSQMET-UTET"], keywords: ["comunicado", "titulacion", "evaluacion"], template: "COM-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "acta", label: "Acta de Titulación por Trabajo de Titulación", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "trabajo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X" }
           ]
@@ -180,16 +164,13 @@ Función:
           name: "Proceso de Gestión de Artículo Académico",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
           periodFolderRequired: false,
-          documentGranularity: "per-student",
+          // Únicamente documentos de gestión institucional; no trabajos de estudiantes.
+          documentGranularity: "institutional",
           documents: [
-            { id: "solicitud", label: "Solicitud de Ingreso al Proceso de Titulación - Oficio", codes: ["OFI-ITSQMET-UTET"], keywords: ["solicitud", "ingreso", "titulacion"], template: "OFI-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "cronograma", label: "Cronograma de Artículo Académico - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "articulo", "academico"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
+            { id: "cronograma", label: "Cronograma de Artículo Académico", codes: ["MEM-ITSQMET-UTET"], keywords: ["cronograma", "articulo", "academico"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "rgi1", label: "Designación de Docentes Metodológicos para la Gestión de Trabajo de Titulación", codes: ["UTET-RGI1", "PRO-57"], keywords: ["designacion", "docentes", "metodologicos"], template: "UTET-RGI1-0X-PRO-57-AÑO-MES" },
-            { id: "pregunta", label: "Pregunta de Investigación - Artículo Académico", keywords: ["pregunta", "investigacion", "articulo", "academico"], template: "Pregunta de Investigación Modalidad de Titulación: Artículo Académico" },
-            { id: "borrador", label: "Artículo Académico (Borrador I)", keywords: ["articulo", "academico", "borrador"], template: "Artículo Académico (Borrador I)" },
-            { id: "final", label: "Artículo Académico (Final)", keywords: ["articulo", "academico", "final"], template: "Artículo Académico (Final)" },
             { id: "com", label: "Comunicado del Proceso de Titulación y Evaluación", codes: ["COM-ITSQMET-UTET"], keywords: ["comunicado", "titulacion", "evaluacion"], template: "COM-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "plagio", label: "Porcentaje de Plagio - Memorando", codes: ["MEM-ITSQMET-UTET"], keywords: ["porcentaje", "plagio"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
+            { id: "plagio", label: "Porcentaje de Plagio", codes: ["MEM-ITSQMET-UTET"], keywords: ["porcentaje", "plagio"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "acta", label: "Acta de Titulación por Artículo Académico", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "articulo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X" }
           ]
         },
@@ -197,8 +178,8 @@ Función:
           name: "Proceso de Inducción del Proceso de Titulación",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
-            { id: "rgi1", label: "Registro de Asistencia Inducción", codes: ["UTET-RGI1", "PRO-97"], keywords: ["registro", "asistencia", "induccion"], template: "UTET-RGI1-0X-PRO-97-AÑO-MES" },
-            { id: "inf", label: "Informe de Finalización de la Inducción del Proceso de Titulación", codes: ["UTET-INF", "PRO-97"], keywords: ["informe", "finalizacion", "induccion"], template: "UTET-INF-0X-PRO-97-AÑO-MES" }
+            { id: "rgi1", label: "Registro de Asistencia Inducción XXX", codes: ["UTET-RGI1", "PRO-97"], keywords: ["registro", "asistencia", "induccion"], template: "UTET-RGI1-0X-PRO-97-AÑO-MES" },
+            { id: "inf", label: "Informe de Finalización de la Inducción del Proceso de Titulación – Periodo XXXX", codes: ["UTET-INF", "PRO-97"], keywords: ["informe", "finalizacion", "induccion"], template: "UTET-INF-0X-PRO-97-AÑO-MES" }
           ]
         }
       }
@@ -231,10 +212,9 @@ Función:
     return unit.processes[safeText(processNumber)] || null;
   }
 
-  // En UTET v2 el inventario tiene 37 documentos en diez procesos.
-  // Los campos rojos 0X/AÑO/MES corresponden a 25 documentos codificados.
-  // Los 12 documentos sin código siguen siendo evidencia/referencia, pero
-  // su ausencia no es un encargo automático de elaboración.
+  // Lista institucional UTET aprobada: 24 documentos en 9 procesos.
+  // 23 documentos tienen código; el Plan de Estudios del Núcleo Complexivo
+  // está aprobado, pero su código no se especifica en el manual.
   function isCodedDocument(scope, processNumber, document) {
     if (safeText(scope).toUpperCase() !== "UTET") return true;
     const process = getProcess(scope, processNumber);
@@ -243,10 +223,13 @@ Función:
   }
 
   function isAutomaticDocument(scope, processNumber, document) {
-    if (!isCodedDocument(scope, processNumber, document)) return false;
-    // PRO-58: el acta sólo se genera cuando el seguimiento acredita bajo cumplimiento.
-    // No deducir esa condición de una carpeta vacía ni del paso del tiempo.
-    if (safeText(scope).toUpperCase() === "UTET" && document.condition) return false;
+    if (safeText(scope).toUpperCase() !== "UTET") return true;
+    const process = getProcess(scope, processNumber);
+    // No inventar documentos ni incorporar entradas del manual descartadas.
+    if (!process || !document || !process.documents.includes(document)) return false;
+    // PRO-58: el acta sólo procede cuando se acredita cumplimiento bajo.
+    if (document.condition) return false;
+    // PRO-88: el Plan de Estudios es aprobado pese a no tener código asignado.
     return true;
   }
 

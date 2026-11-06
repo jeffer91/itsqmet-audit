@@ -129,9 +129,10 @@
 
   function isExcludedUTETFinding(finding) {
     if (!finding || normalizeScope(finding.scope) !== "UTET") return false;
+    // Procesos fuera del inventario aprobado de UTET. No borrar sus archivos.
     return [finding.relativePath,finding.absolutePath,finding.foundRelativePath,
       finding.missingExpectedPath,finding.primaryActionPath,finding.secondaryActionPath]
-      .some(value=>/(?:^|[\\/])UTET-PRO-94(?:-|[\\/]|$)/i.test(safeText(value)));
+      .some(value=>/(?:^|[\\/])UTET-PRO-(?:94|59)(?:-|[\\/]|$)/i.test(safeText(value)));
   }
 
   function executeRule(rule, scope, scanData, sharedState) {

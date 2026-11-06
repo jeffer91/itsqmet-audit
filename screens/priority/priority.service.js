@@ -262,7 +262,7 @@
     if (!["required-documents", "empty-folders", "folders-without-pdf"].includes(category)) return null;
     const scope = safeText(finding.scope).toUpperCase();
     const processNumber = processFromFinding(finding);
-    if (scope === "UTET" && processNumber === "94") return null;
+    if (scope === "UTET" && (processNumber === "94" || processNumber === "59")) return null;
     // PRO-60 se evalúa aparte por ciclo bienal y por carrera. La regla genérica
     // del manual no distingue las incorporaciones semestrales ni el formato
     // histórico de fichas, por lo que aquí se evita convertirla en falsos pendientes.
@@ -701,7 +701,7 @@
 
   function inconsistencyFromFinding(finding) {
     if (safeText(finding.scope).toUpperCase() === "UTET" &&
-        processFromFinding(finding) === "94") return null;
+        ["94","59"].includes(processFromFinding(finding))) return null;
     const category = mapCategory(finding);
     if (["required-documents", "empty-folders", "folders-without-pdf"].includes(category)) return null;
     return {

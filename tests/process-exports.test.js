@@ -42,13 +42,14 @@ test("PDF de prioridades incorpora los procesos y cada inconsistencia",()=>{
   assert.match(html,/Problema B/);
   assert.match(html,/Sin datos/);
 });
-test("se ven los 18 procesos activos (8 UGPA y 10 UTET) incluso sin escaneo",()=>{
+test("se ven los 17 procesos activos (8 UGPA y 9 UTET) incluso sin escaneo",()=>{
   const window={RulesTypes:{}},context=vm.createContext({window,Set});
   for(const file of ["screens/rules/manual/manual.catalog.js","screens/priority/priority.processes.js"])
     vm.runInContext(fs.readFileSync(path.join(__dirname,"..",file),"utf8"),context);
   const result=window.PriorityProcesses.buildRows({ugpaResult:null,utetResult:null},[],[],{scope:"all",process:"all"});
-  assert.equal(result.length,18);
+  assert.equal(result.length,17);
   assert.ok(result.some(x=>x.id==="UTET-57"));
   assert.ok(!result.some(x=>x.id==="UTET-94"));
+  assert.ok(!result.some(x=>x.id==="UTET-59"));
   assert.ok(result.every(x=>x.indicatorStatus==="No evaluado"&&x.state==="Sin escaneo"));
 });
