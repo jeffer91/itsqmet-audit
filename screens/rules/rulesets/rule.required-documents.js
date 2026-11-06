@@ -152,13 +152,14 @@ Función:
         };
       });
 
+    const candidatePaths=new Set(candidates.map(item=>rel(item.relativePath)));
     const outermost = candidates.filter(function keepOutermost(item) {
-      return !candidates.some(function hasAncestor(other) {
-        if (other === item) return false;
-        const itemRel = rel(item.relativePath);
-        const otherRel = rel(other.relativePath);
-        return itemRel !== otherRel && isDescendant(itemRel, otherRel);
-      });
+      let current=rel(item.relativePath);
+      while(current.includes("/")){
+        current=current.slice(0,current.lastIndexOf("/"));
+        if(candidatePaths.has(current))return false;
+      }
+      return true;
     });
 
     if (outermost.length) return outermost;

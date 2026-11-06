@@ -68,33 +68,32 @@ Función:
     const folders = Array.isArray(scanData.folders) ? scanData.folders : [];
     const files = Array.isArray(scanData.files) ? scanData.files : [];
     const findings = [];
+    const parentsWithFolders=new Set();
+    const filesByParent=new Map();
+    for(const folder of folders){
+      parentsWithFolders.add(parentOf(folder&&folder.relativePath));
+    }
+    for(const file of files){
+      if(!file||isTechnical(file.name)||Policy.isIgnored(file))continue;
+      const parent=parentOf(file.relativePath);
+      if(!filesByParent.has(parent))filesByParent.set(parent,{count:0,hasPdf:false,allEditable:true});
+      const entry=filesByParent.get(parent);
+      entry.count++;
+      if(safeText(file.extension).toLowerCase()===".pdf")entry.hasPdf=true;
+      if(!Policy.isEditable(file))entry.allEditable=false;
+    }
 
     folders.forEach(function eachFolder(folder) {
       const rel = normalizeRel(folder && folder.relativePath);
       if (!rel) return;
 
-      const hasChildFolder = folders.some(function hasChild(item) {
-        return parentOf(item && item.relativePath) === rel;
-      });
-
-      if (hasChildFolder) return;
-
-      const directFiles = files.filter(function keep(file) {
-        return parentOf(file && file.relativePath) === rel && !isTechnical(file) && !Policy.isIgnored(file);
-      });
-
-      if (!directFiles.length) return;
-
-      const hasPdf = directFiles.some(function hasPdfFile(file) {
-        return safeText(file && file.extension).toLowerCase() === ".pdf";
-      });
-
-      if (!hasPdf) {
-        findings.push(createFinding(rule, scope, scanData, {
-          ...folder,
-          editableOnly: directFiles.every(function every(file) { return Policy.isEditable(file); })
-        }));
-      }
+      if (parentsWithFolders.has(rel)) return;
+      const entry=filesByParent.get(rel);
+      if (!entry || !entry.count || entry.hasPdf) return;
+      findings.push(createFinding(rule, scope, scanData, {
+        ...folder,
+        editableOnly:entry.allEditable
+      }));
     });
 
     return findings;

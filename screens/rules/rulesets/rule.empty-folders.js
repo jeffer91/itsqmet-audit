@@ -106,25 +106,20 @@ Función o funciones:
     const findings = [];
     const allFolders = Array.isArray(index.folders) ? index.folders : [];
     const allFiles = Array.isArray(index.files) ? index.files : [];
+    // Un índice de padres evita recorrer todo el inventario por cada carpeta.
+    const parentsWithFolders = new Set();
+    const parentsWithDocuments = new Set();
+    allFolders.forEach(item=>parentsWithFolders.add(getParentRelativePath(item && item.relativePath)));
+    allFiles.forEach(item=>{
+      if (!TECHNICAL_FILE_NAMES.has(safeText(item && item.name).toLowerCase()))
+        parentsWithDocuments.add(getParentRelativePath(item && item.relativePath));
+    });
 
     allFolders.forEach(function eachFolder(folder) {
       const rel = normalizeRelativePath(folder && folder.relativePath);
       if (!rel) return;
 
-      const childFolders = allFolders.filter(function keepFolder(item) {
-        return getParentRelativePath(item && item.relativePath) === rel;
-      });
-
-      const childFiles = allFiles.filter(function keepFile(item) {
-        return (
-          getParentRelativePath(item && item.relativePath) === rel &&
-          !TECHNICAL_FILE_NAMES.has(
-            safeText(item && item.name).toLowerCase()
-          )
-        );
-      });
-
-      if (childFolders.length > 0 || childFiles.length > 0) {
+      if (parentsWithFolders.has(rel) || parentsWithDocuments.has(rel)) {
         return;
       }
 

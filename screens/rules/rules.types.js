@@ -588,22 +588,15 @@ Función o funciones:
         return item.validation && item.validation.valid;
       });
 
+    const processPaths=new Set(candidates.map(item=>normalizeRelativePath(item.folder.relativePath)));
     return candidates
       .filter(function keepOutermost(item) {
-        return !candidates.some(function hasProcessAncestor(other) {
-          if (other === item) return false;
-          const childPath = normalizeRelativePath(
-            item.folder && item.folder.relativePath
-          );
-          const parentPath = normalizeRelativePath(
-            other.folder && other.folder.relativePath
-          );
-
-          return (
-            childPath !== parentPath &&
-            isDescendantOf(childPath, parentPath)
-          );
-        });
+        let parent=getParentRelativePath(item.folder && item.folder.relativePath);
+        while(parent){
+          if(processPaths.has(parent))return false;
+          parent=getParentRelativePath(parent);
+        }
+        return true;
       })
       .map(function mapResult(item) {
         return {
