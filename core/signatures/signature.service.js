@@ -27,7 +27,8 @@ function readStore() {
 function saveStore(data){const dest=fileStore();fs.mkdirSync(path.dirname(dest),{recursive:true});const tmp=dest+"."+process.pid+".tmp";fs.writeFileSync(tmp,JSON.stringify(data,null,2));fs.renameSync(tmp,dest);}
 function hashFile(file){return new Promise((resolve,reject)=>{const hash=crypto.createHash("sha256");const stream=fs.createReadStream(file);stream.on("data",d=>hash.update(d));stream.on("error",reject);stream.on("end",()=>resolve(hash.digest("hex")));});}
 function validate(file){return new Promise(resolve=>{
- const script=path.join(__dirname,"validate_pdf.py");
+ // Permite utilizar un validador de prueba multiplataforma sin depender de NODE_OPTIONS.
+ const script=process.env.AUDIT_VALIDATOR_SCRIPT||path.join(__dirname,"validate_pdf.py");
  const python=process.env.AUDIT_PYTHON||(process.platform==="win32"?"python":"python3");
  const child=spawn(python,[script,file],{windowsHide:true});
  let output="",stderr="",settled=false;

@@ -51,12 +51,11 @@ test("firmas usa el inventario, incorpora solicitudes solapadas y señala fuente
   await fs.writeFile(validator, 'process.stdout.write(JSON.stringify({status:"no-electronic-signature",cover:{version:1,status:"inspected",slots:[]}}))');
   // A Node subprocess standing in for Python receives validate_pdf.py as its script.
   // Use a preload to provide a deterministic validator on all supported platforms.
-  const oldPython = process.env.AUDIT_PYTHON, oldOptions = process.env.NODE_OPTIONS;
+  const oldPython = process.env.AUDIT_PYTHON, oldScript = process.env.AUDIT_VALIDATOR_SCRIPT;
   process.env.AUDIT_PYTHON = process.execPath;
-  await fs.appendFile(validator, ";process.exit(0)");
-  process.env.NODE_OPTIONS = '--require "' + validator + '"';
+  process.env.AUDIT_VALIDATOR_SCRIPT = validator;
   t.after(() => {
-    for (const [key, value] of [["AUDIT_PYTHON", oldPython], ["NODE_OPTIONS", oldOptions]]) {
+    for (const [key, value] of [["AUDIT_PYTHON", oldPython], ["AUDIT_VALIDATOR_SCRIPT", oldScript]]) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
