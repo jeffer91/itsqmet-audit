@@ -58,6 +58,8 @@ test("UTET PRO-164 identifica solo tres documentos institucionales, sin inferir 
     root+"/UTET-PRO-164-Porcentaje de Plagio"];
   const data=scan("UTET",paths);
   const w=boot({ugpaResult:null,utetResult:data,discardedFindings:[]});
+  // El motor de pruebas debe suministrar a Priorización los hallazgos de la regla.
+  w.RulesEngine.analyze=()=>({findings:w.RuleRequiredDocuments.run({scope:"UTET",scanData:data})});
   const {vmResult}=view(w);
   const required=vmResult.tasks.filter(item=>item.processNumber==="164" &&
     item.sourceCategory==="required-documents");
