@@ -14,6 +14,26 @@ const path = require("path");
 const { execFile } = require("child_process");
 const extractZip = require("extract-zip");
 const { scanArchiveDirectory } = require("./archive.scan");
+// Límites configurables de defensa frente a archivos comprimidos excesivos.
+const MAX_SOURCE_BYTES=Number(process.env.AUDIT_ARCHIVE_MAX_SOURCE_BYTES)||1024*1024*1024;
+const MAX_EXPANDED_BYTES=Number(process.env.AUDIT_ARCHIVE_MAX_EXPANDED_BYTES)||4*1024*1024*1024;
+const MAX_ENTRIES=Number(process.env.AUDIT_ARCHIVE_MAX_ENTRIES)||40000;
+function validateArchiveLimits(entries,totalBytes){
+  if(entries>MAX_ENTRIES)throw new Error("El archivo contiene demasiadas entradas (máximo "+MAX_ENTRIES+").");
+  if(!Number.isFinite(totalBytes)||totalBytes>MAX_EXPANDED_BYTES)
+    throw new Error("El contenido descomprimido supera el límite de seguridad.");
+}
+function readRarList(stdout){
+  let entries=0,bytes=0;
+  for(const line of stdout.split(/\r?\n/)){
+    if(line.startsWith("Path = ")){entries++;validateArchiveLimits(entries,bytes);}
+    const m=/^Size = (\d+)\s*$/.exec(line);
+    if(m){bytes+=Number(m[1]);validateArchiveLimits(entries,bytes);}
+  }
+  if(!entries)throw new Error("No se pudo verificar el inventario interno del RAR.");
+  return {entries,bytes};
+}
+
 const {
   ensureValidType,
   safeText,
@@ -32,7 +52,8 @@ function execFileAsync(file, args) {
       args,
       {
         windowsHide: true,
-        maxBuffer: 1024 * 1024 * 32
+        maxBuffer: 1024 * 1024 * 32,
+        timeout: 600000
       },
       function onComplete(error, stdout, stderr) {
         if (error) {
@@ -69,6 +90,8 @@ async function extractRarWith7Zip(archivePath, destinationPath) {
 
   for (const candidate of candidates) {
     try {
+      const listing=await execFileAsync(candidate,["l","-slt","-ba",archivePath]);
+      readRarList(listing.stdout);
       await execFileAsync(candidate, ["x", "-y", `-o${destinationPath}`, archivePath]);
       return candidate;
     } catch (error) {
@@ -89,7 +112,15 @@ async function extractArchive(archivePath, destinationPath, extension) {
   await ensureEmptyDirectory(destinationPath);
 
   if (extension === ".zip") {
-    await extractZip(archivePath, { dir: destinationPath });
+    let entries=0,bytes=0;
+    await extractZip(archivePath, {
+      dir:destinationPath,
+      onEntry(entry){
+        entries++;
+        bytes+=Number(entry.uncompressedSize||0);
+        validateArchiveLimits(entries,bytes);
+      }
+    });
     return {
       extractor: "extract-zip"
     };
@@ -138,6 +169,9 @@ async function importArchiveFile(params) {
   }
 
   const extension = ensureSupportedArchiveExtension(originalArchivePath);
+  const sourceStats=await fsp.stat(originalArchivePath);
+  if(!sourceStats.isFile()||sourceStats.size>MAX_SOURCE_BYTES)
+    throw new Error("El archivo comprimido supera el tamaño de entrada permitido.");
   await ensureDirectory(workspaceRoot);
 
   const generation = await fsp.mkdtemp(path.join(workspaceRoot, "import-"));
@@ -174,5 +208,7 @@ async function importArchiveFile(params) {
 }
 
 module.exports = {
-  importArchiveFile
+  importArchiveFile,
+  validateArchiveLimits,
+  readRarList
 };
