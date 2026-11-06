@@ -410,7 +410,9 @@
 
   function buildStrategicScheduleTasks(sharedState, today) {
     const tasks = [];
-    ["UGPA", "UTET"].forEach(function eachScope(scope) {
+    // Los documentos aprobados de UTET se evalúan con RuleRequiredDocuments.
+    // No transformar la mera frecuencia semestral en órdenes de crear carpetas.
+    ["UGPA"].forEach(function eachScope(scope) {
       const scan = scanForScope(sharedState, scope);
       if (!scan || scan.ok !== true || !Types.buildScanIndex) return;
       const index = Types.buildScanIndex(scan);
