@@ -150,6 +150,13 @@ async function list(options={}) {
   const status=String(options.status||"");
   const search=String(options.search||"").toLowerCase().slice(0,300);
   function matches(record){
+    if(options.priorityOnly===true){
+      const coverSlots=(record.cover&&record.cover.slots)||[];
+      const actionable=record.status==="invalid" ||
+        (record.status==="no-electronic-signature"&&coverSlots.some(slot=>
+          slot.required&&["empty","review"].includes(slot.status)));
+      if(!actionable)return false;
+    }
     if(scope && record.scope!==scope)return false;
     if(status){
       if(status.startsWith("visual-")){

@@ -5,7 +5,7 @@
   let signatureRecords = [];
   async function loadSignatureFindings() {
     try {
-      const result = await window.api.signatures.list({includePreviews:false});
+      const result = await window.api.signatures.list({includePreviews:false,priorityOnly:true});
       if (!result || !result.ok) throw new Error(result && result.error || "No se pudieron consultar las firmas.");
       signatureRecords = Array.isArray(result.records) ? result.records : [];
     } catch (error) {

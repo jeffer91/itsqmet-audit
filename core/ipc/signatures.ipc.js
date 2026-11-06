@@ -8,6 +8,7 @@ function registerSignaturesIpc(){
     try{return await service.list({
       includePreviews:options.includePreviews!==false,
       scope:options.scope,status:options.status,search:options.search,
+      priorityOnly:options.priorityOnly===true,
       limit:options.limit,offset:options.offset
     });}
     catch(error){return {ok:false,error:error && error.message || "No se pudieron consultar las firmas."};}

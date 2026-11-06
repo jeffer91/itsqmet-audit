@@ -72,7 +72,8 @@ contextBridge.exposeInMainWorld("api", {
         status: String(options.status || "").slice(0,45),
         search: String(options.search || "").slice(0,300),
         limit: options.limit,
-        offset: options.offset
+        offset: options.offset,
+        priorityOnly: options.priorityOnly === true
       });
     },
     scan: function () { return ipcRenderer.invoke("signatures:scan"); },
