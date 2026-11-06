@@ -20,7 +20,7 @@ o el idioma, la portada queda pendiente y se reintenta al analizar.
 - La fecha mostrada es **declarada**, no un sello de tiempo acreditado.
 - Solo tras confirmar la ausencia de firmas digitales se renderiza la página 1. Se buscan rótulos en el texto del PDF o por OCR. Las casillas delimitadas se evalúan individualmente: posible trazo, espacio sin trazo visible o revisión necesaria. Un recorte facilita la comprobación. Los resultados visuales no autentican identidades ni evalúan fechas.
 - Los rótulos no reconocidos o las casillas sin límites claros requieren revisión humana.
-- No hay reglas temporales por documento todavía. Se restauró el margen de priorización original de 15 días. Este margen NO es un plazo de cumplimiento institucional; se deben incorporar los plazos del manual antes de declarar conformidad temporal.
+- Los documentos UTET no reciben automáticamente una fecha de vencimiento por el mero cierre del período: debe verificarse la obligación y la fecha institucional correspondiente. Las referencias temporales generales usadas para tareas UGPA son orientativas y NO constituyen un vencimiento legal ni acreditan mora.
 - Priorización conserva las firmas digitales inválidas y añade una tarea de revisión para casillas vacías o dudosas identificadas explícitamente como «Firma obligatoria» o «Firma requerida».
 - Antes de distribuir una versión instalable, empaquetar Python/pyHanko y configurar certificados de confianza para Ecuador; de lo contrario, el módulo requiere una instalación local adicional.
 
@@ -30,3 +30,6 @@ o el idioma, la portada queda pendiente y se reintenta al analizar.
 - Si la carpeta está inaccesible o el recorrido es parcial, se conservan resultados anteriores marcados como obsoletos.
 - Las tareas de firmas inválidas se incluyen en el modelo de Priorización y sus exportaciones. No se generan tareas desde resultados obsoletos.
 - No se ha ejecutado una prueba integral del instalador ni con certificados reales de Ecuador. No usar el estado «verificado» como dictamen jurídico.
+
+## Rendimiento y recuperación
+La pantalla consulta las firmas por páginas de 40 resultados; Priorización solicita únicamente casos que requieren revisión. El inventario de firmas permanece local y la evaluación criptográfica es de solo lectura sobre el PDF original. Los fallos del validador se identifican como no verificables, nunca como firmas válidas.
