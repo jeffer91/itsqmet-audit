@@ -65,6 +65,12 @@ async function writeHistory(history) {
   const target = getHistoryFilePath();
   const temporary = target + "." + process.pid + ".tmp";
   try {
+    // Mantener una versión anterior recuperable antes del reemplazo atómico.
+    try {
+      await fsp.copyFile(target,target+".bak");
+    } catch(error) {
+      if(!error || error.code!=="ENOENT")throw error;
+    }
     await fsp.writeFile(temporary, JSON.stringify(normalized, null, 2), "utf8");
     await fsp.rename(temporary, target);
   } finally {

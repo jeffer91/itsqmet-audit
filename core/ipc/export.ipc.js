@@ -62,7 +62,9 @@ async function printHtmlToPdf(html, outputPath) {
     pdfWindow = new BrowserWindow({
       show: false,
       webPreferences: {
-        sandbox: false
+        sandbox: true,
+        nodeIntegration: false,
+        contextIsolation: true
       }
     });
 

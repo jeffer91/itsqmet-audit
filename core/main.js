@@ -32,10 +32,11 @@ function createMainWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   });
 
+  mainWindow.webContents.setWindowOpenHandler(() => ({action:"deny"}));
   mainWindow.loadFile(
     path.join(__dirname, "..", "screens", "scan", "scan.index.html")
   );

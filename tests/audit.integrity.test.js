@@ -88,3 +88,14 @@ test("firmas usa el inventario, incorpora solicitudes solapadas y señala fuente
   assert.ok(!partial.records.find(r => r.scope === "UGPA").stale);
   assert.equal((await signatures.list()).partial, true);
 });
+
+
+test("cada actualización del historial conserva una copia de la versión anterior", async t => {
+  await setup(t);
+  await history.setSourcePath("UGPA","unidad-inicial");
+  await history.setSourcePath("UGPA","unidad-actualizada");
+  const previous=JSON.parse(await fs.readFile(history.getHistoryFilePath()+".bak","utf8"));
+  const current=await history.loadHistory();
+  assert.equal(previous.ugpaSourcePath,"unidad-inicial");
+  assert.equal(current.ugpaSourcePath,"unidad-actualizada");
+});

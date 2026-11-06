@@ -30,6 +30,22 @@
   function buildRows(shared,tasks,issues,filters) {
     const catalog=window.AuditManualCatalog && window.AuditManualCatalog.catalog || {};
     const rows=[];
+    // Agrupar una sola vez evita recorrer todas las tareas por cada proceso.
+    const taskStats=new Map(),issueCounts=new Map();
+    for(const task of tasks||[]){
+      const id=task.scope+"-"+String(task.processNumber||"");
+      if(!taskStats.has(id))taskStats.set(id,{total:0,active:0,first:null});
+      const stats=taskStats.get(id);
+      stats.total++;
+      if(task.status!=="done"){
+        stats.active++;
+        if(!stats.first||(ranks[task.level]||0)>(ranks[stats.first.level]||0))stats.first=task;
+      }
+    }
+    for(const issue of issues||[]){
+      const id=issue.scope+"-"+String(issue.processNumber||"");
+      issueCounts.set(id,(issueCounts.get(id)||0)+1);
+    }
     ["UGPA","UTET"].forEach(function (scope){
       const unit=catalog[scope];if(!unit||!unit.processes)return;
       const scan=scope==="UGPA"?shared.ugpaResult:shared.utetResult;
@@ -48,10 +64,9 @@
         if(filters&&filters.scope&&filters.scope!=="all"&&filters.scope!==scope)return;
         if(filters&&filters.process&&filters.process!=="all"&&filters.process!==id)return;
         const meta=unit.processes[number];
-        const processTasks=(tasks||[]).filter(x=>x.scope===scope&&String(x.processNumber)===number);
-        const processIssues=(issues||[]).filter(x=>x.scope===scope&&String(x.processNumber)===number);
-        const active=processTasks.filter(x=>x.status!=="done");
-        const first=active.slice().sort((a,b)=>(ranks[b.level]||0)-(ranks[a.level]||0))[0];
+        const stats=taskStats.get(id)||{total:0,active:0,first:null};
+        const issueCount=issueCounts.get(id)||0;
+        const first=stats.first;
         const ind=(indicators[scope]||{})[number]||["Consultar el manual","Según manual"];
         const located=scanned&&folderNumbers.has(number);
         rows.push({
@@ -59,13 +74,13 @@
           indicator:ind[0],target:ind[1],indicatorValue:"Sin datos para calcular",
           indicatorStatus:"No evaluado",
           folderStatus:!scanned?"Sin escaneo":located?"Localizada":"No localizada",
-          tasks:processTasks.length,activeTasks:active.length,issues:processIssues.length,
+          tasks:stats.total,activeTasks:stats.active,issues:issueCount,
           priority:first?first.level:"",priorityLabel:first?first.levelLabel:"Sin urgencia calculada",
           nextAction:first?first.title:!scanned?"Escanear carpeta":!located?
-            "Verificar ubicación y evidencias del proceso":processIssues.length?
+            "Verificar ubicación y evidencias del proceso":issueCount?
             "Revisar inconsistencias documentales":"Contrastar indicador con registros de gestión",
           state:!scanned?"Sin escaneo":!located?"Evidencia por localizar":
-            processTasks.length||processIssues.length?"Con observaciones":"Sin observaciones detectadas"
+            stats.total||issueCount?"Con observaciones":"Sin observaciones detectadas"
         });
       });
     });
