@@ -13,7 +13,6 @@
       "321":["Fichas de análisis curricular por carrera","100%"]
     },
     UTET:{
-      "94":["Plazo de actualización y aprobación normativa","60 días (según contexto)"],
       "56":["Planificaciones entregadas oportunamente","95%"],
       "95":["Informes de resultados entregados","95%"],
       "58":["Estudiantes con requisitos cumplidos en plazo","95%"],

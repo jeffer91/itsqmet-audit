@@ -54,3 +54,19 @@ Priorización consulta el último inventario de firmas sin esperar al análisis 
 La API para abrir archivos locales solo permite rutas provenientes de las fuentes seleccionadas o el historial; se bloquea la ejecución de archivos potencialmente peligrosos. Electron mantiene aislamiento de contexto y usa sandbox en las ventanas.
 
 El estado compartido incluye getSnapshot() para reutilizar índices y evitar duplicar miles de rutas en cada actualización de Priorización. get() conserva copias defensivas; el snapshot estable es exclusivamente de lectura y se invalida cuando cambia el historial.
+
+
+POLÍTICA DE ENTREGABLES UTET — MANUAL DE PROCESOS V2 (06/11/2026)
+El catálogo UTET conserva exactamente diez procesos: 56,95,58,59,88,93,96,164,57,97.
+PRO-94 se excluye por decisión del responsable, incluidos todos sus documentos.
+La tabla final del manual contiene 37 documentos, pero sólo 25 tienen código con
+campos marcados en rojo (0X, AÑO, MES); los otros 12 se mantienen como referencias
+y no generan tareas automáticas de elaboración.
+La Ficha de Posibles Temas de Trabajo de Titulación (PRO-96) se conserva
+como evidencia documental, pero su ausencia no se transforma en trabajo pendiente.
+El Acta de Seguimiento de Requisitos (PRO-58) es condicional: se genera sólo si
+el porcentaje de cumplimiento es bajo; sin evidencia de esa condición, no se
+genera automáticamente la obligación ni una fecha vencida.
+La distinción se implementa mediante AuditManualCatalog.isCodedDocument() e
+isAutomaticDocument() y se utiliza tanto en RuleRequiredDocuments como en PriorityService.
+Se preserva la política de UGPA sin cambios.

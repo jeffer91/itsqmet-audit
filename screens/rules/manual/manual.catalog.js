@@ -97,16 +97,6 @@ Función:
     UTET: {
       manualRootPatterns: ["UTET-MP-ITSQMET", "Manual de Procesos"],
       processes: {
-        "94": {
-          name: "Proceso de Regulación de Normativa de la UTET",
-          periodPolicy: { required: true, months: 0, label: "Período obligatorio" },
-          documents: [
-            { id: "reglamento", label: "Reglamento de la UTET", codes: ["CTI-REG-14"], keywords: ["reglamento", "utet"], template: "CTI-REG-14" },
-            { id: "resolucion", label: "Resolución del OCS", codes: ["ITSQMET-OCS"], keywords: ["resolucion", "ocs"], template: "ITSQMET-OCS-AÑO-MES-0X/DÍA-MES-AÑO" },
-            { id: "acta-consejo", label: "Acta de Consejo OCS", codes: ["ACC-ITSQMET-OCS"], keywords: ["acta", "consejo", "ocs"], template: "ACC-ITSQMET-OCS-AÑO-MES-0X" },
-            { id: "acta-socializacion", label: "Acta de Socialización", codes: ["UTET-ACT", "PRO-94"], keywords: ["acta", "socializacion"], template: "UTET-ACT-0X-PRO-94-AÑO-MES" }
-          ]
-        },
         "56": {
           name: "Proceso de Planificación Semestral del Proceso de Titulación",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
@@ -127,7 +117,7 @@ Función:
           name: "Proceso de Seguimiento de Requisitos",
           periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
-            { id: "act", label: "Acta de Seguimiento de los Requisitos de Titulación", codes: ["UTET-ACT", "PRO-58"], keywords: ["acta", "seguimiento", "requisitos"], template: "UTET-ACT-0X-PRO-58-AÑO-MES" },
+            { id: "act", label: "Acta de Seguimiento de los Requisitos de Titulación", codes: ["UTET-ACT", "PRO-58"], keywords: ["acta", "seguimiento", "requisitos"], template: "UTET-ACT-0X-PRO-58-AÑO-MES", condition: "low-requirements-compliance" },
             { id: "rgi1", label: "Informe Individual de Verificación de Requisitos para el Proceso de Titulación", codes: ["UTET-RGI1", "PRO-58"], keywords: ["informe", "individual", "verificacion", "requisitos"], template: "UTET-RGI1-0X-PRO-58-AÑO-MES" },
             { id: "rgi2", label: "Reporte Final de Requisitos para Ingreso a Titulación", codes: ["UTET-RGI2", "PRO-58"], keywords: ["reporte", "final", "requisitos", "ingreso"], template: "UTET-RGI2-0X-PRO-58-AÑO-MES" }
           ]
@@ -241,6 +231,25 @@ Función:
     return unit.processes[safeText(processNumber)] || null;
   }
 
+  // En UTET v2 el inventario tiene 37 documentos en diez procesos.
+  // Los campos rojos 0X/AÑO/MES corresponden a 25 documentos codificados.
+  // Los 12 documentos sin código siguen siendo evidencia/referencia, pero
+  // su ausencia no es un encargo automático de elaboración.
+  function isCodedDocument(scope, processNumber, document) {
+    if (safeText(scope).toUpperCase() !== "UTET") return true;
+    const process = getProcess(scope, processNumber);
+    if (!process || !document || !Array.isArray(document.codes) || !document.codes.length) return false;
+    return /(?:0X|AÑO|MES)/i.test(safeText(document.template));
+  }
+
+  function isAutomaticDocument(scope, processNumber, document) {
+    if (!isCodedDocument(scope, processNumber, document)) return false;
+    // PRO-58: el acta sólo se genera cuando el seguimiento acredita bajo cumplimiento.
+    // No deducir esa condición de una carpeta vacía ni del paso del tiempo.
+    if (safeText(scope).toUpperCase() === "UTET" && document.condition) return false;
+    return true;
+  }
+
   function isRecognizedRootManual(scope, fileName) {
     const unit = getUnit(scope);
     if (!unit) return false;
@@ -261,6 +270,8 @@ Función:
     normalizeText: normalizeText,
     getUnit: getUnit,
     getProcess: getProcess,
+    isCodedDocument: isCodedDocument,
+    isAutomaticDocument: isAutomaticDocument,
     isRecognizedRootManual: isRecognizedRootManual
   };
 })(window);

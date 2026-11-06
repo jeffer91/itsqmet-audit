@@ -288,6 +288,8 @@ Función:
 
       containers.forEach(function eachContainer(container) {
         processInfo.documents.forEach(function eachExpected(expected) {
+          if (Manual.isAutomaticDocument &&
+              !Manual.isAutomaticDocument(scope, parsed.processNumber, expected)) return;
           if (!evidenceExists(expected, container, index, processInfo.documents)) {
             findings.push(
               createFinding(
@@ -314,7 +316,7 @@ Función:
     scope: "BOTH",
     severity: "warning",
     description:
-      "Compara cada proceso/período con la sección Documentos generados en el proceso de los manuales UGPA y UTET.",
+      "Compara los documentos codificados exigibles por proceso/período. En UTET, conserva los documentos sin código como referencias y excluye los condicionales sin evidencia del supuesto.",
     run: function runRule(context) {
       return run(context.scope, context.scanData, this);
     }

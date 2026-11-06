@@ -46,11 +46,6 @@
           cadenceMonths: 6,
           effort: "high",
           stages: { inf: "close" }
-        },
-        "94": {
-          special: true,
-          effort: "high",
-          note: "Proceso normativo: se priorizan sus hallazgos reales según la documentación exigible."
         }
       }
     }

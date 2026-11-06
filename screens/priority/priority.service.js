@@ -266,6 +266,15 @@
     // del manual no distingue las incorporaciones semestrales ni el formato
     // histórico de fichas, por lo que aquí se evita convertirla en falsos pendientes.
     if (scope === "UGPA" && processNumber === "60" && category === "required-documents") return null;
+    if (scope === "UTET" && category === "required-documents") {
+      const manualProcess = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
+      const documentName = normalize(finding.missingFileName || finding.expectedValue);
+      const document = manualProcess && Array.isArray(manualProcess.documents)
+        ? manualProcess.documents.find(function (item) { return normalize(item.label) === documentName; })
+        : null;
+      if (!document || !Manual.isAutomaticDocument ||
+          !Manual.isAutomaticDocument(scope, processNumber, document)) return null;
+    }
     const area = areaFromPath(finding.relativePath);
     const stage = stageFromFinding(finding, processNumber, scope);
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
