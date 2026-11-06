@@ -99,6 +99,8 @@
     window.api.signatures.onUpdated(update=>{
       if(update.phase==="completed"){
         load().catch(error=>$("message").textContent="Error: "+error.message);
+      }else if(update.phase==="progress"){
+        $("message").textContent="Analizando PDF locales: "+update.processed+" de "+update.total+" revisados…";
       }else if(update.phase==="failed"){
         $("message").textContent="No se pudo completar el análisis: "+(update.error||"Error desconocido");
       }else if(update.phase==="started"&&!loading){

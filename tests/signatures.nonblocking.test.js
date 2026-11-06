@@ -45,3 +45,8 @@ test("el listado devuelve inmediatamente resultados anteriores durante un escane
   assert.deepEqual(updates,["started","completed"]);
   assert.equal((await signatures.list()).analyzing,false);
 });
+
+test("el reescaneo de Priorización no espera una segunda validación completa",()=>{
+  const content=fs.readFileSync(path.join(__dirname,"..","screens/priority/priority.app.js"),"utf8");
+  assert.doesNotMatch(content,/await\s+window\.api\.signatures\.scan\s*\(/);
+});

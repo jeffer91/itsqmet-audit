@@ -45,6 +45,11 @@ async function performScan() {
   const stats = { scanned: 0, reused: 0, errors: 0, partial: false };
   const errors = [];
   const current = new Set();
+  const allScans=[history.ugpaResult,history.utetResult];
+  const total=allScans.reduce((sum,scan)=>sum+(
+    scan&&scan.ok?(scan.files||[]).filter(entry=>/\.pdf$/i.test(entry.name)).length:0
+  ),0);
+  let processed=0;
   for (const scope of ["UGPA", "UTET"]) {
     const scan = scope === "UGPA" ? history.ugpaResult : history.utetResult;
     if (!scan || !scan.ok) continue;
@@ -78,6 +83,11 @@ async function performScan() {
         delete store.records[key].stale;
       } catch (error) {
         errors.push(file + ": " + error.message);
+      } finally {
+        processed++;
+        if (processed % 10 === 0 || processed === total) {
+          notify({phase:"progress",processed,total,scope});
+        }
       }
     }
   }

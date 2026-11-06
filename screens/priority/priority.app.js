@@ -116,7 +116,8 @@
         window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Escaneando carpetas…");
         try {
           const total=await rescan();
-          if (window.api.signatures && window.api.signatures.scan) await window.api.signatures.scan();
+          // El escaneo de carpetas ya inicia la validación en segundo plano.
+          // No esperar ni solicitar una segunda pasada de todos los PDF.
           await loadSignatureFindings();
           refresh("Se revisaron "+total+" unidad(es). El avance registrado se conserva.");
         } finally {
