@@ -50,7 +50,7 @@ function view(window) {
   const vmResult=window.PriorityService.buildViewModel({});
   return {vmResult,board:window.PriorityQueue.build(vmResult,window.PriorityStorage.load())};
 }
-test("UTET PRO-164 no crea carpeta semestral inferida ni siete entregables globales por estudiante",()=>{
+test("UTET PRO-164 identifica solo tres documentos institucionales, sin inferir carpeta semestral ni borradores estudiantiles",()=>{
   const root="PROCESOS MISIONALES/EJECUCION/UTET-PRO-164-Ejecución del Trabajo de Titulación";
   const paths=["PROCESOS MISIONALES","PROCESOS MISIONALES/EJECUCION",root,
     root+"/UTET-PRO-164-Acta de titulación del Trabajo de titulación",
@@ -59,8 +59,13 @@ test("UTET PRO-164 no crea carpeta semestral inferida ni siete entregables globa
   const data=scan("UTET",paths);
   const w=boot({ugpaResult:null,utetResult:data,discardedFindings:[]});
   const {vmResult}=view(w);
-  assert.equal(vmResult.tasks.some(item=>item.processNumber==="164"),false);
-  assert.equal(w.RuleRequiredDocuments.run({scope:"UTET",scanData:data}).length,0);
+  const required=vmResult.tasks.filter(item=>item.processNumber==="164" &&
+    item.sourceCategory==="required-documents");
+  assert.equal(required.length,3);
+  assert.ok(required.every(item=>!(/Borrador|Plan de Trabajo|Trabajo de Titulación \(Final\)/i.test(item.title))));
+  assert.ok(!vmResult.tasks.some(item=>item.processNumber==="164" && item.proposedFolderName));
+  const findings=w.RuleRequiredDocuments.run({scope:"UTET",scanData:data});
+  assert.equal(findings.length,3);
 });
 test("PRO-60 respeta el periodo real y pone aprobación de fichas antes de la guía",()=>{
   const base="PROCESOS ESTRATEGICOS/UGPA-PRO-60-Construcción Curricular Continua";
