@@ -34,7 +34,7 @@ test("sin escaneo no se inventan acciones",()=>{
   const e=env();const board=e.window.PriorityQueue.build({tasks:[],inconsistencies:[]},e.window.PriorityStorage.load());
   assert.equal(board.items.length,0);
 });
-test("las cinco acciones favorecen urgencias reales sin reservar cuotas a correcciones menores",()=>{
+test("las cinco acciones: correcciones rápidas primero y luego urgencias reales",()=>{
   const e=env(),board=e.window.PriorityQueue.build(sample(),e.window.PriorityStorage.load());
   assert.equal(board.items.length,5);
   assert.ok(board.items.every(x=>x.level==="max"||x.level==="high"));

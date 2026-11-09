@@ -9,3 +9,21 @@ priority.workflow.js: reglas del ciclo de vida de las tareas.
 priority.processes.js: agrupación y estado de procesos.
 Los hallazgos de firmas inválidas entran como tareas de revisión. Los resultados inconclusos y obsoletos no equivalen a incumplimientos.
 IMPORTANTE: el margen interno de 15 días de cierre no representa una fecha normativa del manual.
+
+ORDEN DE LA COLA (09/11/2026)
+1) Correcciones rápidas: primero carpetas de período mal nombradas y luego nombres de PDF (cada grupo es una sola tarea).
+   Van primero porque son rápidas y porque un nombre corregido cambia qué documentos se consideran faltantes.
+2) Documentos por elaborar, según urgencia, vencimiento de referencia y área.
+3) Revisiones: candidatos por verificar, capacitaciones incompletas, códigos o unidades inconsistentes.
+Las tareas «En proceso» se mantienen arriba.
+
+REGLAS DE URGENCIA
+- Período vigente iniciado sin carpeta: se generan sus documentos de inicio (UGPA PRO-70, PRO-31, PRO-251; UTET PRO-56 sin fecha).
+- Rezago histórico: período cerrado hace más de historicalDays (365) días. Se marca con el campo «historical», no por el texto del motivo.
+- Más atraso nunca resta puntos. UTET sigue sin vencimientos fabricados; entre períodos cerrados se ordena primero el más antiguo.
+- Los «Reportes de resultados/seguimiento» son documentos de cierre.
+- Carpetas con período de duración distinta a la periodicidad: solo se corrige el nombre; no se generan documentos con códigos deducidos.
+- Una carpeta vacía que corresponde a un documento pendiente no crea otra tarea; 4 o más carpetas vacías de un proceso forman un grupo.
+- PRO-60: la guía queda en espera mientras falten el acta o las fichas de la carrera.
+- UTET-PRO-57 sin carpeta se señala cuando PRO-56 tiene Planificación de Artículo Académico en el período.
+- priority.service.js contrasta nombres y evidencias una sola vez; la tabla de procesos, la cola y las exportaciones usan el mismo nivel y orden.

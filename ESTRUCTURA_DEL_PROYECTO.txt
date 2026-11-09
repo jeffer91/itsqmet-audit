@@ -84,3 +84,12 @@ Las importaciones ZIP/RAR tienen cuotas explícitas por tamaño y número de arc
 El listado UTET incluye 24 documentos aprobados en 9 procesos, de los cuales 23
 tienen código; el acta condicional PRO-58 no genera pendiente sin evidencia del
 supuesto. El historial y los PDF institucionales nunca se eliminan automáticamente.
+
+REVISIÓN DE PRIORIZACIÓN (09/11/2026)
+La cola se organiza en tres bloques: correcciones de nombres/carpetas, documentos por elaborar y revisiones (detalle en screens/priority/LEEME.txt).
+RuleRequiredDocuments ya no acepta como evidencia un PDF cuyo código AAAA-MM queda fuera del período de su carpeta
+(margen: 2 meses antes del inicio y 6 después del cierre); queda como PDF candidato por verificar.
+Las actas de titulación emitidas por SISACAD (ACTA_COMPLEX_<cédula>_…, ACTA_TRAB_<cédula>_…) acreditan el acta del período.
+UGPA-PRO-248 incorpora el Cronograma de Seguimiento Individual a Docentes en Formación (sin código en el inventario).
+RG-002 (capacitación con 4 evidencias) ya no toma los Acuerdos de Patrocinio individuales como capacitaciones.
+Se mantiene la lista UTET aprobada (24 documentos, 9 procesos) y la política de no fabricar vencimientos UTET.

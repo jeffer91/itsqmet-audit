@@ -229,6 +229,13 @@ Función o funciones:
       : "";
 
     if (processNumber === PROCESS_134) {
+      // El Acuerdo de Patrocinio (RGI2) es individual por docente y no es una de
+      // las cuatro evidencias: tomarlo como planificación crea capacitaciones
+      // ficticias con el nombre de cada persona.
+      if (/^rgi\s*-?\s*2\b/.test(documentType) ||
+          hasAncestorFolderLike(index, file.relativePath, "Acuerdo de Patrocinio")) {
+        return null;
+      }
       if (hasAncestorFolderLike(index, file.relativePath, EVIDENCE_DEFINITIONS.planning.folderLabel)) {
         return EVIDENCE_DEFINITIONS.planning;
       }

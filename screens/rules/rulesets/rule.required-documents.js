@@ -93,9 +93,20 @@ Función:
     return labelMatch || keywordMatch;
   }
 
+  // Archivos emitidos por un sistema institucional (p. ej. actas de SISACAD)
+  // con un patrón propio en lugar del código del manual.
+  function matchesSystemPattern(expected, file) {
+    return (Array.isArray(expected && expected.systemFilePatterns) ? expected.systemFilePatterns : [])
+      .some(function (pattern) {
+        try { return new RegExp(pattern, "i").test(safeText(file && file.name)); }
+        catch (_error) { return false; }
+      });
+  }
+
   // El nombre del PDF (no solo la carpeta) debe identificar el documento requerido.
   function matchesFinalDocument(expected, file, allDocuments) {
     if (safeText(file && file.extension).toLowerCase() !== ".pdf") return false;
+    if (matchesSystemPattern(expected, file)) return true;
     if (matchesExpected(expected, { name: file.name, relativePath: "" })) return true;
     // Solo un código de formulario + código de proceso identifica un
     // documento. MEM/OFI/COM generales no acreditan cualquier obligación.
@@ -112,10 +123,11 @@ Función:
     return !ambiguous && processSpecific && documentSpecific && everyCode(file.name,codes);
   }
 
-  function hasPdfWithin(files, folderRelativePath, expected, allDocuments) {
+  function hasPdfWithin(files, folderRelativePath, expected, allDocuments, container) {
     return files.some(function some(file) {
       return isDescendant(file && file.relativePath, folderRelativePath) &&
-        matchesFinalDocument(expected, file, allDocuments);
+        matchesFinalDocument(expected, file, allDocuments) &&
+        dateFitsContainer(file, container);
     });
   }
 
@@ -174,6 +186,35 @@ Función:
     ];
   }
 
+  // Fecha AAAA-MM del código del archivo (UGPA-RGI2-01-PRO-70-2025-10, COM-ITSQMET-UTET-2026-04-01).
+  function fileCodeMonth(name) {
+    const text = safeText(name);
+    const match = text.match(/-PRO-\d+-(\d{4})-(0[1-9]|1[0-2])(?:-|\b)/i) ||
+      text.match(/-ITSQMET-(?:UGPA|UTET)-(\d{4})-(0[1-9]|1[0-2])-/i);
+    return match ? Number(match[1]) * 12 + Number(match[2]) : null;
+  }
+
+  function containerMonths(container) {
+    const normalized = safeText(container && container.periodValidation && container.periodValidation.normalizedPeriod);
+    if (!normalized || !Types.parseSpanishPeriodRange) return null;
+    const parsed = Types.parseSpanishPeriodRange(normalized);
+    if (!parsed || !parsed.comparable) return null;
+    return {
+      start: Number(parsed.startYear) * 12 + Number(parsed.startMonth),
+      end: Number(parsed.endYear) * 12 + Number(parsed.endMonth)
+    };
+  }
+
+  // Un archivo codificado con una fecha ajena al período no acredita el documento
+  // de ese período (p. ej. el Plan 2025-10 copiado en Abril–Septiembre 2026).
+  // Margen: hasta 2 meses antes del inicio (planificación) y 6 después del cierre (informes).
+  function dateFitsContainer(file, container) {
+    const month = fileCodeMonth(file && file.name);
+    const range = containerMonths(container);
+    if (month == null || !range) return true;
+    return month >= range.start - 2 && month <= range.end + 6;
+  }
+
   function evidenceExists(expected, container, index, allDocuments) {
     const containerRel = rel(container.relativePath);
 
@@ -185,7 +226,7 @@ Función:
 
     if (
       matchingFolders.some(function hasPdf(folder) {
-        return hasPdfWithin(index.files, folder.relativePath, expected, allDocuments);
+        return hasPdfWithin(index.files, folder.relativePath, expected, allDocuments, container);
       })
     ) {
       return true;
@@ -193,7 +234,7 @@ Función:
 
     return index.files.some(function keep(file) {
       if (!isDescendant(file && file.relativePath, containerRel)) return false;
-      return matchesFinalDocument(expected, file, allDocuments);
+      return matchesFinalDocument(expected, file, allDocuments) && dateFitsContainer(file, container);
     });
   }
 

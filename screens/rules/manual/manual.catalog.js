@@ -82,7 +82,9 @@ Función:
           name: "Proceso de Seguimiento al Proceso de Formación del Personal Docente",
           periodPolicy: { required: true, months: 12, label: "Anual" },
           documents: [
-            { id: "rgi1", label: "Reporte de Seguimiento de Formación Docente", codes: ["UGPA-RGI1", "PRO-248"], keywords: ["reporte", "seguimiento", "formacion"], template: "UGPA-RGI1-0X-PRO-248-AÑO-MES" }
+            { id: "rgi1", label: "Reporte de Seguimiento de Formación Docente", codes: ["UGPA-RGI1", "PRO-248"], keywords: ["reporte", "seguimiento", "formacion"], template: "UGPA-RGI1-0X-PRO-248-AÑO-MES" },
+            // El procedimiento exige elaborarlo antes del seguimiento; el inventario no le asigna código.
+            { id: "cronograma", label: "Cronograma de Seguimiento Individual a Docentes en Formación", codes: [], keywords: ["cronograma", "seguimiento"], template: "", codeStatus: "no-especificado" }
           ]
         },
         "321": {
@@ -136,7 +138,7 @@ Función:
           periodPolicy: { required: true, months: 6, label: "Semestral" },
           documents: [
             { id: "com", label: "Comunicado del Proceso de Titulación y Evaluación", codes: ["COM-ITSQMET-UTET"], keywords: ["comunicado", "titulacion", "evaluacion"], template: "COM-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "acta", label: "Acta de Titulación por Examen Complexivo", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "examen", "complexivo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X" }
+            { id: "acta", label: "Acta de Titulación por Examen Complexivo", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "examen", "complexivo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X", systemFilePatterns: ["^ACTA_COMPLEX_\\d{10}_"] }
           ]
         },
         "96": {
@@ -157,7 +159,7 @@ Función:
           documents: [
             { id: "plagio", label: "Porcentaje de Plagio", codes: ["MEM-ITSQMET-UTET"], keywords: ["porcentaje", "plagio"], template: "MEM-ITSQMET-UTET-AÑO-MES-0X" },
             { id: "com", label: "Comunicado del Proceso de Titulación y Evaluación", codes: ["COM-ITSQMET-UTET"], keywords: ["comunicado", "titulacion", "evaluacion"], template: "COM-ITSQMET-UTET-AÑO-MES-0X" },
-            { id: "acta", label: "Acta de Titulación por Trabajo de Titulación", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "trabajo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X" }
+            { id: "acta", label: "Acta de Titulación por Trabajo de Titulación", codes: ["AT-ITSQMET-UTET"], keywords: ["acta", "titulacion", "trabajo"], template: "AT-ITSQMET-UTET-AÑO-MES-0X", systemFilePatterns: ["^ACTA_TRAB_\\d{10}_"] }
           ]
         },
         "57": {

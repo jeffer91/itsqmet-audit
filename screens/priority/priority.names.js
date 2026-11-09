@@ -46,6 +46,8 @@
     return ratio>=0.64 ? 45+Math.round(ratio*50) : 0;
   }
   function manualDoc(task,manual) {
+    // Tareas de proceso completo: no corresponden a un único documento del manual.
+    if(task.skipManualMatch)return null;
     const docs=documents(task,manual);
     const aliases=task.scope==="UGPA" && safe(task.processNumber)==="60"
       ? {acta:"rgi1",ficha:"rgi2",guia:"rgi3"} : {};
@@ -137,7 +139,7 @@
     const doc=manualDoc(task,manual);
     const officialName=doc&&safe(doc.label)||safe(task.documentLabel);
     const expectedTemplate=doc&&safe(doc.template)||"";
-    const noOfficialCode=!!doc && task.scope==="UTET" && doc.codeStatus==="no-especificado";
+    const noOfficialCode=!!doc && doc.codeStatus==="no-especificado";
     const hasDoc=!!doc;
     const isFolder=["empty-folders","folders-without-pdf"].includes(category);
     const found=hasDoc?matchFiles(task,index,doc):{current:null,previous:null};
@@ -229,7 +231,9 @@
       const first=Array.isArray(task.groupItems)&&task.groupItems[0];
       const actual=safe(first&&(first.pathLabel||first.actual));
       displayTitle=safe(task.scope)+"-PRO-"+safe(task.processNumber)+" · "+safe(task.title);
-      suggestedAction="Revisar las "+Number(task.groupCount||1)+" observaciones agrupadas";
+      suggestedAction=task.workType==="quick"
+        ?"Corregir "+Number(task.groupCount||1)+" nombre(s) del grupo"
+        :"Revisar las "+Number(task.groupCount||1)+" observaciones agrupadas";
       namingNotice=actual?"Ejemplo: "+actual:"";
       sourceKind="group";
     }

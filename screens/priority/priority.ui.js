@@ -13,14 +13,16 @@
     if (item.large) return "Documento estratégico";
     const type = item.displayWorkType || item.workType;
     if (type === "document") return "Documento pendiente";
-    if (type === "quick") return "Organizar carpeta";
+    if (type === "quick") return /nombre de pdf/i.test(val(item.title)) ? "Corregir nombre de PDF" : "Corregir carpeta";
     return "Verificación";
   }
   function taskSummary(item) {
     if (item.large) return item.nextAction;
     if (item.suggestedAction) return item.suggestedAction;
     if (item.origin === "group") return "Revisar " + item.groupCount + " caso(s) relacionados";
-    if (item.workType === "quick") return "Comprobar y realizar la corrección";
+    if (item.workType === "quick") return item.origin === "group"
+      ? "Corregir " + item.groupCount + " nombre(s); se hace primero porque es rápido y aclara qué documentos faltan"
+      : "Comprobar y realizar la corrección";
     if (item.workType === "review") return "Comprobar la situación antes de actuar";
     return "Verificar la obligación y completar el documento";
   }
@@ -31,7 +33,8 @@
     const canCreate = !!(item.parentPath && item.proposedFolderName && item.workType === "quick");
     const groupDetails = (item.groupItems || []).length
       ? '<div class="task-items"><strong>Algunos elementos:</strong><ul>' +
-        item.groupItems.map(x => '<li>' + esc(x.actual || x.pathLabel || x.title) + '</li>').join("") +
+        item.groupItems.map(x => '<li>' + esc(x.actual || x.pathLabel || x.title) +
+          (x.suggestedName ? ' → <strong>' + esc(x.suggestedName) + '</strong>' : '') + '</li>').join("") +
         '</ul></div>' : "";
     const action = item.large
       ? '<button class="btn js-step" type="button" data-id="' + esc(item.id) + '">Terminé este paso</button>'

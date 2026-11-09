@@ -6,6 +6,8 @@
       start: 30,
       close: 15
     },
+    // Días tras el cierre a partir de los cuales un período se considera rezago histórico.
+    historicalDays: 365,
     levels: [
       { id: "max", label: "Máxima", rank: 4 },
       { id: "high", label: "Alta", rank: 3 },
@@ -29,6 +31,11 @@
           cadenceMonths: 6,
           effort: "high",
           stages: { rgi1: "start", rgi2: "start", rgi3: "close" }
+        },
+        "251": {
+          cadenceMonths: 6,
+          effort: "high",
+          stages: { rgi1: "start", rgi2: "close" }
         },
         "60": {
           special: true,

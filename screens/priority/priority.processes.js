@@ -37,7 +37,11 @@
       stats.total++;
       if(task.status!=="done"){
         stats.active++;
-        if(!stats.first||(ranks[task.level]||0)>(ranks[stats.first.level]||0))stats.first=task;
+        // Misma prioridad que la cola: puntuación si está disponible, nivel si no.
+        const Q=window.PriorityQueue;
+        const better=!stats.first||(Q&&Q.score?Q.score(task)>Q.score(stats.first):
+          (ranks[task.level]||0)>(ranks[stats.first.level]||0));
+        if(better)stats.first=task;
       }
     }
     for(const issue of issues||[]){
@@ -74,7 +78,7 @@
           folderStatus:!scanned?"Sin escaneo":located?"Localizada":"No localizada",
           tasks:stats.total,activeTasks:stats.active,issues:issueCount,
           priority:first?first.level:"",priorityLabel:first?first.levelLabel:"Sin urgencia calculada",
-          nextAction:first?first.title:!scanned?"Escanear carpeta":!located?
+          nextAction:first?(first.displayTitle||first.title):!scanned?"Escanear carpeta":!located?
             "Verificar ubicación y evidencias del proceso":issueCount?
             "Revisar inconsistencias documentales":"Contrastar indicador con registros de gestión",
           state:!scanned?"Sin escaneo":!located?"Evidencia por localizar":

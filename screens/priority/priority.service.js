@@ -159,7 +159,8 @@
       finding && finding.expectedValue,
       finding && finding.title
     ].join(" "));
-    if (/informe (de )?cumplimiento|informe final|reporte final|informe de impacto/.test(text)) return "close";
+    // "Reporte ... del Plan" es de cierre aunque su nombre contenga "plan".
+    if (/informe (de )?cumplimiento|informe final|reporte final|informe de impacto|reporte general de resultados|reporte de resultados|reporte de seguimiento/.test(text)) return "close";
     if (/deteccion|planificacion|\bplan\b|cronograma/.test(text)) return "start";
 
     const profile = Config.strategicProfiles[scope] && Config.strategicProfiles[scope][processNumber];
@@ -173,9 +174,10 @@
   function dueFor(stage, period, today) {
     if (!period) return { level: "", dueDate: null, reason: "" };
     // Una deuda histórica no equivale automáticamente a una urgencia actual.
-    // Revisar POA antes de subir su prioridad.
-    if (period.end.getTime() < addDays(today, -60).getTime()) {
-      return {level:"medium",dueDate:period.end,
+    // Solo es histórico lo cerrado hace más de un año: el semestre inmediatamente
+    // anterior sigue siendo una obligación vigente. Revisar POA antes de subir su prioridad.
+    if (period.end.getTime() < addDays(today, -Config.historicalDays).getTime()) {
+      return {level:"medium",dueDate:period.end,historical:true,
         reason:"Rezago de período histórico: verificar vigencia, evidencias y POA antes de ejecutar."};
     }
     if (stage === "start") {
@@ -257,6 +259,20 @@
     return /nombre de pdf incorrecto|nombre de carpeta incorrecto|carpeta de periodo mal nombrada/.test(title) ? "quick" : "review";
   }
 
+  function monthsOf(period) {
+    return (period.end.getUTCFullYear() * 12 + period.end.getUTCMonth()) -
+      (period.start.getUTCFullYear() * 12 + period.start.getUTCMonth()) + 1;
+  }
+
+  function periodMatchesCadence(scope, processNumber, period) {
+    const processInfo = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
+    const policy = processInfo && processInfo.periodPolicy;
+    if (!policy || !period) return true;
+    const cadence = cadenceForDate(policy, period.start);
+    if (cadence !== 6 && cadence !== 12) return true;
+    return monthsOf(period) === cadence;
+  }
+
   function taskFromFinding(finding, today) {
     const category = mapCategory(finding);
     if (!["required-documents", "empty-folders", "folders-without-pdf"].includes(category)) return null;
@@ -282,6 +298,17 @@
     const area = areaFromPath(finding.relativePath);
     const stage = stageFromFinding(finding, processNumber, scope);
     const period = processNumber ? rangeFromFinding(finding, processNumber, scope) : null;
+    // Una carpeta cuyo período no coincide con la periodicidad del proceso
+    // (p. ej. "Abril 2026–Septiembre 2027") se corrige primero como nombre;
+    // no se generan documentos con códigos deducidos de un período erróneo.
+    if (period && !periodMatchesCadence(scope, processNumber, period)) return null;
+    if (!period && processNumber) {
+      // Carpeta de período con nombre no oficial: si su rango tampoco coincide
+      // con la periodicidad, solo procede corregir el nombre.
+      const loose = [finding.periodLabel].concat(rel(finding.relativePath).split("/").reverse())
+        .map(looseRange).find(Boolean);
+      if (loose && !periodMatchesCadence(scope, processNumber, loose)) return null;
+    }
     // En UTET no se han acreditado fechas límite por cada entregable.
     // Un período cerrado, por sí solo, no establece mora ni prioridad máxima.
     const due = scope === "UTET"
@@ -312,6 +339,8 @@
       effort: effortFor(area, processNumber, finding),
       periodLabel: period ? periodLabel(period) : safeText(finding.periodLabel),
       dueDate: due.dueDate,
+      periodEnd: period ? period.end : null,
+      historical: !!due.historical,
       reason: finding.candidateFileName
         ? "PDF candidato localizado: "+safeText(finding.candidateFileName)+". Verificar título, contenido, período y aprobación antes de declarar ausencia."
         : verify ? (scope === "UTET" && processNumber === "56" && /articulo academico/.test(normalize(title))
@@ -408,11 +437,53 @@
     };
   }
 
+  function currentPeriodDocumentTask(scope, processNumber, processInfo, processFolder, period, doc, today) {
+    const label = periodLabel(period);
+    const isUtet = scope === "UTET";
+    // UTET no recibe vencimientos fabricados: se señala el inicio del período sin fecha.
+    const due = isUtet ? { level: "high", dueDate: null, reason: "" } : dueFor("start", period, today);
+    const optional = isUtet && processNumber === "56" && doc.id === "rgi3";
+    const level = optional ? "medium" : due.level || "high";
+    const area = areaFromPath(processFolder.relativePath);
+    const base = rel(processFolder.relativePath);
+    return {
+      id: ["current", scope, processNumber, doc.id, label].join("|"),
+      scope: scope,
+      processNumber: processNumber,
+      processName: safeText(processInfo && processInfo.name),
+      area: area === "other" ? "strategic" : area,
+      areaLabel: areaDef(area === "other" ? "strategic" : area).label,
+      level: level,
+      levelLabel: levelDef(level).label,
+      stage: "start",
+      stageLabel: "Inicio",
+      effort: "high",
+      periodLabel: label,
+      dueDate: due.dueDate,
+      periodEnd: period.end,
+      historical: false,
+      reason: optional
+        ? "Planificación de Artículo Académico del período vigente: verificar si aplica a este período antes de elaborar."
+        : isUtet
+          ? "El período vigente ya inició y no se localizó su carpeta ni este documento de inicio. Sin fecha institucional confirmada: verificar la fecha de entrega."
+          : due.reason + " No se localizó la carpeta del período vigente ni este documento.",
+      title: safeText(doc.label),
+      documentId: doc.id,
+      documentLabel: safeText(doc.label),
+      sourceCategory: "required-documents",
+      // Ruta prevista del período: así los archivos de otros períodos quedan como referencia.
+      pathLabel: base + "/" + scope + "-PRO-" + processNumber + "-" + label,
+      actionPath: safeText(processFolder.path) || safeText(processFolder.absolutePath),
+      parentPath: "",
+      proposedFolderName: "",
+      workType: optional ? "review" : "document",
+      synthetic: true
+    };
+  }
+
   function buildStrategicScheduleTasks(sharedState, today) {
     const tasks = [];
-    // Los documentos aprobados de UTET se evalúan con RuleRequiredDocuments.
-    // No transformar la mera frecuencia semestral en órdenes de crear carpetas.
-    ["UGPA"].forEach(function eachScope(scope) {
+    ["UGPA", "UTET"].forEach(function eachScope(scope) {
       const scan = scanForScope(sharedState, scope);
       if (!scan || scan.ok !== true || !Types.buildScanIndex) return;
       const index = Types.buildScanIndex(scan);
@@ -424,16 +495,30 @@
         const processInfo = Manual.getProcess ? Manual.getProcess(scope, processNumber) : null;
         const processFolder = findProcessFolder(index, scope, processNumber);
         const periods = currentAndPrevious(profile.cadenceMonths, today);
+        const startDocs = (processInfo && Array.isArray(processInfo.documents) ? processInfo.documents : [])
+          .filter(function keep(doc) { return profile.stages && profile.stages[doc.id] === "start"; });
 
         periods.forEach(function eachPeriod(period, periodIndex) {
           if (!processFolder) {
-            if (periodIndex === 0) {
+            // UTET: los documentos aprobados se evalúan con RuleRequiredDocuments;
+            // no se crean órdenes de carpetas por frecuencia.
+            if (periodIndex === 0 && scope === "UGPA") {
               tasks.push(syntheticFolderTask(scope, processNumber, processInfo, null, period, profile, today, true, "strategic"));
             }
             return;
           }
-          if (!findPeriodFolder(index, processFolder, processNumber, scope, period)) {
-            tasks.push(syntheticFolderTask(scope, processNumber, processInfo, processFolder, period, profile, today, false, "strategic"));
+          if (findPeriodFolder(index, processFolder, processNumber, scope, period)) return;
+          if (periodIndex === 0 && today.getTime() >= period.start.getTime() && startDocs.length) {
+            // Período vigente iniciado sin carpeta: los documentos de inicio ya corren.
+            startDocs.forEach(function eachDoc(doc) {
+              tasks.push(currentPeriodDocumentTask(scope, processNumber, processInfo, processFolder, period, doc, today));
+            });
+            return;
+          }
+          if (scope === "UGPA") {
+            const area = areaFromPath(processFolder.relativePath);
+            tasks.push(syntheticFolderTask(scope, processNumber, processInfo, processFolder, period, profile, today, false,
+              area === "other" ? "strategic" : area));
           }
         });
       });
@@ -476,7 +561,9 @@
     // determina cuándo puede elaborarse la guía curricular RGI3.
     const p = params.period || params.cycle;
     const isGuide = params.documentId === "guia";
-    const priority = isGuide ? "high" : "medium";
+    // La guía depende del acta y las fichas de la carrera: mientras falten,
+    // los requisitos van primero y la guía queda en espera.
+    const priority = params.level || (isGuide ? "high" : "medium");
     return {
       id: ["pro60", params.careerKey, params.documentId, periodLabel(p)].join("|"),
       scope: "UGPA",
@@ -491,9 +578,10 @@
       effort: "high",
       periodLabel: periodLabel(p),
       dueDate: null,
-      reason: params.reason + (isGuide
-        ? " Se localizaron fichas de análisis; confirmar su aprobación antes de elaborar la guía. No se ha verificado un vencimiento específico."
+      reason: params.reason + (params.extraReason ? " " + params.extraReason : isGuide
+        ? " Se localizaron el acta y las fichas de análisis; confirmar su aprobación antes de elaborar la guía. No se ha verificado un vencimiento específico."
         : " Verificar otras ubicaciones y la vigencia del período antes de elaborar el documento."),
+      blockedBy: params.blockedBy || [],
       title: params.title + " · " + params.careerName,
       documentId: params.documentId,
       careerName: params.careerName,
@@ -610,19 +698,31 @@
         return safeText(found && found.path) || safeText(latestBase && latestBase.path);
       }
 
+      const guideMissing = !hasGuide;
+      const missingInputs = [];
+      if (!hasActa) missingInputs.push("el acta de colectivos docentes");
+      if (!hasFicha) missingInputs.push("las fichas de análisis por nivel");
+      const prerequisiteLevel = guideMissing ? "high" : "medium";
       if (!hasActa) tasks.push(buildPro60DocumentTask({
+        level: prerequisiteLevel,
         careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
         documentId: "acta", title: "Falta Acta de reunión de colectivos docentes",
         reason: "No se encontró el Acta RGI1 de esta carrera dentro del ciclo bienal.",
         actionPath: targetPath("acta"), cycle: previousCycle, period: actualPeriod, today: today
       }));
       if (!hasFicha) tasks.push(buildPro60DocumentTask({
+        level: prerequisiteLevel,
         careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
         documentId: "ficha", title: "Faltan fichas de análisis curricular",
         reason: "No se encontraron fichas de nivel de esta carrera. Se aceptan las fichas históricas por carrera y el formato UGPA-RGI2 vigente.",
         actionPath: targetPath("ficha"), cycle: previousCycle, period: actualPeriod, today: today
       }));
       if (!hasGuide) tasks.push(buildPro60DocumentTask({
+        level: missingInputs.length ? "low" : "high",
+        blockedBy: missingInputs,
+        extraReason: missingInputs.length
+          ? "En espera: primero completar " + missingInputs.join(" y ") + " de esta carrera."
+          : "",
         careerKey: careerKey, careerName: career.name, careerFolder: latestBase,
         documentId: "guia", title: "Falta Guía Curricular de Aplicación Académica",
         reason: "No se encontró la guía curricular RGI3 de esta carrera dentro del ciclo bienal.",
@@ -783,8 +883,123 @@
     return issues;
   }
 
+  // Rango "Mes AAAA ... Mes AAAA" aunque el separador no sea el oficial.
+  function looseRange(name) {
+    const names = MONTHS.map(function (m) { return normalize(m); });
+    const re = /(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(\d{4})\s+(?:a\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(\d{4})/;
+    const match = normalize(name).replace(/setiembre/g, "septiembre").match(re);
+    if (!match) return null;
+    const startMonth = names.indexOf(match[1]), endMonth = names.indexOf(match[3]);
+    if (startMonth < 0 || endMonth < 0) return null;
+    return {
+      start: dateUtc(Number(match[2]), startMonth, 1),
+      end: dateUtc(Number(match[4]), endMonth + 1, 0)
+    };
+  }
+
+  // UTET-PRO-57: si PRO-56 planificó Artículo Académico en un período y no existe
+  // la carpeta de PRO-57, faltan sus cinco documentos institucionales.
+  function buildUtet57Tasks(sharedState) {
+    const scan = scanForScope(sharedState, "UTET");
+    if (!scan || scan.ok !== true || !Types.buildScanIndex) return [];
+    const index = Types.buildScanIndex(scan);
+    if (findProcessFolder(index, "UTET", "57")) return [];
+    const periods = new Map();
+    (index.files || []).forEach(function (file) {
+      if (safeText(file.extension).toLowerCase() !== ".pdf") return;
+      const text = normalize(file.name);
+      if (!/pro 56/.test(text) || !/articulo academico/.test(text)) return;
+      const parts = rel(file.relativePath).split("/");
+      const folder = parts.find(function (part) { return /PRO-56-/i.test(part) && looseRange(part); });
+      const range = folder && looseRange(folder);
+      if (range) periods.set(periodLabel(range), range);
+    });
+    return Array.from(periods.entries()).map(function (entry) {
+      return {
+        id: "utet57|" + entry[0],
+        scope: "UTET", processNumber: "57",
+        processName: safeText(Manual.getProcess && Manual.getProcess("UTET", "57") && Manual.getProcess("UTET", "57").name),
+        area: "mission", areaLabel: areaDef("mission").label,
+        level: "high", levelLabel: levelDef("high").label,
+        stage: "ongoing", stageLabel: "Ejecución", effort: "high",
+        periodLabel: entry[0], dueDate: null, periodEnd: entry[1].end, historical: false,
+        reason: "PRO-56 tiene una Planificación de Artículo Académico para este período, pero no se localizó la carpeta de UTET-PRO-57. Faltarían sus cinco documentos: cronograma, designación de docentes metodológicos, porcentaje de plagio, comunicado y acta de titulación.",
+        title: "Localizar o elaborar la documentación de UTET-PRO-57 (Artículo Académico)",
+        skipManualMatch: true,
+        pathLabel: "", actionPath: safeText(scan.rootPath),
+        parentPath: "", proposedFolderName: "",
+        workType: "review", synthetic: true
+      };
+    });
+  }
+
+  function keywordHits(name, doc) {
+    const words = normalize(name).split(" ");
+    return (Array.isArray(doc && doc.keywords) ? doc.keywords : [])
+      .filter(function (k) { return words.includes(normalize(k)); }).length;
+  }
+
+  // Una carpeta vacía que corresponde a un documento ya pendiente no es una tarea aparte.
+  function dropDuplicateFolders(tasks) {
+    const required = tasks.filter(function (t) { return t.sourceCategory === "required-documents" && t.pathLabel; });
+    return tasks.filter(function (task) {
+      if (!["empty-folders", "folders-without-pdf"].includes(task.sourceCategory)) return true;
+      const path = rel(task.pathLabel);
+      return !required.some(function (req) {
+        if (req.scope !== task.scope || req.processNumber !== task.processNumber) return false;
+        const base = rel(req.pathLabel);
+        if (path === base) return true;
+        if (!path.startsWith(base + "/")) return false;
+        const processInfo = Manual.getProcess ? Manual.getProcess(req.scope, req.processNumber) : null;
+        const doc = processInfo && (processInfo.documents || []).find(function (d) {
+          return normalize(d.label) === normalize(req.documentLabel || req.title);
+        });
+        return !!doc && keywordHits(path.split("/").pop(), doc) >= 2;
+      });
+    });
+  }
+
+  // Muchas carpetas vacías del mismo proceso se trabajan como un solo grupo.
+  function groupEmptyFolders(tasks) {
+    const buckets = new Map();
+    tasks.forEach(function (task) {
+      if (task.sourceCategory !== "empty-folders") return;
+      const key = task.scope + "|" + task.processNumber;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(task);
+    });
+    const grouped = new Set();
+    const result = [];
+    buckets.forEach(function (items, key) {
+      if (items.length < 4) return;
+      items.forEach(function (item) { grouped.add(item); });
+      const first = items[0];
+      result.push({
+        id: "empty-group|" + key,
+        scope: first.scope, processNumber: first.processNumber, processName: first.processName,
+        area: first.area, areaLabel: first.areaLabel,
+        level: "medium", levelLabel: levelDef("medium").label,
+        stage: "review", stageLabel: "Revisión documental", effort: "low",
+        periodLabel: "", dueDate: null, periodEnd: null, historical: false,
+        reason: "Se detectaron " + items.length + " carpetas vacías en este proceso. Verificar si deben recibir documentos o si pueden quedar vacías por ahora.",
+        title: items.length + " carpetas vacías en " + first.scope + "-PRO-" + first.processNumber,
+        sourceCategory: "empty-folders-group",
+        groupCount: items.length,
+        groupItems: items.slice(0, 12).map(function (item) { return { pathLabel: item.pathLabel, title: item.title }; }),
+        pathLabel: "", actionPath: first.actionPath,
+        workType: "review", synthetic: false
+      });
+    });
+    return tasks.filter(function (task) { return !grouped.has(task); }).concat(result);
+  }
+
   function sortTasks(tasks) {
+    const Queue = window.PriorityQueue;
     tasks.sort(function compare(a, b) {
+      if (Queue && typeof Queue.score === "function") {
+        const byScore = Queue.score(b) - Queue.score(a);
+        if (byScore) return byScore;
+      }
       const byUrgency = levelDef(b.level).rank - levelDef(a.level).rank;
       if (byUrgency) return byUrgency;
       const byArea = areaDef(b.area).rank - areaDef(a.area).rank;
@@ -826,17 +1041,22 @@
     const progress = progressMap();
     const findings = activeFindings(shared);
     const synthetic = buildStrategicScheduleTasks(shared, today).concat(
-      buildPro60Tasks(shared, today), buildOtherScheduleTasks(shared, today)
+      buildPro60Tasks(shared, today), buildOtherScheduleTasks(shared, today), buildUtet57Tasks(shared)
     );
     const fromRules = findings.map(function (finding) { return taskFromFinding(finding, today); }).filter(Boolean);
-    const tasks = synthetic.concat(fromRules.filter(function (task) {
+    const merged = groupEmptyFolders(dropDuplicateFolders(synthetic.concat(fromRules.filter(function (task) {
       return !duplicateGenericMissingPeriod(task, synthetic);
-    }),externalTasks).map(function (task) {
+    }))));
+    // Los nombres y la evidencia se contrastan una sola vez aquí, para que la
+    // tabla de procesos, la cola y las exportaciones usen el mismo nivel.
+    const namesContext = window.PriorityNames ? window.PriorityNames.prepare(shared) : null;
+    const tasks = merged.concat(externalTasks).map(function (task) {
       const scan = scanForScope(shared, task.scope);
       const localFolder = !!(scan && scan.source && scan.source.kind === "folder");
-      return {...task, status: progress[task.id] || "pending",
+      const base = {...task, status: progress[task.id] || "pending",
         parentPath: localFolder ? task.parentPath : "",
         proposedFolderName: localFolder ? task.proposedFolderName : ""};
+      return namesContext ? {...window.PriorityNames.rename(base, namesContext), named: true} : base;
     });
     sortTasks(tasks);
 
@@ -885,6 +1105,7 @@
     // Los informes comparten los mismos nombres contrastados con el escaneo y el manual.
     const ctx=window.PriorityNames ? window.PriorityNames.prepare() : null;
     return (tasks||[]).map(function (task) {
+      if (task.named) return Object.assign({},task,{title: task.displayTitle || task.title});
       if (!ctx) return task;
       const named=window.PriorityNames.rename(task,ctx);
       return Object.assign({},task,{
