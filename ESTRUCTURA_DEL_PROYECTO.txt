@@ -93,3 +93,13 @@ Las actas de titulación emitidas por SISACAD (ACTA_COMPLEX_<cédula>_…, ACTA_
 UGPA-PRO-248 incorpora el Cronograma de Seguimiento Individual a Docentes en Formación (sin código en el inventario).
 RG-002 (capacitación con 4 evidencias) ya no toma los Acuerdos de Patrocinio individuales como capacitaciones.
 Se mantiene la lista UTET aprobada (24 documentos, 9 procesos) y la política de no fabricar vencimientos UTET.
+
+
+CORRECCIONES DE FIRMAS Y ENLACES SHAREPOINT (09/11/2026)
+Se corrige el arranque de Firmas y la vigencia de resultados de fuentes inaccesibles.
+priority.sharepoint.js añade bibliotecas configurables por unidad, enlaces por tarea
+y elemento agrupado, y URLs en reportes. La app sigue auditando archivos locales;
+no verifica el contenido remoto ni renombra automáticamente documentos en SharePoint.
+La cola respeta los bloques incluso con tareas iniciadas o muchos grupos del mismo
+proceso. No se truncan los grupos a doce casos. No se modificó el catálogo aprobado
+ni se introdujeron plazos UTET o atribuciones de responsabilidad sin confirmar.

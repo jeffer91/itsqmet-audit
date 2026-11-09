@@ -173,14 +173,14 @@ async function list(options={}) {
   const totalMatched=selected.length;
   const summaryCounts={verified:0,invalid:0,unverifiable:0};
   for(const [,record] of selected){
-    if((record.status in summaryCounts)&&inventory.has(record.scope+"|"+record.path))
+    if((record.status in summaryCounts)&&!record.stale&&inventory.has(record.scope+"|"+record.path))
       summaryCounts[record.status]++;
   }
   const paged=Number.isInteger(options.limit)&&options.limit>0;
   const limit=paged?Math.min(options.limit,200):totalMatched;
   const offset=paged?Math.max(0,Math.floor(Number(options.offset)||0)):0;
   const records=selected.slice(offset,offset+limit).map(([key,record])=>{
-    const stale=!inventory.has(key);
+    const stale=record.stale===true || !inventory.has(key);
     const withStatus={...record,stale};
     if(includePreviews||!record.cover)return withStatus;
     const cover={...record.cover,slots:(record.cover.slots||[]).map(({preview,...slot})=>slot)};
@@ -190,3 +190,4 @@ async function list(options={}) {
     errors:data.errors||[],records,totalMatched,summaryCounts,offset,limit};
 }
 module.exports={scan,list,onChange};
+

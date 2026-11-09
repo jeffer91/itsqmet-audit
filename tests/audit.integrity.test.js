@@ -90,6 +90,15 @@ test("firmas usa el inventario, incorpora solicitudes solapadas y señala fuente
   assert.ok(partial.records.find(r => r.scope === "UTET").stale);
   assert.ok(!partial.records.find(r => r.scope === "UGPA").stale);
   assert.equal((await signatures.list()).partial, true);
+  const listed = await signatures.list();
+  assert.ok(listed.records.find(r => r.scope === "UTET").stale);
+  // Un resultado verificado de una fuente inaccesible no cuenta como vigente.
+  const unavailable = JSON.parse(await fs.readFile(stored, "utf8"));
+  for (const record of Object.values(unavailable.records)) {
+    if (record.scope === "UTET") record.status = "verified";
+  }
+  await fs.writeFile(stored, JSON.stringify(unavailable));
+  assert.equal((await signatures.list()).summaryCounts.verified, 0);
 });
 
 
@@ -112,3 +121,4 @@ test("sin copia válida el historial corrupto permanece intacto",async t=>{
   await assert.rejects(history.loadHistory(),/no hay una copia de seguridad válida/);
   assert.equal(await fs.readFile(location,"utf8"),"{corrupto");
 });
+

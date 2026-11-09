@@ -84,3 +84,10 @@ h1{font-size:27px;line-height:1.2;letter-spacing:-.03em;margin:0 0 5px}
 }
 
 .task-title,.backlog-row__main strong,.task-meta,.task-reason{overflow-wrap:anywhere;word-break:normal}
+
+
+.sharepoint-settings { width:100%; margin-top:1rem; padding:1rem; }
+.sharepoint-settings label { display:block; margin:.75rem 0; }
+.sharepoint-settings input { display:block; width:100%; box-sizing:border-box; padding:.6rem; }
+.task-items li { margin-bottom:.75rem; overflow-wrap:anywhere; }
+.task-items li button { display:block; margin-top:.4rem; }

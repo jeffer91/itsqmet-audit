@@ -6,3 +6,7 @@ signatures.styles.css: estilos de tarjetas, indicadores y filtros.
 CONEXIÓN: core/preload.js -> core/ipc/signatures.ipc.js -> core/signatures/signature.service.js -> validate_pdf.py.
 RESULTADOS: verificada, inválida, no verificable o sin firma electrónica. Si no hay firma digital, muestra por casilla el recorte de portada y su clasificación visual. Los registros obsoletos se identifican explícitamente.
 PENDIENTE: fechas normativas y distribución autónoma de las dependencias de Python y OCR.
+
+
+Los dos controles de paginación se crean antes de insertarlos. La prueba de inicio
+ejecuta el script y verifica la consulta inicial, avance y retroceso de página.

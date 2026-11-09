@@ -113,6 +113,10 @@
     const history=await window.api.history.get();
     if(history&&history.ok&&history.history)window.AppStore.setHistory(history.history);
     window.PriorityUI.bindEvents({
+      onSaveSharePoint: values => perform(() => {
+        window.PrioritySharePoint.save(values);
+        refresh("Enlaces guardados. Comprueba que cada biblioteca corresponde a su raíz local.");
+      }),
       onRefresh:()=>perform(()=>{
         window.PriorityStorage.setQueue([]);
         refresh("Se actualizaron las cinco prioridades.");
@@ -201,3 +205,4 @@
       .finally(()=>window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(false));
   });
 })(window,document);
+

@@ -1139,11 +1139,9 @@ function buildPriorityDocument(payload) {
     throw new Error("No hay pendientes ni inconsistencias para exportar.");
   }
 
-  const priorityOrder = { max: 4, high: 3, medium: 2, low: 1 };
   const priorityLabel = { max: "Máxima", high: "Alta", medium: "Media", low: "Baja" };
-  const sorted = tasks.slice().sort(function sort(a, b) {
-    return (priorityOrder[b && b.level] || 0) - (priorityOrder[a && a.level] || 0);
-  });
+  // El servicio ya aplica evidencia, bloques y urgencia. No reordenar por nivel.
+  const sorted = tasks;
 
   const rows = sorted.map(function mapTask(task, index) {
     const process = task && task.processNumber
@@ -1162,7 +1160,7 @@ function buildPriorityDocument(payload) {
         <td>${escapeHtml(task.periodLabel || "Sin período")}</td>
         <td>${escapeHtml(task.stageLabel || "")}${dueLabel ? "<br><span class=\"muted\">Ref.: " + escapeHtml(dueLabel) + "</span>" : ""}</td>
         <td>${escapeHtml(task.reason || "")}</td>
-        <td class="path">${escapeHtml(task.pathLabel || "")}</td>
+        <td class="path">${escapeHtml(task.pathLabel || "")}${sharePointLink(task.sharePointUrl)}</td>
       </tr>
     `;
   }).join("");
@@ -1183,8 +1181,8 @@ function buildPriorityDocument(payload) {
           return `<tr>
             <td>${escapeHtml(item.processNumber ? item.scope + "-PRO-" + item.processNumber : item.scope + " · Sin clasificar")}</td>
             <td>${escapeHtml(item.title || "")}: ${escapeHtml(item.actual || "")}</td>
-            <td>${escapeHtml(item.suggestedName || item.expected || "Revisar manualmente")}</td>
-            <td class="path">${escapeHtml(item.pathLabel || "")}</td>
+            <td>${escapeHtml(item.suggestedName || "Revisar manualmente; no hay nombre propuesto confirmado")}</td>
+            <td class="path">${escapeHtml(item.pathLabel || "")}${sharePointLink(item.sharePointUrl)}</td>
           </tr>`;
         });
       }).join("")
@@ -1350,3 +1348,11 @@ function buildExportDocument(payload) {
 module.exports = {
   buildExportDocument
 };
+
+function sharePointLink(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !url.hostname.endsWith(".sharepoint.com") || url.username || url.password) return "";
+    return '<br><a href="' + escapeHtml(url.href) + '">Abrir carpeta en SharePoint</a>';
+  } catch (_) { return ""; }
+}

@@ -42,6 +42,19 @@ test("PDF de prioridades incorpora los procesos y cada inconsistencia",()=>{
   assert.match(html,/Problema B/);
   assert.match(html,/Sin datos/);
 });
+test("los reportes incluyen URLs y el PDF conserva el orden calculado",()=>{
+  const link="https://itsqmet.sharepoint.com/sites/a/Forms/AllItems.aspx?id=%2Fa";
+  const p={mode:"priority",tasks:[{title:"Primera corrección",workType:"quick",level:"low",sharePointUrl:link},
+    {title:"Segundo documento",workType:"document",level:"max",sharePointUrl:"javascript:alert(1)"}],
+    inconsistencies:[{items:[{title:"Caso",sharePointUrl:link}]}]};
+  const html=buildExportDocument(p).html;
+  assert.ok(html.indexOf("Primera corrección")<html.indexOf("Segundo documento"));
+  assert.ok(html.includes('href="'+link+'"'));
+  assert.ok(!html.includes("javascript:"));
+  const parts=readZip(buildPriorityWorkbook(p));
+  assert.ok(parts["xl/worksheets/sheet2.xml"].includes(link));
+  assert.ok(parts["xl/worksheets/sheet3.xml"].includes(link));
+});
 test("se ven los 17 procesos activos (8 UGPA y 9 UTET) incluso sin escaneo",()=>{
   const window={RulesTypes:{}},context=vm.createContext({window,Set});
   for(const file of ["screens/rules/manual/manual.catalog.js","screens/priority/priority.processes.js"])
@@ -53,3 +66,4 @@ test("se ven los 17 procesos activos (8 UGPA y 9 UTET) incluso sin escaneo",()=>
   assert.ok(!result.some(x=>x.id==="UTET-59"));
   assert.ok(result.every(x=>x.indicatorStatus==="No evaluado"&&x.state==="Sin escaneo"));
 });
+

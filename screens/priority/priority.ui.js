@@ -26,16 +26,23 @@
     if (item.workType === "review") return "Comprobar la situación antes de actuar";
     return "Verificar la obligación y completar el documento";
   }
+  function sharePointButton(item) {
+    if (!item.sharePointUrl) return "";
+    return '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.sharePointUrl) + '">Abrir carpeta en SharePoint</button>';
+  }
+  function itemDetails(item) {
+    return (item.groupItems || []).length
+      ? '<div class="task-items"><strong>Elementos del grupo:</strong><ul>' +
+        item.groupItems.map(x => '<li>' + esc(x.actual || x.pathLabel || x.title) +
+          (x.suggestedName ? ' → <strong>' + esc(x.suggestedName) + '</strong>' : ' · Revisar antes de renombrar') + sharePointButton(x) + '</li>').join("") +
+        '</ul></div>' : "";
+  }
   function card(item, index) {
     const title = esc(item.displayTitle || item.projectTitle || item.title);
     const meta = esc([item.scope, item.processNumber ? "PRO-" + item.processNumber : "",
       kind(item)].filter(Boolean).join(" · "));
     const canCreate = !!(item.parentPath && item.proposedFolderName && item.workType === "quick");
-    const groupDetails = (item.groupItems || []).length
-      ? '<div class="task-items"><strong>Algunos elementos:</strong><ul>' +
-        item.groupItems.map(x => '<li>' + esc(x.actual || x.pathLabel || x.title) +
-          (x.suggestedName ? ' → <strong>' + esc(x.suggestedName) + '</strong>' : '') + '</li>').join("") +
-        '</ul></div>' : "";
+    const groupDetails = itemDetails(item);
     const action = item.large
       ? '<button class="btn js-step" type="button" data-id="' + esc(item.id) + '">Terminé este paso</button>'
       : '<button class="btn js-status" type="button" data-status="done" data-id="' + esc(item.id) + '">Terminé mi parte</button>';
@@ -62,7 +69,8 @@
       '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +
       (item.periodLabel ? '<span class="task-meta">Período: ' + esc(item.periodLabel) + '</span>' : "") +
       groupDetails +
-      '<div class="task-actions">' +
+      (item.workType === 'quick' ? '<p>Después de corregir, vuelve a escanear para comprobar el resultado.</p>' : '') +
+      '<div class="task-actions">' + sharePointButton(item) +
       (item.actionPath ? '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.actionPath) + '">Abrir carpeta</button>' : "") +
       (canCreate ? '<button class="btn btn-soft js-mkdir" type="button" data-id="' + esc(item.id) + '">Crear carpeta</button>' : "") +
       action +
@@ -90,12 +98,12 @@
         esc(item.displayTitle || item.projectTitle || item.title) + '</strong><small>' +
         esc([item.scope,item.processNumber ? "PRO-"+item.processNumber : "",kind(item),STATUS[item.status]||"Pendiente"]
         .filter(Boolean).join(" · ")) + '</small></div>' +
-        '<div class="backlog-row__actions">' +
+        '<div class="backlog-row__actions">' + sharePointButton(item) +
         (item.actionPath?'<button type="button" class="btn btn-light js-open" data-path="' +
         esc(item.actionPath) + '">Abrir</button>':"") +
         (inactive?'<button type="button" class="btn btn-soft js-reopen" data-id="' +
         esc(item.id) + '">Reactivar</button>':"") +
-        '</div></div>';
+        '</div></div>' + ((item.groupItems || []).length ? '<details class="backlog-detail"><summary>Ver elementos y correcciones</summary>' + itemDetails(item) + '</details>' : '');
     }).join("") || '<div class="empty-state">No hay registros con estos filtros.</div>';
     byId("btnMore").hidden = items.length <= limit;
   }
@@ -132,6 +140,12 @@
     renderProcesses();
   }
   function bindEvents(handlers) {
+    const settings = window.PrioritySharePoint.load();
+    byId("sharePointUGPA").value = settings.UGPA;
+    byId("sharePointUTET").value = settings.UTET;
+    byId("btnSaveSharePoint").addEventListener("click", () => handlers.onSaveSharePoint({
+      UGPA: byId("sharePointUGPA").value, UTET: byId("sharePointUTET").value
+    }));
     byId("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
     byId("btnRescanPriority").addEventListener("click",handlers.onRescan);
     byId("btnExportPriorityExcel").addEventListener("click",()=>handlers.onExportExcel(activeFilters()));
@@ -159,3 +173,4 @@
   }
   window.PriorityUI={render:render,bindEvents:bindEvents,setGlobalMessage:setGlobalMessage};
 })(window,document);
+

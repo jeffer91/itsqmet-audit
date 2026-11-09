@@ -19,6 +19,22 @@ const task=(id,area,workType,level="high",processNumber=id)=>({
   id,scope: id.startsWith("UTET")?"UTET":"UGPA",processNumber,area,workType,level,
   title:"Plan de resultados "+id,reason:"Pendiente vigente",status:"pending"
 });
+test("los bloques prevalecen sobre tareas iniciadas y el cupo por proceso",()=>{
+  const e=env();
+  const tasks=Array.from({length:5},(_,i)=>task("fix-"+i,"mission","quick","low","134"));
+  tasks.push({...task("doc","strategic","document","max","70"),status:"doing"});
+  const progress=e.window.PriorityStorage.load();progress.queue=["doc"];
+  const board=e.window.PriorityQueue.build({tasks,inconsistencies:[]},progress);
+  assert.equal(board.items.length,5);
+  assert.ok(board.items.every(x=>x.workType==="quick"));
+});
+test("un grupo de correcciones conserva todos los elementos y sus enlaces",()=>{
+  const e=env();
+  const items=Array.from({length:63},(_,i)=>({actual:"PDF "+i,sharePointUrl:"https://itsqmet.sharepoint.com/"+i}));
+  const board=e.window.PriorityQueue.build({tasks:[],inconsistencies:[{scope:"UGPA",processNumber:"134",title:"Nombre de PDF incorrecto",workType:"quick",items}]},e.window.PriorityStorage.load());
+  assert.equal(board.items[0].groupItems.length,63);
+  assert.equal(board.items[0].groupItems[62].sharePointUrl,items[62].sharePointUrl);
+});
 function sample(){
   return {tasks:[
     task("UGPA-31","strategic","document","max","31"),
@@ -101,3 +117,4 @@ test("las observaciones repetidas se agrupan y no monopolizan la cola",()=>{
   assert.equal(board.items.length,5);
   assert.equal(board.all.filter(x=>x.origin==="group").length,1);
 });
+

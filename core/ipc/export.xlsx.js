@@ -47,10 +47,10 @@ function workbookTables(payload){
   return [
     {name:"Procesos",h:["Unidad","Código","Proceso institucional","Situación","Carpeta","Total tareas","Tareas abiertas","Inconsistencias","Prioridad","Siguiente acción"],
       rows:processes.map(p=>[p.scope,p.scope+"-PRO-"+p.processNumber,p.processName,p.state,p.folderStatus,p.tasks,p.activeTasks,p.issues,p.priorityLabel,p.nextAction])},
-    {name:"Pendientes",h:["Unidad","Proceso","Nombre del proceso","Prioridad","Qué hacer","Justificación","Período","Fecha orientativa","Tipo de trabajo","Seguimiento","Área","Ubicación"],
-      rows:tasks.map(t=>[t.scope,t.processNumber?t.scope+"-PRO-"+t.processNumber:"Sin clasificar",t.processName,t.levelLabel,t.title,t.reason,t.periodLabel,period(t.dueDate),t.workType,t.status,t.areaLabel,t.pathLabel])},
-    {name:"Inconsistencias",h:["Unidad","Proceso","Categoría","Hallazgo","Actual","Esperado","Sugerencia","Seguimiento","Ubicación","Detalle"],
-      rows:issues.map(i=>[i.scope,i.processNumber?i.scope+"-PRO-"+i.processNumber:"Sin clasificar",i.category,i.title,i.actual,i.expected,i.suggestedName,i.status,i.pathLabel,i.description])},
+    {name:"Pendientes",h:["Unidad","Proceso","Nombre del proceso","Prioridad","Qué hacer","Justificación","Período","Fecha orientativa","Tipo de trabajo","Seguimiento","Área","Ubicación","Carpeta en SharePoint"],
+      rows:tasks.map(t=>[t.scope,t.processNumber?t.scope+"-PRO-"+t.processNumber:"Sin clasificar",t.processName,t.levelLabel,t.title,t.reason,t.periodLabel,period(t.dueDate),t.workType,t.status,t.areaLabel,t.pathLabel,t.sharePointUrl])},
+    {name:"Inconsistencias",h:["Unidad","Proceso","Categoría","Hallazgo","Actual","Esperado","Sugerencia","Seguimiento","Ubicación","Detalle","Carpeta en SharePoint"],
+      rows:issues.map(i=>[i.scope,i.processNumber?i.scope+"-PRO-"+i.processNumber:"Sin clasificar",i.category,i.title,i.actual,i.expected,i.suggestedName,i.status,i.pathLabel,i.description,i.sharePointUrl])},
     {name:"Indicadores",h:["Unidad","Proceso","Nombre","Indicador (resumen del manual)","Meta","Resultado","Estado medición"],
       rows:processes.map(p=>[p.scope,p.scope+"-PRO-"+p.processNumber,p.processName,p.indicator,p.target,p.indicatorValue,p.indicatorStatus])}
   ];
@@ -75,3 +75,4 @@ function buildPriorityWorkbook(payload){
 }
 async function savePriorityWorkbook(path,payload){await fs.writeFile(path,buildPriorityWorkbook(payload));return path;}
 module.exports={buildPriorityWorkbook,savePriorityWorkbook};
+

@@ -15,7 +15,7 @@ ORDEN DE LA COLA (09/11/2026)
    Van primero porque son rápidas y porque un nombre corregido cambia qué documentos se consideran faltantes.
 2) Documentos por elaborar, según urgencia, vencimiento de referencia y área.
 3) Revisiones: candidatos por verificar, capacitaciones incompletas, códigos o unidades inconsistentes.
-Las tareas «En proceso» se mantienen arriba.
+Las tareas «En proceso» se mantienen arriba dentro de su bloque.
 
 REGLAS DE URGENCIA
 - Período vigente iniciado sin carpeta: se generan sus documentos de inicio (UGPA PRO-70, PRO-31, PRO-251; UTET PRO-56 sin fecha).
@@ -27,3 +27,19 @@ REGLAS DE URGENCIA
 - PRO-60: la guía queda en espera mientras falten el acta o las fichas de la carrera.
 - UTET-PRO-57 sin carpeta se señala cuando PRO-56 tiene Planificación de Artículo Académico en el período.
 - priority.service.js contrasta nombres y evidencias una sola vez; la tabla de procesos, la cola y las exportaciones usan el mismo nivel y orden.
+
+
+ENLACES Y CORRECCIONES (09/11/2026)
+priority.sharepoint.js: configura una biblioteca por unidad en localStorage y genera URLs
+desde la raíz local y las carpetas del último inventario. UGPA viene preconfigurada;
+UTET requiere pegar su biblioteca en Herramientas y reportes. La raíz local seleccionada
+debe corresponder a la raíz de esa biblioteca. No se infieren URLs para ZIP/RAR.
+Cada elemento de un grupo conserva su enlace y se puede consultar también en Ver todos.
+Los enlaces se incluyen en PDF y como columna URL en Excel; no verifican sincronización.
+No se cambia ningún archivo institucional. Después de renombrar en SharePoint,
+esperar la sincronización y volver a escanear. Los períodos ambiguos requieren revisión.
+Las tareas iniciadas solo tienen preferencia dentro de su bloque; la diversidad de
+procesos no adelanta documentos mientras quedan correcciones rápidas.
+Se corrige la sugerencia Ocubre -> Octubre y el prefijo RGI de carpetas de período
+solo cuando el resultado conserva las fechas y cumple la periodicidad del catálogo.
+El PDF conserva el orden de tareas calculado por el servicio.

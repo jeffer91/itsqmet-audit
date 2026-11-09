@@ -75,6 +75,14 @@ test("sugiere separador de período solo si el nombre resultante es válido",()=
   const item=svc.buildViewModel().inconsistencies[0].items[0];
   assert.equal(item.suggestedName,"UTET-PRO-56-Abril 2025–Septiembre 2025");
 });
+test("corrige Ocubre sin modificar fechas ni proponer períodos de duración incorrecta",()=>{
+  const findings=[find("a","Carpeta de período mal nombrada","UTET-PRO-56-Ocubre 2025 - Marzo 2026","Formato oficial"),
+    find("b","Carpeta de período mal nombrada","UTET-PRO-56-Abril 2026 Septiembre 2027","Formato oficial")];
+  const {svc}=setup({findings});
+  const items=svc.buildViewModel().inconsistencies.flatMap(x=>x.items);
+  assert.equal(items.find(x=>x.id==="issue|a").suggestedName,"UTET-PRO-56-Octubre 2025–Marzo 2026");
+  assert.equal(items.find(x=>x.id==="issue|b").suggestedName,"");
+});
 test("filtro por área también se aplica a las inconsistencias",()=>{
   const findings=[find("a","Nombre de PDF incorrecto","Plan (2).pdf","Plan.pdf"),
     find("b","Nombre de PDF incorrecto","Acta (2).pdf","Acta.pdf","PROCESOS MISIONALES")];
@@ -115,3 +123,4 @@ test("el indicador del proceso no oculta observaciones por filtros de tipo",()=>
   assert.equal(view.processes[0].issues,1);
   assert.equal(view.processes[0].state,"Con observaciones");
 });
+

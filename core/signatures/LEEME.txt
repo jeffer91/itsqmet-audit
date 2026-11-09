@@ -7,3 +7,8 @@ requirements.txt: dependencias Python del validador.
 README.md: instrucciones de instalación y límites conocidos.
 DATOS: resultados en el directorio userData de Electron; no se escriben los PDF originales.
 ADVERTENCIAS: sin confianza de certificados configurada, la validación puede ser inconclusa. La detección visual señala posibles trazos manuscritos y no comprueba autoría ni plazos normativos. Un resultado obsoleto no debe alimentar nuevas tareas.
+
+
+El listado conserva la marca stale guardada por el último análisis cuando la fuente
+o el PDF no se puede leer, incluso si la ruta sigue en el historial. Los resultados
+obsoletos no suman en los contadores de firmas vigentes.

@@ -23,7 +23,8 @@
         reason: group.description || "Comprobar los hallazgos antes de corregir.",
         actionPath: group.actionPath, pathLabel: group.pathLabel,
         groupCount: Number(group.groupCount || (group.items || []).length || 1),
-        groupItems: (group.items || []).slice(0, 12),
+        groupItems: group.items || [],
+        sharePointUrl: group.sharePointUrl || "",
         category: group.category, proposedFolderName: "", effort: "low"
       };
     });
@@ -104,35 +105,27 @@
     });
     const pool = all.filter(eligible);
     const ranked = pool.slice().sort(function(a, b) {
-      return score(b) - score(a) || val(a.id).localeCompare(val(b.id), "es");
+      return block(a) - block(b) || score(b) - score(a) || val(a.id).localeCompare(val(b.id), "es");
     });
 
-    // Solo las acciones iniciadas se fijan arriba: las pendientes se repriorizan.
+    // Mantener el orden de bloques incluso con tareas iniciadas o muchos casos
+    // del mismo proceso. La diversidad se aplica dentro de cada bloque.
     const selected = [];
-    (progress.queue || []).forEach(function(id) {
-      const item = ranked.find(x => x.id === id && x.status === "doing");
-      if (item && selected.length < MAX && !selected.some(x => x.id === id))
-        selected.push(item);
-    });
-    ranked.forEach(function(item) {
-      if (item.status === "doing" && selected.length < MAX &&
-          !selected.some(x => x.id === item.id)) selected.push(item);
-    });
-
-    function processCount(item) {
-      return selected.filter(x =>
-        x.scope === item.scope && !!x.processNumber &&
-        x.processNumber === item.processNumber).length;
+    for (const workBlock of [1, 2, 3]) {
+      const members = ranked.filter(item => block(item) === workBlock);
+      const add = item => {
+        if (selected.length < MAX && !selected.some(x => x.id === item.id)) selected.push(item);
+      };
+      for (const id of progress.queue || []) {
+        const item = members.find(x => x.id === id && x.status === "doing");
+        if (item) add(item);
+      }
+      members.filter(item => item.status === "doing").forEach(add);
+      members.forEach(item => {
+        if (selected.filter(x => x.scope === item.scope && x.processNumber === item.processNumber).length < 2) add(item);
+      });
+      members.forEach(add);
     }
-    // Diversidad razonable sin reservar cuotas a errores menores.
-    ranked.forEach(function(item) {
-      if (selected.length < MAX && !selected.some(x => x.id === item.id) &&
-          processCount(item) < 2) selected.push(item);
-    });
-    ranked.forEach(function(item) {
-      if (selected.length < MAX && !selected.some(x => x.id === item.id))
-        selected.push(item);
-    });
     return {
       items: selected, all, queueIds: selected.map(item => item.id),
       openCount: pool.length,
@@ -142,3 +135,4 @@
 
   window.PriorityQueue = { build, score, block };
 })(window);
+

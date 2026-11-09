@@ -65,6 +65,14 @@
         <button id="btnExportPriorityExcel" class="btn" type="button">Exportar Excel</button>
         <button id="btnExportPriorityPdf" class="btn" type="button">Exportar PDF</button>
         <span id="scanLabel" class="micro"></span>
+        <fieldset class="sharepoint-settings">
+          <legend>Bibliotecas de SharePoint</legend>
+          <p>Vincula cada biblioteca con la raíz local seleccionada en Escaneo. Los enlaces se construyen desde el último inventario; vuelve a escanear después de corregir nombres.</p>
+          <label>Biblioteca UGPA <input id="sharePointUGPA" type="url" placeholder="https://…sharepoint.com/…/Forms/AllItems.aspx" /></label>
+          <label>Biblioteca UTET <input id="sharePointUTET" type="url" placeholder="Pega el enlace de la biblioteca UTET" /></label>
+          <button id="btnSaveSharePoint" class="btn" type="button">Guardar enlaces</button>
+          <p>Las importaciones ZIP/RAR no generan enlaces a SharePoint. Un enlace no confirma que OneDrive haya terminado de sincronizar.</p>
+        </fieldset>
       </div>
     </details>
   </main>
@@ -85,8 +93,10 @@
   <script src="./priority.names.js"></script>
   <script src="./priority.workflow.js"></script>
   <script src="./priority.queue.js"></script>
+  <script src="./priority.sharepoint.js"></script>
   <script src="./priority.service.js"></script>
   <script src="./priority.ui.js"></script>
   <script src="./priority.app.js"></script>
 </body>
 </html>
+

@@ -16,7 +16,6 @@
   previous.className="btn";
   previous.textContent="Página anterior";
   previous.hidden=true;
-  more.insertAdjacentElement("beforebegin",previous);
   let matchedCount=0;
   let summaryCounts={verified:0,invalid:0,unverifiable:0};
   let loading=false;
@@ -27,6 +26,7 @@
   more.textContent="Mostrar más resultados";
   more.hidden=true;
   $("results").insertAdjacentElement("afterend",more);
+  more.insertAdjacentElement("beforebegin",previous);
 
   function coverDetails(record){
     if(record.status!=="no-electronic-signature")return "";
@@ -136,3 +136,4 @@
   }
   load().catch(error=>$("message").textContent="Error: "+error.message);
 })(window,document);
+

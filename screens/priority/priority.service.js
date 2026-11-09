@@ -803,13 +803,22 @@
         ? expected : "";
     }
     if (title !== "carpeta de periodo mal nombrada" || !actual) return "";
-    const match = actual.match(/^(.*?)\b(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})\s+(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})$/i);
+    const cleaned = actual.replace(/\bOcubre\b/gi, "Octubre")
+      .replace(/^((?:UGPA|UTET))-RGI\d+-PRO-/i, "$1-PRO-")
+      .replace(/(\d{4})\s+a\s+/i, "$1 ");
+    const match = cleaned.match(/^(.*?)\b(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})\s*[-–—]?\s*(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Setiembre|Octubre|Noviembre|Diciembre)\s+(\d{4})$/i);
     if (!match || !Types.parsePeriodFolderName) return "";
     const suggestion = match[1] + match[2] + " " + match[3] + "–" + match[4] + " " + match[5];
     const processNumber = processFromFinding(finding);
     if (!processNumber) return "";
     const validation = Types.parsePeriodFolderName(suggestion, "PRO-" + processNumber, safeText(finding.scope).toUpperCase());
-    return validation && validation.valid ? suggestion : "";
+    if (!validation || !validation.valid) return "";
+    const range = Types.parseSpanishPeriodRange(validation.normalizedPeriod);
+    if (!range.comparable || !periodMatchesCadence(safeText(finding.scope).toUpperCase(), processNumber, {
+      start: dateUtc(range.startYear, range.startMonth - 1, 1),
+      end: dateUtc(range.endYear, range.endMonth, 0)
+    })) return "";
+    return suggestion;
   }
 
   function inconsistencyFromFinding(finding) {
@@ -985,7 +994,7 @@
         title: items.length + " carpetas vacías en " + first.scope + "-PRO-" + first.processNumber,
         sourceCategory: "empty-folders-group",
         groupCount: items.length,
-        groupItems: items.slice(0, 12).map(function (item) { return { pathLabel: item.pathLabel, title: item.title }; }),
+        groupItems: items.map(function (item) { return { scope: item.scope, actionPath: item.actionPath, pathLabel: item.pathLabel, title: item.title }; }),
         pathLabel: "", actionPath: first.actionPath,
         workType: "review", synthetic: false
       });
@@ -997,6 +1006,8 @@
     const Queue = window.PriorityQueue;
     tasks.sort(function compare(a, b) {
       if (Queue && typeof Queue.score === "function") {
+        const byBlock = Queue.block(a) - Queue.block(b);
+        if (byBlock) return byBlock;
         const byScore = Queue.score(b) - Queue.score(a);
         if (byScore) return byScore;
       }
@@ -1050,13 +1061,16 @@
     // Los nombres y la evidencia se contrastan una sola vez aquí, para que la
     // tabla de procesos, la cola y las exportaciones usen el mismo nivel.
     const namesContext = window.PriorityNames ? window.PriorityNames.prepare(shared) : null;
+    const links = window.PrioritySharePoint;
+    const linkContext = links ? links.prepare(shared) : null;
     const tasks = merged.concat(externalTasks).map(function (task) {
       const scan = scanForScope(shared, task.scope);
       const localFolder = !!(scan && scan.source && scan.source.kind === "folder");
       const base = {...task, status: progress[task.id] || "pending",
         parentPath: localFolder ? task.parentPath : "",
         proposedFolderName: localFolder ? task.proposedFolderName : ""};
-      return namesContext ? {...window.PriorityNames.rename(base, namesContext), named: true} : base;
+      const named = namesContext ? {...window.PriorityNames.rename(base, namesContext), named: true} : base;
+      return links ? links.decorate(named, linkContext) : named;
     });
     sortTasks(tasks);
 
@@ -1065,7 +1079,8 @@
     const allIssues = findings.map(inconsistencyFromFinding).filter(Boolean).concat(structuralInconsistencies(shared))
       .map(function (issue) {
         const groupId = ["group", issue.scope, issue.processNumber || "", issue.category || "", issue.title].join("|");
-        return { ...issue, status: progress[groupId] || progress[issue.id] || "pending" };
+        const next = { ...issue, status: progress[groupId] || progress[issue.id] || "pending" };
+        return links ? links.decorate(next, linkContext) : next;
       });
     const visibleIssues = allIssues.filter(function (issue) {
       return (filtersSafe.scope === "all" || filtersSafe.scope === issue.scope) &&
@@ -1175,3 +1190,4 @@
     saveProgress: saveProgress, createFolder: createFolder
   };
 })(window);
+
