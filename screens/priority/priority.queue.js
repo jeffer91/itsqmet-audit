@@ -76,8 +76,12 @@
     let inner;
     if (block(item) === 1) {
       // Primero las carpetas de período (determinan cómo se lee su contenido).
+      const d=item.decision||{};
+      const actionValue=d.action==="RENOMBRAR" && d.certainty==="alta" ? 15 :
+        d.action==="CONSOLIDAR"||d.action==="UNIFICAR" ? 9 :
+        d.certainty==="baja" ? -25 : 0;
       inner = (PERIOD_FOLDER.test(val(item.title)) ? 40 : 0) +
-        Math.min(20, Math.floor(Number(item.groupCount || 1) / 5)) + area;
+        Math.min(20, Math.floor(Number(item.groupCount || 1) / 5)) + area + actionValue;
     } else {
       const structural = item.synthetic && item.workType !== "document" ? -24 : 0;
       const grouped = item.origin === "group" ? -16 : 0;
@@ -95,13 +99,16 @@
   function build(vm, storage, preparedNamesContext) {
     const progress = storage || { statuses: {}, stages: {}, queue: [], activity: [] };
     const namesContext = preparedNamesContext || (window.PriorityNames ? window.PriorityNames.prepare() : null);
+    const decisionContext = namesContext ? {indices:namesContext.indices||{},manual:namesContext.manual||{}} : null;
     const all = candidateTasks(vm).map(function(item) {
       const saved = progress.statuses && progress.statuses[item.id];
       const status = saved ? saved.status : (item.status || "pending");
       const input = Object.assign({}, item, {status});
       // Las tareas del servicio ya llegan contrastadas; no se renombran dos veces.
       const named = namesContext && !input.named ? window.PriorityNames.rename(input, namesContext) : input;
-      return window.PriorityWorkflow.decorate(named, progress);
+      const analyzed = window.PriorityDecisions
+        ? window.PriorityDecisions.decorate(named,decisionContext) : named;
+      return window.PriorityWorkflow.decorate(analyzed, progress);
     });
     const pool = all.filter(eligible);
     const ranked = pool.slice().sort(function(a, b) {
