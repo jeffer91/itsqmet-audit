@@ -15,7 +15,7 @@
   const basename=v=>rel(v).split("/").pop()||"";
   const parent=v=>rel(v).split("/").slice(0,-1).join("/");
   const key=v=>rel(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .toLowerCase().replace(/[–—]/g,"-").replace(/\s+/g," ").trim();
+    .toLowerCase().replace(/[–—]/g,"-").replace(/\s*\-\s*/g,"-").replace(/\s+/g," ").trim();
   const exactPart=(path,name)=>key(basename(path))===key(name);
   function prepare(shared) {
     const indices={};
@@ -179,12 +179,13 @@
     const all=items.map(x=>x.decision);
     const complex=all.some(x=>x.duplicate||x.conflict);
     const unsolved=all.some(x=>!x.suggestion);
-    const main=complex?"CONSOLIDAR":unsolved?"VERIFICAR":all.every(x=>x.certainty==="alta")?"RENOMBRAR":"REVISAR";
+    const main=!all.length?"VERIFICAR":complex?"CONSOLIDAR":unsolved?"VERIFICAR":
+      all.every(x=>x.certainty==="alta")?"RENOMBRAR":"REVISAR";
     return {
       ...item,groupItems:items,
       decision:{
         action:main,certainty:complex||unsolved?"media":all.every(x=>x.certainty==="alta")?"alta":"media",
-        summary:complex
+        summary:!all.length?"El grupo no contiene rutas suficientes para recomendar un cambio seguro.":complex
           ?"Resolver "+entries.length+" rutas relacionadas sin renombrar duplicados por separado."
           :unsolved?"Hay "+entries.length+" casos; algunos requieren confirmar el nombre antes de corregir."
           :"Corregir "+entries.length+" nombre(s) concretos, conservando archivos y verificando destinos.",
