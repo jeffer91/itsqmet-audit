@@ -65,13 +65,13 @@
     const oldName=val(d.oldName),newName=val(d.newName);
     if (!oldName && !newName && !item.resolvedDocumentId) return "";
     const suggested=newName||val(item.proposedDocumentName||item.officialName);
-    const old=oldName||val(item.referenceFileName)||"No se localizó una versión anterior.";
+    const old=oldName||val(item.referenceFileName)||"No se encontró referencia en otra carpeta o período escaneado.";
     const current=val(item.sourceFileName);
     const oldLink=item.referenceFilePath && val(item.referenceFileName)
       ? '<button class="btn btn-light js-open" type="button" data-path="'+esc(item.referenceFilePath)+'">Abrir referencia</button>' : "";
     const currentBlock=current
-      ? '<p class="comparison-note"><strong>Archivo candidato del período:</strong> '+esc(current)+
-        ' · Debe validarse antes de crear otro.'+
+      ? '<p class="comparison-note"><strong>Archivo localizado en el período objetivo:</strong> '+esc(current)+
+        ' · Primero verifica el archivo localizado antes de crear otro.'+
         (item.sourceFilePath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.sourceFilePath)+'">Abrir archivo</button>':"")+
         '</p>' : "";
     const create=val(d.createNote) || (item.resolvedDocumentId && suggested
