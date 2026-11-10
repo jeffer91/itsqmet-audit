@@ -66,6 +66,8 @@ test("documento de otro período figura como referencia, no acredita el actual",
   const w=setup([pdf(file,p31a)]),out=named(w);
   assert.equal(out.sourceFileName,"");
   assert.equal(out.referenceFileName,file);
+  assert.equal(out.proposedDocumentName,"UGPA-RGI1-01-PRO-31-2025-10-Deteccion de Necesidades de Formacion");
+  assert.match(out.referenceFilePath,/2024/);
   assert.equal(out.displayTitle,"UGPA-RGI1-01-PRO-31-2025-10-Deteccion de Necesidades de Formacion");
 });
 test("identifica Guía Curricular de Administración como RGI3 del manual, no como Falta Guía",()=>{
