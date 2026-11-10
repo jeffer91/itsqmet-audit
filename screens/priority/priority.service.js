@@ -1061,6 +1061,7 @@
     // Los nombres y la evidencia se contrastan una sola vez aquí, para que la
     // tabla de procesos, la cola y las exportaciones usen el mismo nivel.
     const namesContext = window.PriorityNames ? window.PriorityNames.prepare(shared) : null;
+    const decisionContext = namesContext ? {indices:namesContext.indices||{},manual:namesContext.manual||{}} : null;
     const links = window.PrioritySharePoint;
     const linkContext = links ? links.prepare(shared) : null;
     const tasks = merged.concat(externalTasks).map(function (task) {
@@ -1070,7 +1071,8 @@
         parentPath: localFolder ? task.parentPath : "",
         proposedFolderName: localFolder ? task.proposedFolderName : ""};
       const named = namesContext ? {...window.PriorityNames.rename(base, namesContext), named: true} : base;
-      return links ? links.decorate(named, linkContext) : named;
+      const analyzed = window.PriorityDecisions ? window.PriorityDecisions.decorate(named,decisionContext) : named;
+      return links ? links.decorate(analyzed, linkContext) : analyzed;
     });
     sortTasks(tasks);
 
