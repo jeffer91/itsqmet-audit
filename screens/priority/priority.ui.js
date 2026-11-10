@@ -74,7 +74,8 @@
         ' · Debe validarse antes de crear otro.'+
         (item.sourceFilePath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.sourceFilePath)+'">Abrir archivo</button>':"")+
         '</p>' : "";
-    const create=val(d.createNote);
+    const create=val(d.createNote) || (item.resolvedDocumentId && suggested
+      ? (current?"Si el archivo localizado no corresponde, elaborar: ":"Si no existe una versión válida, elaborar: ")+suggested : "");
     return '<div class="task-comparison">'+
       '<div class="comparison-grid">'+
         '<div class="comparison-side comparison-side--old"><span class="comparison-label"><span aria-hidden="true">−</span> Esto es lo antiguo</span>'+
