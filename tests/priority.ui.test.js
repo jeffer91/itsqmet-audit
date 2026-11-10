@@ -81,7 +81,7 @@ test("tarjeta visual muestra acción, nombres individuales, ruta y pasos sin dup
  assert.match(html,/CONSOLIDAR/);
  assert.match(html,/Qué debes hacer/);
  assert.match(html,/Esto es lo antiguo|ANTIGUO/);
- assert.match(html,/NUEVO PROPUESTO/);
+ assert.match(html,/Esto es lo nuevo/);
  assert.ok(html.includes(next));
  assert.match(html,/Consolidar con carpeta contenedora/);
  assert.doesNotMatch(html,/Por confirmar; revisar antes de renombrar/);
