@@ -85,13 +85,20 @@
       name:text(entry.suggestedName),
       reason:text(entry.suggestedName)?"Nombre sugerido por la regla institucional. Confirmar la estructura y el contenido.":"El hallazgo no proporciona un nombre inequívoco; revisar la regla y la evidencia.",
       certainty:text(entry.suggestedName)?"media":"baja"};
+    if(isPeriod && !attempt.name && text(entry.suggestedName)) {
+      attempt.name=text(entry.suggestedName);
+      attempt.reason="La regla institucional propone un nombre válido; confirmar el período antes de cambiarlo.";
+      attempt.certainty="media";
+    }
+    const isFile=/nombre de pdf/i.test(text(entry.title)) || /\.pdf$/i.test(old);
     const newName=attempt.name;
     const dest=newName?parent(path)+"/"+newName:"";
     const other=Array.isArray(groupItems)?groupItems:[];
     const hasParent=other.some(x=>rel(x.pathLabel)===parent(path) && exactPart(parent(path),old));
     const hasNested=other.some(x=>parent(x.pathLabel)===path && exactPart(x.pathLabel,old));
-    const duplicate=hasParent || hasNested;
-    const conflict=existsTarget(index,dest,path);
+    const duplicate=!isFile && (hasParent || hasNested);
+    const conflict=existsTarget(index,dest,path) || !!(isFile && index &&
+      index.files && index.files.some(file=>key(file.relativePath)===key(dest) && key(file.relativePath)!==key(path)));
     let action="VERIFICAR", summary=attempt.reason,certainty=attempt.certainty;
     let steps=[
       "Abrir la carpeta y comprobar su nombre, contenido y período real.",
@@ -130,11 +137,13 @@
       ];
     } else if(newName && key(newName)!==key(old)) {
       action="RENOMBRAR";
-      summary=attempt.datesChanged?"Corregir el período solo después de confirmar a qué ciclo pertenece.":"Cambiar el nombre conservando sus documentos.";
+      summary=attempt.datesChanged?"Corregir el período solo después de confirmar a qué ciclo pertenece.":
+        isFile?"Corregir el nombre del PDF sin modificar su contenido.":"Cambiar el nombre conservando sus documentos.";
       steps=[
         "Confirmar que los documentos corresponden al período propuesto.",
         "Comprobar que no existe otra carpeta de destino.",
-        "Renombrar la carpeta sin modificar ni eliminar archivos.",
+        isFile?"Renombrar únicamente el archivo, manteniendo intacto el PDF.":
+          "Renombrar la carpeta sin modificar ni eliminar archivos.",
         "Volver a escanear para validar el nombre."
       ];
     } else if(newName) {
