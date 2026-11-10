@@ -30,11 +30,59 @@
     if (!item.sharePointUrl) return "";
     return '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.sharePointUrl) + '">Abrir carpeta en SharePoint</button>';
   }
+  // Compara el nombre previsto con candidatos actuales o históricos. No certifica versiones.
+  function comparisonBox(item) {
+    const isDoc = !!val(item.resolvedDocumentId) && !!val(item.officialName);
+    const isFolder = !isDoc && !!val(item.proposedFolderName) && item.workType === "quick";
+    const isRename = !isDoc && !isFolder && !!val(item.suggestedName) && item.workType === "quick";
+    if (!isDoc && !isFolder && !isRename) return "";
+    const proposed = val(isDoc ? (item.proposedDocumentName || item.officialName) :
+      (item.proposedFolderName || item.suggestedName));
+    if (!proposed) return "";
+    const oldName = val(isDoc ? item.referenceFileName : (item.actual || item.detectedName));
+    const currentName = isDoc ? val(item.sourceFileName) : "";
+    const oldMessage = oldName || (isDoc
+      ? "No se encontró referencia en otra carpeta o período escaneado."
+      : "No se localizó un nombre anterior para esta carpeta.");
+    const oldHint = isDoc && oldName
+      ? '<small>Candidato de otra ubicación o período. Comprobar fecha, contenido y vigencia.</small>'
+      : "";
+    const oldLink = isDoc && oldName && item.referenceFilePath
+      ? '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.referenceFilePath) + '">Abrir referencia</button>' : "";
+    const current = currentName
+      ? '<p class="comparison-note"><strong>Archivo localizado en el período objetivo:</strong> ' +
+        esc(currentName) + ' · Pendiente de comprobar contenido, aprobación y vigencia.' +
+        (item.sourceFilePath ? ' <button class="btn btn-light js-open" type="button" data-path="' +
+          esc(item.sourceFilePath) + '">Abrir archivo</button>' : '') + '</p>' : "";
+    const createText = currentName
+      ? "Si el documento localizado no corresponde, elaborar: " + proposed
+      : proposed;
+    const createHint = isDoc
+      ? (currentName
+        ? "Primero verifica el archivo localizado. No generes duplicados ni lo marques como validado por existir."
+        : "Primero busca otras evidencias y comprueba cualquier referencia anterior. La creación es manual y requiere los datos, firmas y aprobaciones correspondientes.")
+      : "Comprueba que no exista la carpeta antes de crearla o renombrarla.";
+    const namingHint = isDoc && !item.namingComplete && item.expectedTemplate
+      ? '<p class="comparison-note">El código o fecha definitiva está pendiente de confirmar; no utilices 0X ni AÑO-MES como nombre final.</p>'
+      : "";
+    return '<div class="task-comparison">' +
+      '<div class="comparison-row"><strong>Esto es lo nuevo</strong><span>' + esc(proposed) +
+        '<small>' + (isDoc ? "Nombre objetivo basado en el manual y la información disponible." : "Nombre propuesto para la carpeta.") + '</small></span></div>' +
+      '<div class="comparison-row"><strong>Esto es lo antiguo</strong><span>' + esc(oldMessage) +
+        oldHint + oldLink + '</span></div>' +
+      current +
+      '<div class="comparison-row comparison-create"><strong>Si no hay, crea esto</strong><span>' +
+        esc(createText) + '<small>' + createHint + '</small></span></div>' +
+      namingHint + '</div>';
+  }
   function itemDetails(item) {
     return (item.groupItems || []).length
       ? '<div class="task-items"><strong>Elementos del grupo:</strong><ul>' +
-        item.groupItems.map(x => '<li>' + esc(x.actual || x.pathLabel || x.title) +
-          (x.suggestedName ? ' → <strong>' + esc(x.suggestedName) + '</strong>' : ' · Revisar antes de renombrar') + sharePointButton(x) + '</li>').join("") +
+        item.groupItems.map(x => '<li><strong>Esto es lo antiguo:</strong> ' +
+          esc(x.actual || x.pathLabel || x.title || "No identificado") +
+          '<span class="group-new"><strong>Esto es lo nuevo:</strong> ' +
+          (x.suggestedName ? esc(x.suggestedName) : "Por confirmar; revisar antes de renombrar") +
+          '</span>' + sharePointButton(x) + '</li>').join("") +
         '</ul></div>' : "";
   }
   function card(item, index) {
@@ -51,7 +99,10 @@
       '<span class="task-main"><span class="task-title">' + title + '</span>' +
       '<span class="task-next">' + esc(taskSummary(item)) + '</span>' +
       '<span class="task-meta">' + meta + (item.status==="doing"?" · En proceso":"") +
-      '</span></span><span class="task-chevron" aria-hidden="true">›</span></summary>' +
+      '</span>' +
+      (item.proposedDocumentName ? '<span class="task-version-hint">Nuevo: ' + esc(item.proposedDocumentName) +
+        ' · Antiguo: ' + esc(item.referenceFileName || "No localizado") + '</span>' : '') +
+      '</span><span class="task-chevron" aria-hidden="true">›</span></summary>' +
       '<div class="task-detail">' +
       (item.large ? '<span class="task-step">Paso ' + (item.stepIndex+1) + ' de ' + item.stepCount + '</span>' : "") +
       (item.officialName ? '<span class="task-meta"><strong>Documento del manual:</strong> ' + esc(item.officialName) + '</span>' : "") +
@@ -68,7 +119,7 @@
         esc(new Date(item.dueDate).toLocaleDateString("es-EC", {year:"numeric",month:"long",day:"numeric",timeZone:"UTC"})) + '</span>' : "") +
       '<p class="task-reason">' + esc(item.reason || "Verifica el documento antes de darlo por finalizado.") + '</p>' +
       (item.periodLabel ? '<span class="task-meta">Período: ' + esc(item.periodLabel) + '</span>' : "") +
-      groupDetails +
+      comparisonBox(item) + groupDetails +
       (item.workType === 'quick' ? '<p>Después de corregir, vuelve a escanear para comprobar el resultado.</p>' : '') +
       '<div class="task-actions">' + sharePointButton(item) +
       (item.actionPath ? '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.actionPath) + '">Abrir carpeta</button>' : "") +
@@ -94,6 +145,10 @@
     const items = backlogRows();
     byId("backlogList").innerHTML = items.slice(0,limit).map(function (item) {
       const inactive = ["done","blocked","snoozed"].includes(item.status);
+      const extra = comparisonBox(item) + itemDetails(item);
+      const details = extra
+        ? '<details class="backlog-detail"><summary>Comparar lo nuevo, lo antiguo y qué crear si falta</summary>' +
+          extra + '</details>' : "";
       return '<div class="backlog-row"><div class="backlog-row__main"><strong>' +
         esc(item.displayTitle || item.projectTitle || item.title) + '</strong><small>' +
         esc([item.scope,item.processNumber ? "PRO-"+item.processNumber : "",kind(item),STATUS[item.status]||"Pendiente"]
@@ -103,7 +158,7 @@
         esc(item.actionPath) + '">Abrir</button>':"") +
         (inactive?'<button type="button" class="btn btn-soft js-reopen" data-id="' +
         esc(item.id) + '">Reactivar</button>':"") +
-        '</div></div>' + ((item.groupItems || []).length ? '<details class="backlog-detail"><summary>Ver elementos y correcciones</summary>' + itemDetails(item) + '</details>' : '');
+        '</div></div>' + details;
     }).join("") || '<div class="empty-state">No hay registros con estos filtros.</div>';
     byId("btnMore").hidden = items.length <= limit;
   }
