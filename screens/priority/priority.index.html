@@ -15,7 +15,7 @@
       <div>
         <p class="eyebrow">Trabajo pendiente</p>
         <h1>Mi trabajo prioritario</h1>
-        <p class="subtitle">Cinco acciones para seguir avanzando, una a la vez.</p>
+        <p class="subtitle">Qué cambiar, qué conservar y qué elaborar, con instrucciones basadas en el inventario.</p>
       </div>
       <div class="page-header__count">
         <strong id="todayCompleted">0</strong>
@@ -29,6 +29,14 @@
       <div class="section-head">
         <div><h2 id="workHeading">Qué hacer ahora</h2><p id="queueSummary">Seleccionando prioridades…</p></div>
         <button id="btnRefreshPriority" class="btn btn-light" type="button">Actualizar</button>
+      </div>
+      <div class="queue-overview" aria-label="Estado de la cola">
+        <div class="queue-metric"><strong id="quickQueueCount">0</strong><span>Correcciones rápidas</span></div>
+        <div class="queue-metric"><strong id="reviewQueueCount">0</strong><span>Verificaciones</span></div>
+        <div class="queue-progress">
+          <div class="queue-progress__label"><strong>Avance registrado</strong><span id="queueProgressText">Sin actividad registrada hoy</span></div>
+          <div class="queue-progress__track" aria-hidden="true"><div id="queueProgressFill" class="queue-progress__fill"></div></div>
+        </div>
       </div>
       <div id="priorityList" class="priority-list"></div>
       <p class="board-hint">Al terminar un paso, el sistema continúa con la siguiente acción. «Realizado» no equivale a evidencia validada.</p>
