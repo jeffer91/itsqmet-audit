@@ -19,14 +19,15 @@ const task=(id,area,workType,level="high",processNumber=id)=>({
   id,scope: id.startsWith("UTET")?"UTET":"UGPA",processNumber,area,workType,level,
   title:"Plan de resultados "+id,reason:"Pendiente vigente",status:"pending"
 });
-test("los bloques prevalecen sobre tareas iniciadas y el cupo por proceso",()=>{
+test("una obligación urgente independiente conserva un lugar entre las correcciones",()=>{
   const e=env();
   const tasks=Array.from({length:5},(_,i)=>task("fix-"+i,"mission","quick","low","134"));
   tasks.push({...task("doc","strategic","document","max","70"),status:"doing"});
   const progress=e.window.PriorityStorage.load();progress.queue=["doc"];
   const board=e.window.PriorityQueue.build({tasks,inconsistencies:[]},progress);
   assert.equal(board.items.length,5);
-  assert.ok(board.items.every(x=>x.workType==="quick"));
+  assert.equal(board.items.filter(x=>x.workType==="quick").length,4);
+  assert.ok(board.items.some(x=>x.id==="doc"));
 });
 test("un grupo de correcciones conserva todos los elementos y sus enlaces",()=>{
   const e=env();
@@ -118,3 +119,12 @@ test("las observaciones repetidas se agrupan y no monopolizan la cola",()=>{
   assert.equal(board.all.filter(x=>x.origin==="group").length,1);
 });
 
+
+test("no adelanta documentos que dependen de corregir una carpeta del mismo proceso",()=>{
+  const e=env();
+  const tasks=Array.from({length:5},(_,i)=>task("fix-"+i,"mission","quick","medium","31"));
+  tasks.push({...task("doc","strategic","document","max","31"),scope:"UGPA"});
+  const board=e.window.PriorityQueue.build({tasks,inconsistencies:[]},e.window.PriorityStorage.load());
+  assert.equal(board.items.length,5);
+  assert.ok(board.items.every(x=>x.workType==="quick"));
+});
