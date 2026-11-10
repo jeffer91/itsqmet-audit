@@ -91,3 +91,20 @@ h1{font-size:27px;line-height:1.2;letter-spacing:-.03em;margin:0 0 5px}
 .sharepoint-settings input { display:block; width:100%; box-sizing:border-box; padding:.6rem; }
 .task-items li { margin-bottom:.75rem; overflow-wrap:anywhere; }
 .task-items li button { display:block; margin-top:.4rem; }
+
+/* Comparación de documento previsto y evidencia previa, sin afirmar vigencia. */
+.task-version-hint{display:block;font-size:11px;line-height:1.4;color:#53687e;overflow-wrap:anywhere}
+.task-comparison{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fcfdff;display:grid}
+.comparison-row{padding:9px 11px;display:grid;grid-template-columns:145px minmax(0,1fr);gap:12px;border-bottom:1px solid var(--line);font-size:12px;line-height:1.5}
+.comparison-row>strong{font-size:11px;color:#4b6076}
+.comparison-row>span{min-width:0;overflow-wrap:anywhere}
+.comparison-row small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.comparison-row .btn,.comparison-note .btn{font-size:11px;min-height:27px;padding:4px 8px;margin:6px 0 0}
+.comparison-create{background:#f4f8fc;border-bottom:0}
+.comparison-create>strong{color:var(--primary)}
+.comparison-note{font-size:11px;line-height:1.5;color:#53687e;margin:0;padding:9px 11px;border-bottom:1px solid var(--line)}
+.group-new{display:block;margin-top:3px}
+.backlog-detail{border-bottom:1px solid var(--line);padding:0 0 12px}
+.backlog-detail>summary{cursor:pointer;font-size:11px;color:var(--primary);padding:7px 0}
+.backlog-detail .task-comparison{margin:5px 0}
+@media(max-width:640px){.comparison-row{grid-template-columns:1fr;gap:4px}}
