@@ -100,8 +100,8 @@
         const newName=val(d.newName||x.suggestedName);
         return '<article class="group-item">'+
           '<div class="group-item-head"><strong>Elemento '+(i+1)+'</strong>'+actionChip(d)+'</div>'+
-          '<div class="group-compare"><span><small>ANTIGUO</small>'+esc(oldName)+'</span>'+
-          '<span><small>NUEVO PROPUESTO</small>'+esc(newName||
+          '<div class="group-compare"><span><small>Esto es lo antiguo</small>'+esc(oldName)+'</span>'+
+          '<span><small>Esto es lo nuevo</small>'+esc(newName||
             (d.isNestedDuplicate?"Consolidar con carpeta contenedora":"Requiere confirmar destino"))+'</span></div>'+
           (d.summary?'<p class="group-hint">'+esc(d.summary)+'</p>':"")+
           (x.pathLabel?'<p class="group-path"><strong>Ruta:</strong> '+esc(x.pathLabel)+'</p>':"")+
