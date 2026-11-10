@@ -43,3 +43,16 @@ procesos no adelanta documentos mientras quedan correcciones rápidas.
 Se corrige la sugerencia Ocubre -> Octubre y el prefijo RGI de carpetas de período
 solo cuando el resultado conserva las fechas y cumple la periodicidad del catálogo.
 El PDF conserva el orden de tareas calculado por el servicio.
+
+COMPARACIÓN NUEVO / ANTIGUO
+En las tarjetas de Priorización y en «Ver todos» se muestra «Esto es lo nuevo»
+(nombre institucional propuesto para el período), «Esto es lo antiguo»
+(candidato localizado fuera de la carpeta del período, nunca validado por sí solo)
+y «Si no hay, crea esto» (instrucción condicionada tras comprobar evidencias).
+Si hay un archivo candidato en el período objetivo, se indica expresamente antes
+de proponer uno nuevo. Cuando no se puede resolver un código o fecha del manual,
+se usa el nombre oficial sin inventar 0X, AÑO-MES ni valores definitivos.
+Las correcciones agrupadas muestran nombre antiguo y nombre nuevo por elemento.
+Ningún documento se genera ni se sobreescribe automáticamente: se debe redactar,
+aprobar, firmar y archivar por el flujo institucional correspondiente. La creación
+de carpetas mantiene el botón existente y exige confirmación manual.
