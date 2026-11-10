@@ -57,3 +57,32 @@ test("Priorización distingue documento nuevo, referencia antigua y creación co
  window.PriorityUI.render({processes:[]},{items:[review],all:[review]});
  assert.doesNotMatch(document.getElementById("priorityList").innerHTML,/Si no hay, crea esto/);
 });
+
+test("tarjeta visual muestra acción, nombres individuales, ruta y pasos sin duplicar el nombre",()=>{
+ const elements=new Map();
+ const document={getElementById(id){if(!elements.has(id))elements.set(id,{value:"all",innerHTML:"",
+  textContent:"",hidden:false,style:{}});return elements.get(id);},addEventListener(){}};
+ document.getElementById("filterSearch").value="";
+ const window={};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../screens/priority/priority.ui.js"),"utf8"),{window,document});
+ const old="UGPA-PRO-31-Abril 2026–Septiembre 2027",next="UGPA-PRO-31-Octubre 2026–Septiembre 2027";
+ const group={id:"group31",origin:"group",scope:"UGPA",processNumber:"31",title:"Carpeta de período mal nombrada",
+   workType:"quick",groupItems:[
+     {actual:old,pathLabel:"PROCESOS ESTRATEGICOS/UGPA-PRO-31/"+old,decision:{action:"CONSOLIDAR",
+       oldName:old,newName:next,summary:"Revisar carpeta interior antes de renombrar."}},
+     {actual:old,pathLabel:"PROCESOS ESTRATEGICOS/UGPA-PRO-31/"+old+"/"+old,
+       decision:{action:"CONSOLIDAR",oldName:old,newName:"",isNestedDuplicate:true,
+         summary:"No renombrar por separado."}}
+   ],decision:{action:"CONSOLIDAR",certainty:"media",needsConfirmation:true,
+     summary:"Resolver las rutas relacionadas sin renombrar duplicados por separado.",
+     steps:["Abrir las dos carpetas.","Comprobar el contenido.","Volver a escanear."]}};
+ window.PriorityUI.render({processes:[]},{items:[group],all:[group],openCount:1,completedToday:0});
+ const html=document.getElementById("priorityList").innerHTML;
+ assert.match(html,/CONSOLIDAR/);
+ assert.match(html,/Qué debes hacer/);
+ assert.match(html,/Esto es lo antiguo|ANTIGUO/);
+ assert.match(html,/NUEVO PROPUESTO/);
+ assert.ok(html.includes(next));
+ assert.match(html,/Consolidar con carpeta contenedora/);
+ assert.doesNotMatch(html,/Por confirmar; revisar antes de renombrar/);
+});
