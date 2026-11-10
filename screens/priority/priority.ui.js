@@ -209,7 +209,7 @@
     const progress=byId("queueProgressFill");
     const completed=Number(board.completedToday||0),open=Number(board.openCount||0);
     const ratio=completed+open ? Math.min(100,Math.round(100*completed/(completed+open))) : 0;
-    if(progress)progress.style.width=ratio+"%";
+    if(progress && progress.style)progress.style.width=ratio+"%";
     const info=byId("queueProgressText");
     if(info)info.textContent=completed+" gestiones registradas hoy · "+open+
       " pendientes activos (no equivale a evidencias validadas)";
