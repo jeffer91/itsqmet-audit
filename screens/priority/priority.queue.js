@@ -115,24 +115,39 @@
       return block(a) - block(b) || score(b) - score(a) || val(a.id).localeCompare(val(b.id), "es");
     });
 
-    // Mantener el orden de bloques incluso con tareas iniciadas o muchos casos
-    // del mismo proceso. La diversidad se aplica dentro de cada bloque.
-    const selected = [];
-    for (const workBlock of [1, 2, 3]) {
-      const members = ranked.filter(item => block(item) === workBlock);
-      const add = item => {
-        if (selected.length < MAX && !selected.some(x => x.id === item.id)) selected.push(item);
+    // Conservar el orden lógico: corregir nombres antes de elaborar documentos
+    // dependientes. Pero no llenar siempre los cinco cupos de correcciones si
+    // existen documentos urgentes e independientes de esas carpetas.
+    const quickProcesses=new Set(pool.filter(x=>block(x)===1).map(x=>x.scope+"|"+x.processNumber));
+    const independent=item=>!quickProcesses.has(item.scope+"|"+item.processNumber);
+    const urgent=item=>item.status==="doing" || (RANK[item.level]||0)>=3;
+    const reserveDocs=Math.min(2,ranked.filter(x=>block(x)===2&&independent(x)&&urgent(x)).length);
+    const reserveReviews=ranked.some(x=>block(x)===3&&independent(x)&&urgent(x)) ? 1 : 0;
+    const maxQuick=MAX-reserveDocs-reserveReviews;
+    const selected=[];
+    for(const workBlock of [1,2,3]) {
+      const cap=workBlock===1?maxQuick:workBlock===2?MAX-reserveReviews:MAX;
+      const members=ranked.filter(item=>block(item)===workBlock &&
+        (workBlock===1||independent(item)));
+      const add=item=>{
+        if(selected.length<cap && !selected.some(x=>x.id===item.id))selected.push(item);
       };
-      for (const id of progress.queue || []) {
-        const item = members.find(x => x.id === id && x.status === "doing");
-        if (item) add(item);
+      for(const id of progress.queue||[]) {
+        const item=members.find(x=>x.id===id&&x.status==="doing");
+        if(item)add(item);
       }
-      members.filter(item => item.status === "doing").forEach(add);
-      members.forEach(item => {
-        if (selected.filter(x => x.scope === item.scope && x.processNumber === item.processNumber).length < 2) add(item);
+      members.filter(x=>x.status==="doing").forEach(add);
+      members.forEach(item=>{
+        if(selected.filter(x=>x.scope===item.scope&&x.processNumber===item.processNumber).length<2)add(item);
       });
       members.forEach(add);
     }
+    // Si no hay suficientes casos independientes, completar con correcciones
+    // o revisiones pendientes sin dejar huecos, pero no con documentos
+    // bloqueados por una corrección de estructura del mismo proceso.
+    ranked.filter(item=>block(item)===1 || independent(item)).forEach(item=>{
+      if(selected.length<MAX&&!selected.some(x=>x.id===item.id))selected.push(item);
+    });
     return {
       items: selected, all, queueIds: selected.map(item => item.id),
       openCount: pool.length,
