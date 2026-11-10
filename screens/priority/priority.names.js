@@ -146,6 +146,7 @@
     const sourceFileName=safe(found.current&&found.current.name)||safe(task.candidateFileName);
     const sourceFilePath=safe(found.current&&found.current.path)||safe(task.candidateFilePath);
     const referenceFileName=safe(found.previous&&found.previous.name);
+    const referenceFilePath=safe(found.previous&&found.previous.path);
     // Recuperar el período desde la carpeta cuando el hallazgo solo incluye la ruta.
     const periodSource=window.PriorityNamingPolicy
       ? [task.periodLabel].concat(relative(task.pathLabel).split("/").reverse())
@@ -265,7 +266,10 @@
       namingDateCode:namingPolicy&&namingPolicy.dateCode||"",
       namingSequence:namingPolicy&&namingPolicy.sequence||"",
       namingComplete:!!(namingPolicy&&namingPolicy.isComplete),
-      referenceFileName,sourceKind,suggestedAction,namingNotice,
+      referenceFileName,referenceFilePath,
+      proposedDocumentName:hasDoc ? (namingPolicy&&namingPolicy.isComplete ? canonical :
+        officialName+(task.careerName?" · "+task.careerName:"")) : "",
+      sourceKind,suggestedAction,namingNotice,
       displayWorkType,
       originalWorkType:task.workType,
       workType:sourceFileName&&task.workType==="document"?"review":task.workType,
