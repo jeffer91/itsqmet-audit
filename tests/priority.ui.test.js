@@ -23,3 +23,37 @@ test("las tarjetas y todos los pendientes muestran enlaces por caso y guardan bi
  events.click({target:{closest:()=>({dataset:{path:url},classList:{contains:c=>c==="js-open"}})}});
  assert.equal(opened,url);
 });
+
+test("Priorización distingue documento nuevo, referencia antigua y creación condicionada",()=>{
+ const elements=new Map(),document={
+  getElementById(id){if(!elements.has(id))elements.set(id,{value:"all",innerHTML:"",textContent:"",hidden:false});
+   return elements.get(id);},
+  addEventListener(){}
+ };
+ document.getElementById("filterSearch").value="";
+ const window={};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../screens/priority/priority.ui.js"),"utf8"),{window,document});
+ const doc={id:"doc",scope:"UGPA",processNumber:"70",workType:"document",
+  officialName:"Plan Semestral de Capacitación Docente",resolvedDocumentId:"rgi2",
+  proposedDocumentName:"UGPA-RGI2-01-PRO-70-2026-10-Plan Semestral",
+  referenceFileName:"UGPA-RGI2-01-PRO-70-2026-04-Plan Semestral.pdf",
+  sourceFileName:"",expectedTemplate:"UGPA-RGI2-0X-PRO-70-AÑO-MES",namingComplete:true};
+ window.PriorityUI.render({processes:[]},{items:[doc],all:[doc]});
+ for(const id of ["priorityList","backlogList"]){
+  const html=document.getElementById(id).innerHTML;
+  assert.match(html,/Esto es lo nuevo/);
+  assert.match(html,/Esto es lo antiguo/);
+  assert.match(html,/Si no hay, crea esto/);
+  assert.match(html,/2026-10-Plan Semestral/);
+  assert.match(html,/2026-04-Plan Semestral/);
+ }
+ const now={...doc,sourceFileName:"Plan localizado.pdf",referenceFileName:""};
+ window.PriorityUI.render({processes:[]},{items:[now],all:[now]});
+ const html=document.getElementById("priorityList").innerHTML;
+ assert.match(html,/Archivo localizado en el período objetivo/);
+ assert.match(html,/Primero verifica el archivo localizado/);
+ assert.match(html,/No se encontró referencia/);
+ const review={id:"signature",scope:"UTET",title:"Revisar firma",workType:"review"};
+ window.PriorityUI.render({processes:[]},{items:[review],all:[review]});
+ assert.doesNotMatch(document.getElementById("priorityList").innerHTML,/Si no hay, crea esto/);
+});
