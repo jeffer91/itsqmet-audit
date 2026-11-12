@@ -13,7 +13,7 @@
   const isInactive=item=>["done","blocked","snoozed"].includes(item.status);
   function tabOf(item) {
     if (item.workType==="document" || item.large || item.resolvedDocumentId ||
-      (item.workType==="review" && /firma|pdf|documento|archivo|evidencia/i.test(val(item.title))))
+      (item.workType==="review" && /firma|pdf|document|archivo|evidencia|elaborar|informe|acta|reporte/i.test(val(item.title))))
       return "documents";
     return "folders";
   }
