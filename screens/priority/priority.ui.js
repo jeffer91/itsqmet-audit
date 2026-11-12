@@ -57,7 +57,10 @@
   }
   function sharePointButton(item) {
     if (!item.sharePointUrl) return "";
-    return '<button class="btn btn-light js-open" type="button" data-path="' + esc(item.sharePointUrl) + '">Abrir carpeta en SharePoint</button>';
+    const url = esc(item.sharePointUrl);
+    // El href permite copiar la dirección y el clic lo abre mediante Electron.
+    return '<a class="btn btn-light js-open" href="' + url + '" data-path="' + url + '" target="_blank" rel="noopener noreferrer">Abrir carpeta en SharePoint</a>' +
+      '<button class="btn btn-light js-copy-sharepoint" type="button" data-url="' + url + '">Copiar enlace</button>';
   }
   // Presentar decisiones y rutas, no validar documentos ni ejecutar correcciones.
   function comparisonBox(item) {
@@ -106,7 +109,7 @@
           (d.summary?'<p class="group-hint">'+esc(d.summary)+'</p>':"")+
           (x.pathLabel?'<p class="group-path"><strong>Ruta:</strong> '+esc(x.pathLabel)+'</p>':"")+
           '<div class="group-item-actions">'+sharePointButton(x)+
-          (x.actionPath?'<button type="button" class="btn btn-light js-open" data-path="'+esc(x.actionPath)+'">Abrir ubicación</button>':"")+
+          (x.actionPath?'<button type="button" class="btn btn-light js-open" data-path="'+esc(x.actionPath)+'">Abrir carpeta local</button>':"")+
           '</div></article>';
       }).join("")+'</div></section>';
   }
@@ -144,7 +147,7 @@
         evidenceDetails(item)+
         '<p class="decision-disclaimer">Las acciones son recomendaciones; confirma el destino, no sobrescribas evidencias y vuelve a escanear para comprobar el resultado.</p>'+
         '<div class="task-actions">'+sharePointButton(item)+
-          (item.actionPath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.actionPath)+'">Abrir ubicación</button>':"")+
+          (item.actionPath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.actionPath)+'">Abrir carpeta local</button>':"")+
           (canCreate?'<button class="btn btn-soft js-mkdir" type="button" data-id="'+esc(item.id)+'">Crear carpeta (confirmar)</button>':"")+
           action+
           (item.status!=="doing"?'<button class="btn btn-light js-status" type="button" data-id="'+esc(item.id)+'" data-status="doing">En proceso</button>':"")+
@@ -245,10 +248,14 @@
     byId("filterSearch").addEventListener("input",function(){limit=40;renderBacklog();});
     byId("btnMore").addEventListener("click",function(){limit+=40;renderBacklog();});
     document.addEventListener("click",function (event) {
-      const button=event.target.closest("button");
+      const button=event.target.closest("button,a.js-open");
       if (!button) return;
       const id=button.dataset.id;
-      if (button.classList.contains("js-open")) handlers.onOpenPath(button.dataset.path);
+      if (button.classList.contains("js-open")) {
+        if (button.tagName === "A" && typeof event.preventDefault === "function") event.preventDefault();
+        handlers.onOpenPath(button.dataset.path);
+      }
+      else if(button.classList.contains("js-copy-sharepoint")) handlers.onCopySharePoint(button.dataset.url);
       else if(button.classList.contains("js-mkdir")) handlers.onCreateFolder(id);
       else if(button.classList.contains("js-status")) handlers.onStatus(id,button.dataset.status);
       else if(button.classList.contains("js-step")) handlers.onStep(id);
