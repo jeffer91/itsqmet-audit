@@ -17,6 +17,7 @@ const { registerRulesIpc } = require("./ipc/rules.ipc");
 const { registerArchiveIpc } = require("./ipc/archive.ipc");
 const { registerHistoryIpc } = require("./ipc/history.ipc");
 const { registerSignaturesIpc } = require("./ipc/signatures.ipc");
+const { registerPeriodsIpc } = require("./ipc/periods.ipc");
 
 let mainWindow = null;
 
@@ -57,6 +58,7 @@ function registerAppIpc() {
   registerShellIpc();
   registerRulesIpc();
   registerSignaturesIpc();
+  registerPeriodsIpc();
 }
 
 if (!app.requestSingleInstanceLock()) {
