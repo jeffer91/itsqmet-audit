@@ -22,6 +22,7 @@ h1{font-size:27px;line-height:1.2;letter-spacing:-.03em;margin:0 0 5px}
 .section-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 0 12px}
 .section-head h2{font-size:15px;margin:0 0 4px}.section-head p{color:var(--muted);font-size:12px;margin:0}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:33px;padding:7px 11px;background:var(--primary);border:1px solid var(--primary);border-radius:8px;color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+a.btn{text-decoration:none}
 .btn:hover{filter:brightness(.96)}.btn:disabled{opacity:.55;cursor:not-allowed}
 .btn-light{color:var(--text);border-color:var(--line);background:#fff}
 .btn-soft{color:var(--primary);background:#eff5fc;border-color:#dce9f7}
@@ -177,7 +178,8 @@ h1{font-size:27px;line-height:1.2;letter-spacing:-.03em;margin:0 0 5px}
 .group-hint{margin:8px 0;font-size:11px;color:#44566e}
 .group-path{margin:5px 0;font-size:10px;color:#718093;overflow-wrap:anywhere}
 .group-item-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
-.group-item-actions button{font-size:10px}
+.group-item-actions .btn{font-size:10px}
+.backlog-row__actions{flex-wrap:wrap;justify-content:flex-end}
 .evidence-details{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
 .evidence-details summary{cursor:pointer;color:var(--primary);font-size:12px;font-weight:600}
 .evidence-details p{font-size:11px;color:#52657c;overflow-wrap:anywhere}
