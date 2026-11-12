@@ -1,7 +1,10 @@
 (function (window) {
   "use strict";
   const KEY = "audit_sharepoint_libraries_v1";
-  const DEFAULT = "https://itsqmet.sharepoint.com/sites/UGPA-UnidaddeGestindeProcesosAcadmicos/Documentos%20compartidos/Forms/AllItems.aspx";
+  const DEFAULTS = Object.freeze({
+    UGPA: "https://itsqmet.sharepoint.com/sites/UGPA-UnidaddeGestindeProcesosAcadmicos/Documentos%20compartidos/Forms/AllItems.aspx",
+    UTET: "https://itsqmet.sharepoint.com/sites/UTET-TitulacinyEficienciaTerminal/Documentos%20compartidos/Forms/AllItems.aspx"
+  });
   function normalizeUrl(value) {
     if (!String(value || "").trim()) return "";
     const url = new URL(String(value).trim());
@@ -13,11 +16,21 @@
     return url.href;
   }
   function load() {
-    try { return { UGPA: DEFAULT, UTET: "", ...JSON.parse(window.localStorage.getItem(KEY) || "{}") }; }
-    catch (_) { return { UGPA: DEFAULT, UTET: "" }; }
+    let stored = {};
+    try {
+      const data = JSON.parse(window.localStorage.getItem(KEY) || "{}");
+      if (data && typeof data === "object" && !Array.isArray(data)) stored = data;
+    } catch (_) { /* Conservar los enlaces institucionales si la configuración local está dañada. */ }
+    // Migrar configuraciones antiguas que guardaban UTET vacío: nunca exigir
+    // que se pegue una URL por cada proceso o carpeta.
+    return Object.fromEntries(["UGPA", "UTET"].map(scope => [scope,
+      typeof stored[scope] === "string" && stored[scope].trim() ? stored[scope] : DEFAULTS[scope]]));
   }
   function save(values) {
-    const next = {UGPA: normalizeUrl(values.UGPA), UTET: normalizeUrl(values.UTET)};
+    const next = {
+      UGPA: normalizeUrl(values.UGPA) || DEFAULTS.UGPA,
+      UTET: normalizeUrl(values.UTET) || DEFAULTS.UTET
+    };
     window.localStorage.setItem(KEY, JSON.stringify(next));
     return next;
   }
@@ -34,7 +47,9 @@
       if (!root) continue;
       const directories = new Map([[root.toLowerCase(), ""]]);
       for (const folder of scan.folders || []) {
-        const absolute = localPath(folder.path);
+        const relativePath = localPath(folder.relativePath).replace(/^\/+/, "");
+        const absolute = localPath(folder.path || folder.absolutePath ||
+          (relativePath ? root + "/" + relativePath : ""));
         if (!absolute.toLowerCase().startsWith(root.toLowerCase() + "/")) continue;
         const relative = absolute.slice(root.length + 1);
         if (relative.split("/").some(part => part === ".." || part === ".")) continue;
@@ -48,6 +63,11 @@
     const source = context && context[item.scope];
     if (!source) return "";
     let candidate = localPath(item.actionPath || item.parentPath);
+    // Si el hallazgo apunta al padre, priorizar la carpeta real del inventario.
+    // Nunca construir una URL de una carpeta inexistente a partir del nombre propuesto.
+    const relativePath = localPath(item.pathLabel).replace(/^\/+/, "");
+    const inventoried = relativePath ? source.root + "/" + relativePath : "";
+    if (inventoried && source.directories.has(inventoried.toLowerCase())) candidate = inventoried;
     const root = source.root.toLowerCase();
     if (candidate.toLowerCase() !== root && !candidate.toLowerCase().startsWith(root + "/")) return "";
     if (candidate.split("/").some(part => part === ".." || part === ".")) return "";
