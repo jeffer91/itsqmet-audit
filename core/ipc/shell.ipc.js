@@ -55,7 +55,8 @@ async function canOpenLocal(targetPath) {
 function registerShellIpc() {
   ipcMain.handle("shell:copy-text", async (_event, payload = {}) => {
     const value = String(payload.text || "");
-    if (!value || value.length > 1000) return {ok:false,error:"Nombre no válido."};
+    // Las URLs de carpetas profundas pueden exceder 1000 caracteres codificados.
+    if (!value || value.length > 8192) return {ok:false,error:"Texto demasiado largo o vacío."};
     clipboard.writeText(value);
     return {ok:true};
   });
