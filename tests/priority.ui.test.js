@@ -8,8 +8,8 @@ test("las tarjetas y todos los pendientes muestran enlaces por caso y guardan bi
  document.getElementById("filterSearch").value="";
  const window={PrioritySharePoint:{load:()=>({UGPA:"https://itsqmet.sharepoint.com/",UTET:""})}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../screens/priority/priority.ui.js"),"utf8"),{window,document});
- let saved,opened;
- window.PriorityUI.bindEvents({onSaveSharePoint:v=>saved=v,onOpenPath:v=>opened=v});
+ let saved,opened,copied;
+ window.PriorityUI.bindEvents({onSaveSharePoint:v=>saved=v,onOpenPath:v=>opened=v,onCopySharePoint:v=>copied=v});
  document.getElementById("sharePointUTET").value="biblioteca-ut";
  document.getElementById("btnSaveSharePoint").events.click();
  assert.equal(saved.UTET,"biblioteca-ut");
@@ -19,9 +19,17 @@ test("las tarjetas y todos los pendientes muestran enlaces por caso y guardan bi
  for(const id of ["priorityList","backlogList"]){
   const html=document.getElementById(id).innerHTML;
   assert.ok(html.includes("Ocubre"));assert.ok(html.includes("Octubre"));assert.ok(html.includes(url));
+  assert.match(html,/href="https:\/\/itsqmet\.sharepoint\.com/);
+  assert.match(html,/Copiar enlace/);
  }
  events.click({target:{closest:()=>({dataset:{path:url},classList:{contains:c=>c==="js-open"}})}});
  assert.equal(opened,url);
+ let prevented=false;
+ events.click({target:{closest:()=>({tagName:"A",dataset:{path:url},classList:{contains:c=>c==="js-open"}})},preventDefault(){prevented=true;}});
+ assert.ok(prevented);
+ assert.equal(opened,url);
+ events.click({target:{closest:()=>({dataset:{url},classList:{contains:c=>c==="js-copy-sharepoint"}})}});
+ assert.equal(copied,url);
 });
 
 test("Priorización distingue documento nuevo, referencia antigua y creación condicionada",()=>{
