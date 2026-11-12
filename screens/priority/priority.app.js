@@ -113,6 +113,16 @@
     const history=await window.api.history.get();
     if(history&&history.ok&&history.history)window.AppStore.setHistory(history.history);
     window.PriorityUI.bindEvents({
+      onSyncPeriods:()=>perform(async()=>{
+        const service=window.api && window.api.periods;
+        if (!service || !service.list) throw new Error("La consulta de períodos no está disponible.");
+        const response=await service.list();
+        if (response && response.ok && window.PriorityPeriods.setPeriods(response.periods))
+          refresh("Períodos UTET actualizados desde Firebase (solo lectura).");
+        else
+          refresh("No se pudo consultar Firebase. Se conservan los períodos de referencia; "+
+            (response?.error||"revisar conexión y permisos."),"warning");
+      }),
       onSaveSharePoint: values => perform(() => {
         window.PrioritySharePoint.save(values);
         refresh("Enlaces guardados. Comprueba que cada biblioteca corresponde a su raíz local.");
@@ -205,6 +215,14 @@
       });
     }
     refresh();
+    // Sincronizar al abrir Priorización sin bloquear el inventario si falla la red.
+    if (window.api && window.api.periods && window.api.periods.list) {
+      window.api.periods.list().then(response=>{
+        if (response && response.ok && window.PriorityPeriods &&
+            window.PriorityPeriods.setPeriods(response.periods)) refresh();
+      }).catch(error=>window.console && window.console.warn(
+        "No se pudo actualizar el catálogo de períodos; se conserva la referencia.",error));
+    }
   }
   document.addEventListener("DOMContentLoaded",function () {
     initialize().catch(error=>window.PriorityUI &&
