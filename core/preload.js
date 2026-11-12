@@ -127,6 +127,9 @@ contextBridge.exposeInMainWorld("api", {
       });
     }
   },
+  periods: {
+    list: function listPeriods() { return ipcRenderer.invoke("periods:list"); }
+  },
   rules: {
     listFiles: function listFiles() {
       return ipcRenderer.invoke("rules:list-files");
