@@ -16,6 +16,7 @@ test("las tarjetas y todos los pendientes muestran enlaces por caso y guardan bi
  const url="https://itsqmet.sharepoint.com/?id=%2Ftest";
  const item={id:"fix",scope:"UGPA",processNumber:"135",workType:"quick",sharePointUrl:url,groupItems:[{actual:"Ocubre",suggestedName:"Octubre",sharePointUrl:url}]};
  window.PriorityUI.render({processes:[]},{items:[item],all:[item]});
+ document.getElementById("tabFolders").events.click();
  for(const id of ["priorityList","backlogList"]){
   const html=document.getElementById(id).innerHTML;
   assert.ok(html.includes("Ocubre"));assert.ok(html.includes("Octubre"));assert.ok(html.includes(url));
@@ -85,6 +86,7 @@ test("tarjeta visual muestra acción, nombres individuales, ruta y pasos sin dup
      summary:"Resolver las rutas relacionadas sin renombrar duplicados por separado.",
      steps:["Abrir las dos carpetas.","Comprobar el contenido.","Volver a escanear."]}};
  window.PriorityUI.render({processes:[]},{items:[group],all:[group],openCount:1,completedToday:0});
+ window.PriorityUI.setTab("folders");
  const html=document.getElementById("priorityList").innerHTML;
  assert.match(html,/CONSOLIDAR/);
  assert.match(html,/Qué debes hacer/);
