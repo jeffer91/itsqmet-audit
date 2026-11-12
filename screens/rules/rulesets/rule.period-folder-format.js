@@ -199,6 +199,19 @@
           return;
         }
 
+        if (scope === "UTET") {
+          // Las fechas PVC pueden tener longitudes distintas al semestre académico.
+          // Verificar solamente prefijo, dos meses y años, cronología y formato.
+          const canonical=scope+"-"+processValidation.processCode+"-"+
+            validation.normalizedPeriod.replace(/\s*[-–—]\s*/g,"–");
+          if (folder.name.trim() !== canonical) {
+            addFinding(findings,rule,scope,scanData,folder,{
+              ...validation,expected:canonical,
+              message:"El período conserva sus fechas originales; normalizar solo el prefijo y el separador."
+            });
+          }
+          return;
+        }
         if (!processPolicy) return;
 
         const range = Types.parseSpanishPeriodRange
@@ -225,7 +238,9 @@
         }
       });
 
-      if (processPolicy && processPolicy.required && !hasPeriodCandidate) {
+      const process=Manual && Manual.getProcess ? Manual.getProcess(scope,processValidation.processNumber) : null;
+      if (processPolicy && processPolicy.required && !hasPeriodCandidate &&
+          !(process && process.periodFolderRequired === false)) {
         addMissingPeriodFinding(
           findings,
           rule,
