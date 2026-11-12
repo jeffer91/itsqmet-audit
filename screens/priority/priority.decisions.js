@@ -60,6 +60,21 @@
     const r=rangeOf(old);
     if(!r)return {name:"",reason:"El nombre no permite identificar dos meses y años con suficiente certeza.",certainty:"baja"};
     const scope=text(entry.scope).toUpperCase(),number=text(entry.processNumber);
+    // Las fechas de UTET pueden corresponder a períodos PVC. Ninguna regla de
+    // duración semestral debe sobrescribir meses/años que constan en la carpeta.
+    if (scope === "UTET") {
+      if (r.by * 12 + r.b < r.ay * 12 + r.a)
+        return {name:"",reason:"La fecha final es anterior a la inicial; verificar el período en Firebase.",certainty:"baja"};
+      const name=scope+"-PRO-"+number+"-"+MONTHS[r.a-1]+" "+r.ay+
+        "–"+MONTHS[r.b-1]+" "+r.by;
+      const match=window.PriorityPeriods && window.PriorityPeriods.classifyRange
+        ? window.PriorityPeriods.classifyRange(r) : null;
+      const category=match && match.type==="regular" ? "regular" :
+        match && match.known ? "PVC" : "de titulación (confirmar si está registrado)";
+      return {name,reason:"Se conserva el período "+category+
+        " tal como está registrado. Solo se normalizan prefijo y separador, sin modificar fechas.",
+        certainty:"alta",datesChanged:false};
+    }
     const months=policyFor(scope,number,r.ay,r.a,ctx);
     if(!months)return {name:"",reason:"El catálogo no define una duración verificable para esta carpeta.",certainty:"baja"};
     const target=standardRange(r,months);
@@ -85,7 +100,7 @@
       name:text(entry.suggestedName),
       reason:text(entry.suggestedName)?"Nombre sugerido por la regla institucional. Confirmar la estructura y el contenido.":"El hallazgo no proporciona un nombre inequívoco; revisar la regla y la evidencia.",
       certainty:text(entry.suggestedName)?"media":"baja"};
-    if(isPeriod && !attempt.name && text(entry.suggestedName)) {
+    if(isPeriod && !attempt.name && text(entry.suggestedName) && text(entry.scope).toUpperCase()!=="UTET") {
       attempt.name=text(entry.suggestedName);
       attempt.reason="La regla institucional propone un nombre válido; confirmar el período antes de cambiarlo.";
       attempt.certainty="media";
