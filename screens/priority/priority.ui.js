@@ -324,6 +324,10 @@
     box.textContent=val(message);
     box.className="global-message" + (type ? " is-"+type : "");
   }
-  window.PriorityUI={render:render,bindEvents:bindEvents,setGlobalMessage:setGlobalMessage};
+  function setTab(next) {
+    if (!["documents","folders"].includes(next)) return;
+    activeTab=next;limit=40;render(vm,board);
+  }
+  window.PriorityUI={render:render,bindEvents:bindEvents,setTab:setTab,setGlobalMessage:setGlobalMessage};
 })(window,document);
 
