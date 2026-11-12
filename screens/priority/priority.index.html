@@ -25,6 +25,18 @@
     <div id="globalMessage" class="global-message" role="status" aria-live="polite"></div>
     <div id="noScanNotice" class="notice" hidden></div>
 
+    <nav class="work-tabs" role="tablist" aria-label="Tipo de gestión">
+      <button id="tabDocuments" class="work-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="priorityList">
+        Documentos por crear <span id="documentsCount">0</span>
+      </button>
+      <button id="tabFolders" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">
+        Carpetas por corregir <span id="foldersCount">0</span>
+      </button>
+    </nav>
+    <p id="periodsStatus" class="periods-status" role="status">
+      UTET: períodos regulares y PVC. UGPA: periodicidad propia del proceso.
+    </p>
+
     <section class="main-board" aria-labelledby="workHeading">
       <div class="section-head">
         <div><h2 id="workHeading">Qué hacer ahora</h2><p id="queueSummary">Seleccionando prioridades…</p></div>
@@ -39,7 +51,7 @@
         </div>
       </div>
       <div id="priorityList" class="priority-list"></div>
-      <p class="board-hint">Al terminar un paso, el sistema continúa con la siguiente acción. «Realizado» no equivale a evidencia validada.</p>
+      <p class="board-hint">Los documentos se proponen según el manual y la evidencia escaneada. Las correcciones de carpetas son sugerencias: nunca se renombran automáticamente. «Realizado» no equivale a evidencia validada.</p>
     </section>
 
     <details id="backlogPanel" class="secondary-panel">
@@ -70,6 +82,8 @@
       <summary>Herramientas y reportes</summary>
       <div class="panel-body tools">
         <button id="btnRescanPriority" class="btn" type="button">Volver a escanear</button>
+        <button id="btnSyncPeriods" class="btn btn-light" type="button">Actualizar períodos UTET desde Firebase</button>
+        <div id="periodsCatalog" class="periods-catalog" aria-label="Períodos UTET" role="status"></div>
         <button id="btnExportPriorityExcel" class="btn" type="button">Exportar Excel</button>
         <button id="btnExportPriorityPdf" class="btn" type="button">Exportar PDF</button>
         <span id="scanLabel" class="micro"></span>
@@ -94,6 +108,7 @@
   <script src="../rules/rules.config.js"></script>
   <script src="../rules/rules.catalog.js"></script>
   <script src="../rules/rules.engine.js"></script>
+  <script src="./priority.periods.js"></script>
   <script src="./priority.config.js"></script>
   <script src="./priority.processes.js"></script>
   <script src="./priority.storage.js"></script>
