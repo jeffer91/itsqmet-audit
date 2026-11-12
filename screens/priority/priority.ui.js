@@ -9,6 +9,56 @@
   let board = {items:[],all:[]};
   let vm = {processes:[]};
   let limit = 40;
+  let activeTab = "documents";
+  const isInactive=item=>["done","blocked","snoozed"].includes(item.status);
+  function tabOf(item) {
+    if (item.workType==="document" || item.large || item.resolvedDocumentId ||
+      (item.workType==="review" && /firma|pdf|documento|archivo|evidencia/i.test(val(item.title))))
+      return "documents";
+    return "folders";
+  }
+  function tabItems() {
+    return (board.all || []).filter(item=>tabOf(item)===activeTab);
+  }
+  function rankedItems(items) {
+    const score=window.PriorityQueue && window.PriorityQueue.score;
+    return items.filter(item=>!isInactive(item)).slice().sort((a,b)=>
+      (score?score(b)-score(a):0) || val(a.title).localeCompare(val(b.title),"es"));
+  }
+  function updateTabs() {
+    for (const [id,type] of [["tabDocuments","documents"],["tabFolders","folders"]]) {
+      const el=byId(id);
+      if (!el) continue;
+      el.className="work-tab"+(activeTab===type?" is-active":"");
+      if (typeof el.setAttribute==="function")
+        el.setAttribute("aria-selected",String(activeTab===type));
+      else el.ariaSelected=String(activeTab===type);
+    }
+    byId("documentsCount").textContent=String((board.all||[]).filter(x=>tabOf(x)==="documents").length);
+    byId("foldersCount").textContent=String((board.all||[]).filter(x=>tabOf(x)==="folders").length);
+  }
+  function renderPeriods() {
+    const module=window.PriorityPeriods;
+    if (!module) return;
+    const periods=module.getItems(),status=module.getStatus();
+    const source=status.source==="Firebase"?"Firebase (solo lectura)":
+      "referencia del 12/11/2026, pendiente de sincronizar";
+    byId("periodsStatus").textContent="UTET: "+periods.length+" períodos ("+
+      periods.filter(x=>x.type==="regular").length+" regulares, "+
+      periods.filter(x=>x.type==="PVC").length+" PVC) · Fuente: "+source+
+      ". UGPA: periodicidad semestral, anual o especial según el proceso.";
+    byId("periodsCatalog").innerHTML='<strong>Períodos UTET · '+esc(source)+'</strong>'+
+      '<ul>'+periods.map(x=>'<li>'+esc(x.label)+
+      ' <span>('+esc(x.type)+')</span></li>').join("")+'</ul>';
+  }
+  function periodMeta(item) {
+    const period=val(item.periodLabel);
+    if (!period) return "";
+    const result=item.scope==="UTET" && window.PriorityPeriods
+      ? window.PriorityPeriods.classifyLabel(period) : null;
+    const kind=result && result.type!=="sin determinar" ? " · "+result.type : "";
+    return '<span class="task-meta">Período: '+esc(period+kind)+'</span>';
+  }
   function kind(item) {
     if (item.large) return "Documento estratégico";
     const type = item.displayWorkType || item.workType;
@@ -140,7 +190,7 @@
           '<span>Acción recomendada</span></span>'+
           '<p>'+esc(taskSummary(item))+'</p>'+certainty+'</div>'+
         (item.levelLabel?'<span class="task-meta"><strong>Prioridad:</strong> '+esc(item.levelLabel)+'</span>':"")+
-        (item.periodLabel?'<span class="task-meta">Período: '+esc(item.periodLabel)+'</span>':"")+
+        periodMeta(item)+
         (item.origin!=="group"?comparisonBox(item):"")+
         itemDetails(item)+
         decisionSteps(decision)+
@@ -159,7 +209,7 @@
     const unit = byId("filterScope").value;
     const work = byId("filterWork").value;
     const query = val(byId("filterSearch").value).toLowerCase();
-    return (board.all || []).filter(function (item) {
+    return tabItems().filter(function (item) {
       if (unit !== "all" && item.scope !== unit) return false;
       if (work !== "all" && item.workType !== work) return false;
       return !query || [item.displayTitle,item.title,item.officialName,item.sourceFileName,item.processNumber,item.processName,item.scope,item.periodLabel,item.pathLabel]
@@ -209,27 +259,31 @@
     vm = nextVm || {};
     board = nextBoard || {items:[],all:[]};
     byId("todayCompleted").textContent = String(board.completedToday || 0);
-    byId("queueSummary").textContent = board.items.length + " acciones en la cola · Abre cada tarjeta para ver la decisión recomendada";
+    updateTabs();
+    const selected=rankedItems(tabItems()).slice(0,5);
+    byId("workHeading").textContent=activeTab==="documents"?"Documentos por crear o verificar":"Carpetas por corregir";
+    byId("queueSummary").textContent=selected.length+" acciones prioritarias · Abre cada tarjeta para revisar su propuesta";
     const progress=byId("queueProgressFill");
-    const completed=Number(board.completedToday||0),open=Number(board.openCount||0);
+    const completed=Number(board.completedToday||0),open=rankedItems(tabItems()).length;
     const ratio=completed+open ? Math.min(100,Math.round(100*completed/(completed+open))) : 0;
     if(progress && progress.style)progress.style.width=ratio+"%";
     const info=byId("queueProgressText");
     if(info)info.textContent=completed+" gestiones registradas hoy · "+open+
       " pendientes activos (no equivale a evidencias validadas)";
-    const quick=board.items.filter(x=>x.workType==="quick").length;
-    const review=board.items.filter(x=>x.workType==="review").length;
+    const quick=selected.filter(x=>x.workType==="quick").length;
+    const review=selected.filter(x=>x.workType==="review").length;
     const quickBox=byId("quickQueueCount"),reviewBox=byId("reviewQueueCount");
     if(quickBox)quickBox.textContent=String(quick);
     if(reviewBox)reviewBox.textContent=String(review);
-    byId("priorityList").innerHTML = board.items.map(card).join("") ||
+    byId("priorityList").innerHTML = selected.map(card).join("") ||
       '<div class="empty-state">No hay acciones activas. Revisa los pendientes o ejecuta un nuevo escaneo.</div>';
-    byId("backlogCount").textContent = "(" + board.all.length + ")";
+    byId("backlogCount").textContent = "(" + tabItems().length + ")";
     byId("scanLabel").textContent = vm.scansLabel || "";
     byId("noScanNotice").hidden = !vm.noScan;
     byId("noScanNotice").textContent = vm.noScan ? "No hay escaneos. Selecciona UGPA o UTET en Escaneo." : "";
     renderBacklog();
     renderProcesses();
+    renderPeriods();
   }
   function bindEvents(handlers) {
     const settings = window.PrioritySharePoint.load();
@@ -238,6 +292,9 @@
     byId("btnSaveSharePoint").addEventListener("click", () => handlers.onSaveSharePoint({
       UGPA: byId("sharePointUGPA").value, UTET: byId("sharePointUTET").value
     }));
+    byId("tabDocuments").addEventListener("click",()=>{activeTab="documents";limit=40;render(vm,board);});
+    byId("tabFolders").addEventListener("click",()=>{activeTab="folders";limit=40;render(vm,board);});
+    byId("btnSyncPeriods").addEventListener("click",handlers.onSyncPeriods);
     byId("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
     byId("btnRescanPriority").addEventListener("click",handlers.onRescan);
     byId("btnExportPriorityExcel").addEventListener("click",()=>handlers.onExportExcel(activeFilters()));
