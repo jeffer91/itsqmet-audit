@@ -144,6 +144,13 @@
       onOpenPath:path=>perform(async()=>{
         await window.PriorityService.openPath(path);
       }),
+      onCopySharePoint:url=>perform(async()=>{
+        if (!/^https:\/\/itsqmet\.sharepoint\.com\//i.test(String(url || "")))
+          throw new Error("El enlace no corresponde al SharePoint institucional.");
+        const result=await window.api.shell.copyText(url);
+        if (!result || !result.ok) throw new Error(result?.error || "No se pudo copiar el enlace.");
+        window.PriorityUI.setGlobalMessage("Enlace de SharePoint copiado.", "success");
+      }),
       onStatus:(id,status)=>perform(()=>{
         const task=getTask(id);
         if(!task)throw new Error("La tarea ya no está disponible. Actualiza.");
