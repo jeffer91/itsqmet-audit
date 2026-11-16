@@ -35,12 +35,13 @@
       if(!taskStats.has(id))taskStats.set(id,{total:0,active:0,first:null});
       const stats=taskStats.get(id);
       stats.total++;
-      if(task.status!=="done"){
+      if(!["verified","dismissed"].includes(task.status)){
         stats.active++;
         // Misma prioridad que la cola: puntuación si está disponible, nivel si no.
         const Q=window.PriorityQueue;
-        const better=!stats.first||(Q&&Q.score?Q.score(task)>Q.score(stats.first):
-          (ranks[task.level]||0)>(ranks[stats.first.level]||0));
+        const actionable=(!Q || !Q.eligible || Q.eligible(task));
+        const better=actionable && (!stats.first||(Q&&Q.score?Q.score(task)>Q.score(stats.first):
+          (ranks[task.level]||0)>(ranks[stats.first.level]||0)));
         if(better)stats.first=task;
       }
     }

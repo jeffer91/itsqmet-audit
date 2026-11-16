@@ -1,58 +1,62 @@
-CARPETA screens/priority — PRIORIZACIÓN
-======================================
-priority.config.js: niveles de urgencia, áreas, perfiles y márgenes de priorización.
-priority.service.js: transforma hallazgos y reglas en tareas; genera el modelo utilizado por pantalla y exportaciones.
-priority.queue.js: selecciona hasta cinco acciones principales y respeta estados de seguimiento.
-priority.storage.js: persistencia de seguimiento y cola.
-priority.app.js: orquesta carga de reglas, hallazgos de firmas, cola y presentación.
-priority.workflow.js: reglas del ciclo de vida de las tareas.
-priority.processes.js: agrupación y estado de procesos.
-Los hallazgos de firmas inválidas entran como tareas de revisión. Los resultados inconclusos y obsoletos no equivalen a incumplimientos.
-IMPORTANTE: el margen interno de 15 días de cierre no representa una fecha normativa del manual.
+PRIORIZACIÓN · MI DOCUMENTO ACTUAL
 
-ORDEN DE LA COLA (09/11/2026)
-1) Correcciones rápidas: primero carpetas de período mal nombradas y luego nombres de PDF (cada grupo es una sola tarea).
-   Van primero porque son rápidas y porque un nombre corregido cambia qué documentos se consideran faltantes.
-2) Documentos por elaborar, según urgencia, vencimiento de referencia y área.
-3) Revisiones: candidatos por verificar, capacitaciones incompletas, códigos o unidades inconsistentes.
-Las tareas «En proceso» se mantienen arriba dentro de su bloque.
+La pantalla principal muestra un documento abierto por vez. La vista Carpetas
+muestra una corrección por vez. La selección procede de PriorityQueue.focus;
+la interfaz no vuelve a ordenar todos los hallazgos. El documento se conserva
+al actualizar y al reiniciar, mientras siga disponible y no tenga dependencias.
 
-REGLAS DE URGENCIA
-- Período vigente iniciado sin carpeta: se generan sus documentos de inicio (UGPA PRO-70, PRO-31, PRO-251; UTET PRO-56 sin fecha).
-- Rezago histórico: período cerrado hace más de historicalDays (365) días. Se marca con el campo «historical», no por el texto del motivo.
-- Más atraso nunca resta puntos. UTET sigue sin vencimientos fabricados; entre períodos cerrados se ordena primero el más antiguo.
-- Los «Reportes de resultados/seguimiento» son documentos de cierre.
-- Carpetas con período de duración distinta a la periodicidad: solo se corrige el nombre; no se generan documentos con códigos deducidos.
-- Una carpeta vacía que corresponde a un documento pendiente no crea otra tarea; 4 o más carpetas vacías de un proceso forman un grupo.
-- PRO-60: la guía queda en espera mientras falten el acta o las fichas de la carrera.
-- UTET-PRO-57 sin carpeta se señala cuando PRO-56 tiene Planificación de Artículo Académico en el período.
-- priority.service.js contrasta nombres y evidencias una sola vez; la tabla de procesos, la cola y las exportaciones usan el mismo nivel y orden.
+GESTIÓN
+- En proceso: mantiene la tarea actual.
+- Ya está en firma: registra responsable, observaciones y fecha; retira el
+  documento de la cola activa y permite trabajar en el siguiente.
+- En firma y seguimiento: permite registrar gestiones, recepción y devolución.
+- Por corregir: conserva las etapas y vuelve a la cola sin desplazar una tarea
+  que ya se está trabajando.
+- Firmado: todavía requiere archivar/verificar el documento.
+- Completado: exige ruta absoluta de un PDF local existente y confirmación
+  explícita de revisión manual. No acredita una firma criptográfica válida.
+- Bloqueado, pospuesto y descartado: quedan fuera de la cola. Los descartes y
+  bloqueos requieren motivo; se pueden reactivar en Todos los pendientes.
+- Realizado (estado anterior): continúa significando evidencia por verificar.
 
+La cola respeta correcciones de estructura y los antecedentes declarados en
+blockedBy. PRO-60 no adelanta la guía si faltan actas/fichas o estos antecedentes
+están esperando aprobación en el seguimiento. No se infieren dependencias
+institucionales adicionales sin información del manual.
+PRO-57 genera cinco documentos independientes cuando PRO-56 registra una
+planificación de Artículo Académico y falta la carpeta del proceso.
 
-ENLACES Y CORRECCIONES (09/11/2026)
-priority.sharepoint.js: configura una biblioteca por unidad en localStorage y genera URLs
-desde la raíz local y las carpetas del último inventario. UGPA viene preconfigurada;
-UTET requiere pegar su biblioteca en Herramientas y reportes. La raíz local seleccionada
-debe corresponder a la raíz de esa biblioteca. No se infieren URLs para ZIP/RAR.
-Cada elemento de un grupo conserva su enlace y se puede consultar también en Ver todos.
-Los enlaces se incluyen en PDF y como columna URL en Excel; no verifican sincronización.
-No se cambia ningún archivo institucional. Después de renombrar en SharePoint,
-esperar la sincronización y volver a escanear. Los períodos ambiguos requieren revisión.
-Las tareas iniciadas solo tienen preferencia dentro de su bloque; la diversidad de
-procesos no adelanta documentos mientras quedan correcciones rápidas.
-Se corrige la sugerencia Ocubre -> Octubre y el prefijo RGI de carpetas de período
-solo cuando el resultado conserva las fechas y cumple la periodicidad del catálogo.
-El PDF conserva el orden de tareas calculado por el servicio.
+EVIDENCIA Y ORIENTACIÓN
+Se mantienen los candidatos PDF/editables y las referencias previas encontrados
+por PriorityNames y PriorityDecisions. Se ofrecen comprobaciones sugeridas por
+tipo de documento. Las referencias anteriores no son plantillas certificadas;
+la aplicación no inventa formatos ni fechas institucionales.
 
-COMPARACIÓN NUEVO / ANTIGUO
-En las tarjetas de Priorización y en «Ver todos» se muestra «Esto es lo nuevo»
-(nombre institucional propuesto para el período), «Esto es lo antiguo»
-(candidato localizado fuera de la carpeta del período, nunca validado por sí solo)
-y «Si no hay, crea esto» (instrucción condicionada tras comprobar evidencias).
-Si hay un archivo candidato en el período objetivo, se indica expresamente antes
-de proponer uno nuevo. Cuando no se puede resolver un código o fecha del manual,
-se usa el nombre oficial sin inventar 0X, AÑO-MES ni valores definitivos.
-Las correcciones agrupadas muestran nombre antiguo y nombre nuevo por elemento.
-Ningún documento se genera ni se sobreescribe automáticamente: se debe redactar,
-aprobar, firmar y archivar por el flujo institucional correspondiente. La creación
-de carpetas mantiene el botón existente y exige confirmación manual.
+PERSISTENCIA
+PriorityStorage migra el seguimiento local existente al archivo
+priority-workspace.json del directorio userData de Electron. Conserva una copia
+.bak y escribe mediante archivo temporal y renombrado. Las escrituras se
+serializan y los errores se muestran. Si ambas copias fallan, se bloquean las
+escrituras hasta restaurar un respaldo, sin impedir el acceso al botón Restaurar.
+Herramientas ofrece exportación e importación JSON para cambiar de equipo.
+Restaurar solicita confirmación y conserva priority-workspace.before-restore.json.
+
+Un documento con seguimiento conserva una ficha mínima aunque desaparezca el
+hallazgo tras escanear: su desaparición no equivale a aprobación. Los cambios de
+ID se concilian solo cuando documento, período y contexto coinciden de forma
+inequívoca. No se fusionan coincidencias ambiguas ni carreras distintas.
+
+El reescaneo muestra archivos nuevos y rutas desaparecidas. Un cambio de ruta
+puede ser un renombrado, no una eliminación. El progreso muestra documentos del
+seguimiento completados mediante revisión manual; no es el cumplimiento global
+de los procesos. PDF y Excel incluyen estado, responsable y observaciones.
+
+VALIDACIÓN
+npm ci
+npm test
+python -m pip install -r core/signatures/requirements.txt
+python -m unittest discover -s tests -p 'test_cover_review.py'
+
+Prueba funcional recomendada en Windows con las carpetas reales:
+abrir Priorización → En firma → siguiente documento → cerrar/reabrir → recibir o
+devolver → verificar PDF → exportar/restaurar respaldo → volver a escanear.

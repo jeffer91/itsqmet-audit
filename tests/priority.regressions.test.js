@@ -139,7 +139,7 @@ test("Excel y PDF respetan bloqueo y postergación de la tarea", async () => {
   };
   w.api = { pdf: { export: capture }, excel: { export: capture } };
   for (expected of ["blocked", "snoozed"]) {
-    w.PriorityStorage.setStatus(task.id, expected);
+    w.PriorityStorage.setStatus(task.id, expected, "Esperando responsable");
     await w.PriorityService.exportExcel({});
     await w.PriorityService.exportPdf({});
   }

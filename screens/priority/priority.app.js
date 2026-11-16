@@ -71,6 +71,8 @@
     const namesContext=window.PriorityNames ? window.PriorityNames.prepare(shared) : null;
     const board=window.PriorityQueue.build(vm,data,namesContext);
     window.PriorityStorage.setQueue(board.queueIds);
+    window.PriorityStorage.remember(board.all,board.focusIds);
+    window.PriorityStorage.flush().catch(error=>window.PriorityUI.setGlobalMessage("Avance local guardado, pero falló el respaldo: "+error.message,"error"));
     currentBoard=board;
     window.PriorityUI.render(vm,board);
     if(message)window.PriorityUI.setGlobalMessage(message,type||"success");
@@ -108,11 +110,30 @@
   async function initialize() {
     window.AppNav && window.AppNav.render("priority");
     window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Cargando prioridades…");
+    const recovered = await window.PriorityStorage.initialize();
     await loadRules();
     await loadSignatureFindings();
     const history=await window.api.history.get();
     if(history&&history.ok&&history.history)window.AppStore.setHistory(history.history);
+    const scanPaths=()=>{
+      const state=window.AppStore.get();
+      return ["UGPA","UTET"].flatMap(scope=>{
+        const scan=scope==="UGPA"?state.ugpaResult:state.utetResult;
+        return scan&&scan.ok?(scan.files||[]).map(file=>scope+"|"+(file.relativePath||file.path||file.name)):[];
+      });
+    };
+    window.PriorityStorage.compareScan(scanPaths());
     window.PriorityUI.bindEvents({
+      onExportBackup:()=>perform(async()=>{
+        const result=await window.PriorityStorage.exportBackup();
+        if(!result.ok)throw new Error(result.error);
+        if(!result.canceled)window.PriorityUI.setGlobalMessage("Respaldo guardado: "+result.filePath,"success");
+      }),
+      onImportBackup:()=>perform(async()=>{
+        const result=await window.PriorityStorage.importBackup();
+        if(!result.ok)throw new Error(result.error);
+        if(!result.canceled)refresh("Seguimiento restaurado.");
+      }),
       onSyncPeriods:()=>perform(async()=>{
         const service=window.api && window.api.periods;
         if (!service || !service.list) throw new Error("La consulta de períodos no está disponible.");
@@ -129,7 +150,7 @@
       }),
       onRefresh:()=>perform(()=>{
         window.PriorityStorage.setQueue([]);
-        refresh("Se actualizaron las cinco prioridades.");
+        refresh("Prioridades actualizadas. Se conserva el documento actual mientras esté disponible.");
       }),
       onRescan:()=>perform(async()=>{
         window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Escaneando carpetas…");
@@ -138,7 +159,9 @@
           // El escaneo de carpetas ya inicia la validación en segundo plano.
           // No esperar ni solicitar una segunda pasada de todos los PDF.
           await loadSignatureFindings();
-          refresh("Se revisaron "+total+" unidad(es). El avance registrado se conserva.");
+          const delta=window.PriorityStorage.compareScan(scanPaths());
+          await window.PriorityStorage.flush();
+          refresh("Se revisaron "+total+" unidad(es). "+(delta?delta.added+" archivos nuevos y "+delta.removed+" rutas que ya no aparecen (pueden ser renombres). ":"")+"El seguimiento se conserva; los archivos nuevos requieren revisión.");
         } finally {
           window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(false);
         }
@@ -161,32 +184,39 @@
         if (!result || !result.ok) throw new Error(result?.error || "No se pudo copiar el enlace.");
         window.PriorityUI.setGlobalMessage("Enlace de SharePoint copiado.", "success");
       }),
-      onStatus:(id,status)=>perform(()=>{
+      onStatus:(id,status)=>perform(async()=>{
         const task=getTask(id);
         if(!task)throw new Error("La tarea ya no está disponible. Actualiza.");
-        let note="";
-        if(status==="blocked"){
-          const entered=window.prompt("¿Qué falta para continuar? (responsable, insumo o aprobación)");
-          if(entered===null)return;
-          note=safe(entered);
-          if(!note)throw new Error("Indica el motivo del bloqueo.");
+        let details={};
+        if(["signing","blocked","correction","verified","dismissed","note"].includes(status)){
+          details=await window.PriorityUI.requestDetails(task,status);
+          if(details===null)return;
         }
-        window.PriorityStorage.setStatus(id,status,note);
-        refresh(status==="done"?"Trabajo registrado; la evidencia sigue pendiente de validación.":
-          status==="blocked"?"Tarea bloqueada; la siguiente recomendación está disponible.":
-          status==="snoozed"?"Tarea pospuesta. Puedes reactivarla en Ver todos.":
-          "Avance guardado.");
+        if(status==="verified"){
+          const result=await window.api.workspace.verifyEvidence(details.evidencePath);
+          if(!result||!result.ok)throw new Error(result&&result.error||"No se pudo localizar el PDF definitivo.");
+        }
+        if(status==="note"){
+          window.PriorityStorage.addNote(id,details);
+        } else window.PriorityStorage.setStatus(id,status,details.note,details);
+        window.PriorityStorage.remember([task],window.PriorityStorage.load().focus);
+        await window.PriorityStorage.flush();
+        refresh(status==="signing"?"Documento en firma. Puedes trabajar en el siguiente; el anterior permanece en seguimiento.":
+          status==="verified"?"Cierre registrado mediante revisión manual del PDF. No equivale a validación criptográfica automática.":
+          status==="done"?"Gestión realizada; falta verificar la evidencia final.":"Avance guardado.");
       }),
-      onStep:id=>perform(()=>{
+      onStep:id=>perform(async()=>{
         const task=getTask(id);
         if(!task||!task.large)throw new Error("Esta tarea no tiene etapas.");
         window.PriorityStorage.completeStep(id,task.stepIndex,task.stepCount);
+        await window.PriorityStorage.flush();
         refresh(task.stepIndex+1===task.stepCount
           ?"Se completaron las etapas; la evidencia debe validarse."
           :"Paso registrado. Ya puedes continuar con la siguiente etapa.");
       }),
-      onReopen:id=>perform(()=>{
+      onReopen:id=>perform(async()=>{
         window.PriorityStorage.resetTask(id);
+        await window.PriorityStorage.flush();
         refresh("La tarea se reactivó.");
       }),
       onCreateFolder:id=>perform(async()=>{
@@ -214,7 +244,7 @@
         }
       });
     }
-    refresh();
+    refresh(recovered && recovered.error ? recovered.error+" Usa Herramientas → Restaurar respaldo. El seguimiento no se sobrescribirá." : recovered?"Seguimiento recuperado desde la copia automática.":"", recovered && recovered.error ? "error":"success");
     // Sincronizar al abrir Priorización sin bloquear el inventario si falla la red.
     if (window.api && window.api.periods && window.api.periods.list) {
       window.api.periods.list().then(response=>{

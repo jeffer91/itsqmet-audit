@@ -14,8 +14,8 @@
     <header class="page-header">
       <div>
         <p class="eyebrow">Trabajo pendiente</p>
-        <h1>Mi trabajo prioritario</h1>
-        <p class="subtitle">Qué cambiar, qué conservar y qué elaborar, con instrucciones basadas en el inventario.</p>
+        <h1>Mi documento actual</h1>
+        <p class="subtitle">Un documento a la vez. Registra cuándo está en firma y continúa con el siguiente disponible.</p>
       </div>
       <div class="page-header__count">
         <strong id="todayCompleted">0</strong>
@@ -54,6 +54,10 @@
       <p class="board-hint">Los documentos se proponen según el manual y la evidencia escaneada. Las correcciones de carpetas son sugerencias: nunca se renombran automáticamente. «Realizado» no equivale a evidencia validada.</p>
     </section>
 
+    <details class="secondary-panel" id="trackingPanel" open>
+      <summary>En firma y seguimiento <span id="trackingCount">0</span></summary>
+      <div id="trackingList" class="panel-body"></div>
+    </details>
     <details id="backlogPanel" class="secondary-panel">
       <summary>Ver todos los pendientes <span id="backlogCount"></span></summary>
       <div class="panel-body">
@@ -63,6 +67,16 @@
           </label>
           <label>Tipo
             <select id="filterWork"><option value="all">Todos</option><option value="document">Documentos</option><option value="quick">Correcciones rápidas</option><option value="review">Verificaciones</option></select>
+          </label>
+          <label>Estado
+            <select id="filterStatus">
+              <option value="all">Todos</option><option value="pending">Pendiente</option>
+              <option value="doing">En elaboración</option><option value="signing">En firma</option>
+              <option value="review">En revisión</option><option value="signed">Firmado, por verificar</option>
+              <option value="correction">Por corregir</option><option value="blocked">Bloqueado</option>
+              <option value="snoozed">Pospuesto</option><option value="done">Realizado, por verificar</option>
+              <option value="verified">Completado · revisión manual</option><option value="dismissed">Descartado</option>
+            </select>
           </label>
           <label>Buscar
             <input id="filterSearch" type="search" placeholder="Documento, proceso o período" autocomplete="off" />
@@ -81,6 +95,8 @@
     <details id="toolsPanel" class="secondary-panel">
       <summary>Herramientas y reportes</summary>
       <div class="panel-body tools">
+        <button id="btnExportBackup" class="btn btn-light" type="button">Exportar respaldo del seguimiento</button>
+        <button id="btnImportBackup" class="btn btn-light" type="button">Restaurar respaldo</button>
         <button id="btnRescanPriority" class="btn" type="button">Volver a escanear</button>
         <button id="btnSyncPeriods" class="btn btn-light" type="button">Actualizar períodos UTET desde Firebase</button>
         <div id="periodsCatalog" class="periods-catalog" aria-label="Períodos UTET" role="status"></div>
@@ -99,6 +115,16 @@
     </details>
   </main>
 
+  <dialog id="statusDialog" class="status-dialog">
+    <form id="statusForm">
+      <h2 id="statusTitle"></h2><p id="statusDocument"></p>
+      <label>Responsable / personas pendientes de firma<input id="statusResponsible" maxlength="300" /></label>
+      <label>Observaciones / motivo<textarea id="statusNote" rows="3" maxlength="2000"></textarea></label>
+      <label id="evidenceField">Ruta local del archivo definitivo<input id="statusEvidence" maxlength="2000" /></label>
+      <label id="verificationField"><input type="checkbox" id="statusVerify" /> He revisado contenido, período, aprobación y firmas del archivo. Esta confirmación es manual.</label>
+      <div class="task-actions"><button type="submit" class="btn">Guardar y continuar</button><button type="button" id="statusCancel" class="btn btn-light">Cancelar</button></div>
+    </form>
+  </dialog>
   <script src="../shared/app.store.js"></script>
   <script src="../shared/app.nav.js"></script>
   <script src="../rules/rules.types.js"></script>

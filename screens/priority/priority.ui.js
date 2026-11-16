@@ -5,13 +5,14 @@
   const esc = v => val(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const STATUS = {pending:"Pendiente",doing:"En proceso",review:"En revisión",
-    done:"Realizado · por verificar",blocked:"Bloqueado",snoozed:"Pospuesto"};
+    done:"Realizado · por verificar",blocked:"Bloqueado",snoozed:"Pospuesto",signing:"En firma",correction:"Por corregir",signed:"Firmado · por archivar/verificar",verified:"Completado · revisión manual",dismissed:"Descartado con motivo"};
   let board = {items:[],all:[]};
   let vm = {processes:[]};
   let limit = 40;
   let activeTab = "documents";
-  const isInactive=item=>["done","blocked","snoozed"].includes(item.status);
+  const isInactive=item=>["done","blocked","snoozed","signing","review","verified","dismissed"].includes(item.status);
   function tabOf(item) {
+    if (window.PriorityQueue && window.PriorityQueue.tabOf) return window.PriorityQueue.tabOf(item);
     if (item.workType==="document" || item.large || item.resolvedDocumentId ||
       (item.workType==="review" && /firma|pdf|document|archivo|evidencia|elaborar|informe|acta|reporte/i.test(val(item.title))))
       return "documents";
@@ -22,7 +23,7 @@
   }
   function rankedItems(items) {
     const score=window.PriorityQueue && window.PriorityQueue.score;
-    return items.filter(item=>!isInactive(item)).slice().sort((a,b)=>
+    return items.filter(item=>!isInactive(item) && !(item.blockedBy||[]).length && !item.waitingForStructure).slice().sort((a,b)=>
       (score?score(b)-score(a):0) || val(a.title).localeCompare(val(b.title),"es"));
   }
   function updateTabs() {
@@ -170,13 +171,15 @@
       kind(item)].filter(Boolean).join(" · "));
     const canCreate=!!(item.parentPath && item.proposedFolderName &&
       item.workType==="quick" && (!item.decision || decision.action==="CREAR"));
-    const action=item.large
+    const action=item.status === "signed"
+      ? statusButton(item,"verified","Registrar archivo revisado y completar")
+      : item.large && item.stepIndex < item.stepCount
       ? '<button class="btn js-step" type="button" data-id="'+esc(item.id)+'">Registrar este paso</button>'
       : '<button class="btn js-status" type="button" data-status="done" data-id="'+esc(item.id)+'">Registrar gestión · por verificar</button>';
     const certainty=decision.certainty
       ? '<span class="decision-certainty">Certeza '+esc(decision.certainty)+
         (decision.needsConfirmation?" · Confirmar antes de cambiar":"")+'</span>' : "";
-    return '<details class="task-card" data-id="'+esc(item.id)+'">'+
+    return '<details open class="task-card" data-id="'+esc(item.id)+'">'+
       '<summary><span class="task-number">'+String(index+1).padStart(2,"0")+'</span>'+
       '<span class="task-main"><span class="task-heading"><span class="task-title">'+title+'</span>'+
         actionChip(decision)+'</span>'+
@@ -184,32 +187,64 @@
       '<span class="task-meta">'+meta+(item.status==="doing"?" · En proceso":"")+'</span>'+
       '</span><span class="task-chevron" aria-hidden="true">›</span></summary>'+
       '<div class="task-detail">'+
-        (item.large?'<span class="task-step">Paso '+(item.stepIndex+1)+' de '+item.stepCount+
+        (item.large?'<span class="task-step">Paso '+Math.min(item.stepIndex+1,item.stepCount)+' de '+item.stepCount+
           ' · '+esc(item.nextAction||"")+'</span>':"")+
         '<div class="decision-summary"><span class="decision-title">'+actionChip(decision)+
           '<span>Acción recomendada</span></span>'+
           '<p>'+esc(taskSummary(item))+'</p>'+certainty+'</div>'+
         (item.levelLabel?'<span class="task-meta"><strong>Prioridad:</strong> '+esc(item.levelLabel)+'</span>':"")+
         periodMeta(item)+
+        '<p class="priority-reason"><strong>Por qué ahora:</strong> '+esc(item.priorityReason||item.reason||"Prioridad del inventario")+'</p>'+
+        (item.note?'<p><strong>Observaciones:</strong> '+esc(item.note)+'</p>':"")+
+        (item.pathLabel?'<p class="group-path"><strong>Destino / ubicación:</strong> '+esc(item.pathLabel)+'</p>':"")+
         (item.origin!=="group"?comparisonBox(item):"")+
         itemDetails(item)+
         decisionSteps(decision)+
+        ((item.preparation||[]).length?'<details class="evidence-details"><summary>Insumos y comprobaciones sugeridas</summary><ol>'+item.preparation.map(step=>'<li>'+esc(step)+'</li>').join("")+'</ol></details>':"")+
         evidenceDetails(item)+
         '<p class="decision-disclaimer">Las acciones son recomendaciones; confirma el destino, no sobrescribas evidencias y vuelve a escanear para comprobar el resultado.</p>'+
         '<div class="task-actions">'+sharePointButton(item)+
           (item.actionPath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.actionPath)+'">Abrir carpeta local</button>':"")+
           (canCreate?'<button class="btn btn-soft js-mkdir" type="button" data-id="'+esc(item.id)+'">Crear carpeta (confirmar)</button>':"")+
           action+
+          (tabOf(item)==="documents" && item.status!=="signed" ? statusButton(item,"signing","Ya está en firma") + statusButton(item,"signed","Ya recibí el documento firmado") : "")+
+          statusButton(item,"dismissed","Ya existe / no aplica / duplicado")+
           (item.status!=="doing"?'<button class="btn btn-light js-status" type="button" data-id="'+esc(item.id)+'" data-status="doing">En proceso</button>':"")+
           '<button class="btn btn-light js-status" type="button" data-status="blocked" data-id="'+esc(item.id)+'">Bloquear</button>'+
           '<button class="btn btn-light js-status" type="button" data-status="snoozed" data-id="'+esc(item.id)+'">Posponer</button>'+
         '</div></div></details>';
   }
+  function statusButton(item,status,label) {
+    return '<button class="btn btn-light js-status" type="button" data-id="'+esc(item.id)+'" data-status="'+status+'">'+esc(label)+'</button>';
+  }
+  function trackingDetails(item) {
+    const sent = item.signatureSentAt && new Date(item.signatureSentAt);
+    const age = sent && Number.isFinite(sent.getTime()) ? Math.max(0,Math.floor((Date.now()-sent.getTime())/86400000)) : null;
+    return '<p class="micro">'+esc([item.periodLabel,item.responsible?"Responsable: "+item.responsible:"",
+      age!==null ? age+" días en firma":"",item.note,item.trackedOnly?"No aparece como hallazgo en el último escaneo; verificar cierre":""].filter(Boolean).join(" · "))+'</p>'+
+      (item.evidencePath?'<button class="btn btn-light js-open" data-path="'+esc(item.evidencePath)+'">Abrir evidencia registrada</button>':"");
+  }
+  function renderTracking() {
+    const items=(board.all||[]).filter(x=>["signing","review","blocked","signed","correction","done"].includes(x.status));
+    items.sort((a,b)=>val(a.signatureSentAt||a.updatedAt).localeCompare(val(b.signatureSentAt||b.updatedAt)));
+    const panel=byId("trackingList");
+    if (!panel) return;
+    byId("trackingCount").textContent=String(items.length);
+    panel.innerHTML=items.map(item=>'<article class="tracking-item"><strong>'+esc(item.displayTitle||item.title)+'</strong>'+
+      '<span class="task-meta">'+esc([item.scope,item.processNumber,STATUS[item.status]].join(" · "))+'</span>'+trackingDetails(item)+
+      '<div class="task-actions">'+
+      (["signing","review"].includes(item.status)?statusButton(item,"signed","Recibido firmado")+statusButton(item,"correction","Devuelto para corregir"):"")+
+      (["signed","done"].includes(item.status)?statusButton(item,"verified","Registrar archivo revisado y completar")+statusButton(item,"correction","Requiere corrección"):"")+
+      (item.status==="blocked"?statusButton(item,"pending","Desbloquear"):"")+
+      statusButton(item,"note","Registrar seguimiento")+'</div></article>').join("")||'<p>No hay documentos esperando gestión.</p>';
+  }
   function backlogRows() {
     const unit = byId("filterScope").value;
     const work = byId("filterWork").value;
     const query = val(byId("filterSearch").value).toLowerCase();
+    const status = byId("filterStatus") ? byId("filterStatus").value : "all";
     return tabItems().filter(function (item) {
+      if (status && status !== "all" && item.status !== status) return false;
       if (unit !== "all" && item.scope !== unit) return false;
       if (work !== "all" && item.workType !== work) return false;
       return !query || [item.displayTitle,item.title,item.officialName,item.sourceFileName,item.processNumber,item.processName,item.scope,item.periodLabel,item.pathLabel]
@@ -219,7 +254,7 @@
   function renderBacklog() {
     const items = backlogRows();
     byId("backlogList").innerHTML = items.slice(0,limit).map(function (item) {
-      const inactive = ["done","blocked","snoozed"].includes(item.status);
+      const inactive = ["done","blocked","snoozed","signing","review","verified","dismissed"].includes(item.status);
       const extra = (item.origin==='group'?'':comparisonBox(item)) + itemDetails(item) + decisionSteps(item.decision);
       const details = extra
         ? '<details class="backlog-detail"><summary>Ver instrucciones, nombres y rutas</summary>' +
@@ -228,11 +263,12 @@
         esc(item.displayTitle || item.projectTitle || item.title) + '</strong><small>' +
         esc([item.scope,item.processNumber ? "PRO-"+item.processNumber : "",item.decision&&item.decision.action || kind(item),STATUS[item.status]||"Pendiente"]
         .filter(Boolean).join(" · ")) + '</small></div>' +
-        '<div class="backlog-row__actions">' + sharePointButton(item) +
+        '<p class="micro">'+esc(item.waitingForStructure?'Antes: corregir la estructura de carpetas del proceso.':(item.blockedBy||[]).length?'Antes: '+item.blockedBy.join('; '):'')+'</p>'+
+         '<div class="backlog-row__actions">' + sharePointButton(item) +
         (item.actionPath?'<button type="button" class="btn btn-light js-open" data-path="' +
         esc(item.actionPath) + '">Abrir</button>':"") +
         (inactive?'<button type="button" class="btn btn-soft js-reopen" data-id="' +
-        esc(item.id) + '">Reactivar</button>':"") +
+        esc(item.id) + '">Reactivar</button>':"") + trackingDetails(item) +
         '</div></div>' + details;
     }).join("") || '<div class="empty-state">No hay registros con estos filtros.</div>';
     byId("btnMore").hidden = items.length <= limit;
@@ -260,16 +296,18 @@
     board = nextBoard || {items:[],all:[]};
     byId("todayCompleted").textContent = String(board.completedToday || 0);
     updateTabs();
-    const selected=rankedItems(tabItems()).slice(0,5);
-    byId("workHeading").textContent=activeTab==="documents"?"Documentos por crear o verificar":"Carpetas por corregir";
-    byId("queueSummary").textContent=selected.length+" acciones prioritarias · Abre cada tarjeta para revisar su propuesta";
+    const selected=board.focus ? (board.focus[activeTab]?[board.focus[activeTab]]:[]) :
+      (board.items||[]).filter(x=>tabOf(x)===activeTab&&!isInactive(x)).slice(0,1);
+    byId("workHeading").textContent=activeTab==="documents"?"Mi documento actual":"Mi corrección actual";
+    byId("queueSummary").textContent=selected.length ? "Una tarea a la vez. Al enviarla a firma, bloquearla o finalizar la gestión, aparece la siguiente." : "No hay trabajo disponible en esta vista. Consulta En firma y seguimiento o las correcciones de carpetas.";
     const progress=byId("queueProgressFill");
     const completed=Number(board.completedToday||0),open=rankedItems(tabItems()).length;
-    const ratio=completed+open ? Math.min(100,Math.round(100*completed/(completed+open))) : 0;
+    const documents=(board.all||[]).filter(x=>tabOf(x)==="documents" && x.status!=="dismissed");
+    const verified=documents.filter(x=>x.status==="verified").length;
+    const ratio=documents.length ? Math.round(100*verified/documents.length) : 0;
     if(progress && progress.style)progress.style.width=ratio+"%";
     const info=byId("queueProgressText");
-    if(info)info.textContent=completed+" gestiones registradas hoy · "+open+
-      " pendientes activos (no equivale a evidencias validadas)";
+    if(info)info.textContent=verified+" de "+documents.length+" documentos en seguimiento completados mediante revisión manual · "+documents.filter(x=>x.status==="signing").length+" en firma · "+open+" acciones activas. No es el cumplimiento institucional total.";
     const quick=selected.filter(x=>x.workType==="quick").length;
     const review=selected.filter(x=>x.workType==="review").length;
     const quickBox=byId("quickQueueCount"),reviewBox=byId("reviewQueueCount");
@@ -282,6 +320,7 @@
     byId("noScanNotice").hidden = !vm.noScan;
     byId("noScanNotice").textContent = vm.noScan ? "No hay escaneos. Selecciona UGPA o UTET en Escaneo." : "";
     renderBacklog();
+    renderTracking();
     renderProcesses();
     renderPeriods();
   }
@@ -296,10 +335,12 @@
     byId("tabFolders").addEventListener("click",()=>{activeTab="folders";limit=40;render(vm,board);});
     byId("btnSyncPeriods").addEventListener("click",handlers.onSyncPeriods);
     byId("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
+    byId("btnExportBackup").addEventListener("click",()=>handlers.onExportBackup());
+    byId("btnImportBackup").addEventListener("click",()=>handlers.onImportBackup());
     byId("btnRescanPriority").addEventListener("click",handlers.onRescan);
     byId("btnExportPriorityExcel").addEventListener("click",()=>handlers.onExportExcel(activeFilters()));
     byId("btnExportPriorityPdf").addEventListener("click",()=>handlers.onExportPdf(activeFilters()));
-    ["filterScope","filterWork"].forEach(id => byId(id).addEventListener("change",function(){
+    ["filterScope","filterWork","filterStatus"].forEach(id => byId(id).addEventListener("change",function(){
       limit=40;renderBacklog();
     }));
     byId("filterSearch").addEventListener("input",function(){limit=40;renderBacklog();});
@@ -328,6 +369,32 @@
     if (!["documents","folders"].includes(next)) return;
     activeTab=next;limit=40;render(vm,board);
   }
-  window.PriorityUI={render:render,bindEvents:bindEvents,setTab:setTab,setGlobalMessage:setGlobalMessage};
+  function requestDetails(task,status) {
+    return new Promise(resolve=>{
+      const dialog=byId("statusDialog"),form=byId("statusForm");
+      byId("statusTitle").textContent=status==="note"?"Registrar seguimiento":(STATUS[status]||status);
+      byId("statusDocument").textContent=task.displayTitle||task.title;
+      byId("statusNote").value=task.note||"";
+      byId("statusNote").required=["blocked","correction","dismissed","note"].includes(status);
+      byId("statusResponsible").value=task.responsible||"";
+      byId("statusEvidence").value=task.evidencePath||task.sourceFilePath||"";
+      byId("statusEvidence").required=status==="verified";
+      byId("evidenceField").hidden=status!=="verified";
+      byId("statusVerify").checked=false;
+      byId("statusVerify").required=status==="verified";
+      byId("verificationField").hidden=status!=="verified";
+      const close=()=>{form.onsubmit=null;resolve(null);};
+      dialog.oncancel=close;
+      byId("statusCancel").onclick=()=>{dialog.close();close();};
+      form.onsubmit=event=>{
+        event.preventDefault();
+        if (!form.reportValidity())return;
+        const result={note:val(byId("statusNote").value),responsible:val(byId("statusResponsible").value),evidencePath:val(byId("statusEvidence").value)};
+        form.onsubmit=null;dialog.close();resolve(result);
+      };
+      dialog.showModal();
+    });
+  }
+  window.PriorityUI={requestDetails:requestDetails,render:render,bindEvents:bindEvents,setTab:setTab,setGlobalMessage:setGlobalMessage};
 })(window,document);
 

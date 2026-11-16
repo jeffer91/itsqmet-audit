@@ -37,7 +37,23 @@
       "Archivar el PDF final aprobado"
     ];
   }
+  function preparation(task) {
+    const name=String(task.officialName||task.title||"").toLowerCase();
+    const context=[task.scope,task.processNumber?"PRO-"+task.processNumber:"",task.periodLabel,task.careerName].filter(Boolean).join(" · ");
+    let inputs=[];
+    if(/cronograma/.test(name))inputs=["Confirmar fechas de inicio, entregas, evaluación y cierre con los responsables.","Asignar responsable y plazo a cada actividad y comprobar cruces."];
+    else if(/designaci[oó]n/.test(name))inputs=["Confirmar la nómina de docentes, carreras, funciones y período de asignación.","Verificar quién autoriza la designación antes de enviarla a firma."];
+    else if(/plagio/.test(name))inputs=["Reunir los reportes de similitud y vincular cada resultado con su artículo y estudiante.","Comprobar el criterio institucional aplicable sin inventar un porcentaje permitido."];
+    else if(/acta/.test(name))inputs=["Reunir fecha, participantes, resultados y acuerdos de la sesión o evaluación.","Contrastar nombres, decisiones y firmantes con los registros originales."];
+    else if(/informe|reporte/.test(name))inputs=["Reunir registros del período y comprobar totales, resultados e indicadores.","Relacionar cada resultado y conclusión con su evidencia y anexos."];
+    else if(/plan/.test(name))inputs=["Reunir el diagnóstico de necesidades y los resultados del plan anterior.","Definir objetivos, actividades, responsables, fechas y evidencias de cumplimiento."];
+    else if(/gu[ií]a|ficha/.test(name))inputs=["Reunir actas, fichas por nivel e insumos de la carrera.","Confirmar la aprobación de antecedentes antes de elaborar la versión final."];
+    else if(/comunicado/.test(name))inputs=["Confirmar destinatarios, fechas, instrucciones y autoridad que autoriza el comunicado."];
+    if(!inputs.length)return [];
+    return ["Confirmar el ámbito: "+context].concat(inputs,["Usar el formato institucional vigente. Una referencia anterior no acredita que sea la plantilla vigente."]);
+  }
   function decorate(task, state) {
+    task=Object.assign({},task,{preparation:preparation(task)});
     const large = isLarge(task);
     if (!large) return Object.assign({}, task, {
       large: false, stepIndex: 0, stepCount: 1, nextAction: task.suggestedAction || task.title

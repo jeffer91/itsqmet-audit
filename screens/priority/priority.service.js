@@ -585,6 +585,7 @@
       title: params.title + " · " + params.careerName,
       documentId: params.documentId,
       careerName: params.careerName,
+      careerKey: params.careerKey,
       sourceCategory: "required-documents",
       pathLabel: safeText(params.careerFolder && params.careerFolder.relativePath),
       actionPath: safeText(params.actionPath || (params.careerFolder && params.careerFolder.path)),
@@ -923,22 +924,22 @@
       const range = folder && looseRange(folder);
       if (range) periods.set(periodLabel(range), range);
     });
-    return Array.from(periods.entries()).map(function (entry) {
-      return {
-        id: "utet57|" + entry[0],
-        scope: "UTET", processNumber: "57",
-        processName: safeText(Manual.getProcess && Manual.getProcess("UTET", "57") && Manual.getProcess("UTET", "57").name),
-        area: "mission", areaLabel: areaDef("mission").label,
-        level: "high", levelLabel: levelDef("high").label,
-        stage: "ongoing", stageLabel: "Ejecución", effort: "high",
-        periodLabel: entry[0], dueDate: null, periodEnd: entry[1].end, historical: false,
-        reason: "PRO-56 tiene una Planificación de Artículo Académico para este período, pero no se localizó la carpeta de UTET-PRO-57. Faltarían sus cinco documentos: cronograma, designación de docentes metodológicos, porcentaje de plagio, comunicado y acta de titulación.",
-        title: "Localizar o elaborar la documentación de UTET-PRO-57 (Artículo Académico)",
-        skipManualMatch: true,
-        pathLabel: "", actionPath: safeText(scan.rootPath),
-        parentPath: "", proposedFolderName: "",
-        workType: "review", synthetic: true
-      };
+    const process = Manual.getProcess("UTET","57");
+    return Array.from(periods.entries()).flatMap(function (entry) {
+      return (process.documents || []).map(function(doc) {
+        return {
+          id:["utet57",entry[0],doc.id].join("|"),
+          scope:"UTET", processNumber:"57", processName:process.name,
+          area:"mission", areaLabel:areaDef("mission").label,
+          level:"high", levelLabel:levelDef("high").label,
+          stage:"ongoing", stageLabel:"Ejecución", effort:"medium",
+          periodLabel:entry[0], dueDate:null, periodEnd:entry[1].end,
+          reason:"PRO-56 registra planificación de Artículo Académico para este período. Localizar este documento de PRO-57 antes de elaborarlo; no se encontró su carpeta.",
+          title:doc.label + " · UTET-PRO-57", documentId:doc.id, documentLabel:doc.label,
+          sourceCategory:"required-documents", pathLabel:"", actionPath:safeText(scan.rootPath),
+          parentPath:"", proposedFolderName:"",workType:"document",synthetic:true
+        };
+      });
     });
   }
 
@@ -1074,6 +1075,13 @@
       const analyzed = window.PriorityDecisions ? window.PriorityDecisions.decorate(named,decisionContext) : named;
       return links ? links.decorate(analyzed, linkContext) : analyzed;
     });
+    if (window.PriorityStorage && window.PriorityStorage.reconcile) {
+      const saved = window.PriorityStorage.reconcile(tasks);
+      tasks.forEach(task=>{if(saved.statuses[task.id])Object.assign(task,saved.statuses[task.id]);});
+      const ids=new Set(tasks.map(x=>x.id));
+      for(const record of Object.values(saved.tasks||{}))
+        if(!ids.has(record.id)&&saved.statuses[record.id])tasks.push({...record,...saved.statuses[record.id],trackedOnly:true,named:true});
+    }
     sortTasks(tasks);
 
     const filtersSafe = Object.assign({scope:"all",process:"all",area:"all",level:"all",workType:"all",status:"all",search:""},filters || {});

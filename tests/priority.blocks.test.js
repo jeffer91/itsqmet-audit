@@ -220,7 +220,8 @@ test("UTET-57 sin carpeta se señala si PRO-56 planificó Artículo Académico",
   const task = view(w).vmResult.tasks.find(t => t.processNumber === "57");
   assert.ok(task);
   assert.equal(task.periodLabel, "Octubre 2025 – Marzo 2026");
-  assert.match(task.displayTitle || task.title, /PRO-57/);
+  assert.equal(view(w).vmResult.tasks.filter(t=>t.processNumber==="57").length,5);
+  assert.ok(task.documentId);
 });
 
 test("la tabla de procesos y la exportación usan el mismo nivel que la cola", () => {

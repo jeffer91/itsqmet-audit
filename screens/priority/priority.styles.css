@@ -209,3 +209,12 @@ a.btn{text-decoration:none}
   gap:6px 14px;list-style:none;padding:6px 0 0;margin:0}
 .periods-catalog li{line-height:1.5}
 .periods-catalog li span{color:var(--muted)}
+
+.status-dialog { border: 1px solid #cbd5e1; border-radius: 16px; padding: 24px; max-width: 620px; width: 90%; color: #172b4d; }
+.status-dialog::backdrop { background: rgba(15,23,42,.45); }
+.status-dialog label { display: block; margin: 16px 0; }
+.status-dialog input:not([type=checkbox]), .status-dialog textarea { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #94a3b8; border-radius: 6px; font: inherit; }
+.status-dialog [hidden] { display: none; }
+.tracking-item { padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
+.tracking-item .task-meta { display: block; }
+.priority-reason { padding: 12px; background: #eff6ff; border-left: 3px solid #2563eb; }

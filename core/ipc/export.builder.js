@@ -1,4 +1,5 @@
 "use strict";
+const statusLabel=require("./export.status");
 /*
 Nombre completo: export.builder.js
 Ruta o ubicación: /core/ipc/export.builder.js
@@ -1159,7 +1160,7 @@ function buildPriorityDocument(payload) {
         <td><strong>${escapeHtml(task.title || "")}</strong><br><span class="muted">${escapeHtml(task.processName || "")}</span><br><span class="muted">${escapeHtml(({quick:"Corrección rápida",review:"Verificar",document:"Elaborar"})[task.workType] || "")}</span></td>
         <td>${escapeHtml(task.periodLabel || "Sin período")}</td>
         <td>${escapeHtml(task.stageLabel || "")}${dueLabel ? "<br><span class=\"muted\">Ref.: " + escapeHtml(dueLabel) + "</span>" : ""}</td>
-        <td>${escapeHtml(task.reason || "")}</td>
+        <td>${escapeHtml(task.reason || "")}<br><strong>${escapeHtml(statusLabel(task.status))}</strong><br>${escapeHtml(task.responsible || "")}<br>${escapeHtml(task.note || "")}${task.signatureSentAt ? "<br>Enviado a firma: " + escapeHtml(task.signatureSentAt) : ""}${task.evidencePath ? "<br>Archivo revisado: " + escapeHtml(task.evidencePath) : ""}</td>
         <td class="path">${escapeHtml(task.pathLabel || "")}${sharePointLink(task.sharePointUrl)}</td>
       </tr>
     `;

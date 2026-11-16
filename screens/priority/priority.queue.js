@@ -93,22 +93,36 @@
   }
 
   function eligible(item) {
-    return !["done", "blocked", "snoozed"].includes(item.status);
+    return !(item.blockedBy || []).length && !["done", "blocked", "snoozed", "signing", "review", "verified", "dismissed"].includes(item.status);
   }
 
   function build(vm, storage, preparedNamesContext) {
     const progress = storage || { statuses: {}, stages: {}, queue: [], activity: [] };
     const namesContext = preparedNamesContext || (window.PriorityNames ? window.PriorityNames.prepare() : null);
     const decisionContext = namesContext ? {indices:namesContext.indices||{},manual:namesContext.manual||{}} : null;
-    const all = candidateTasks(vm).map(function(item) {
+    const candidates = candidateTasks(vm);
+    const ids = new Set(candidates.map(x=>x.id));
+    for (const saved of Object.values(progress.tasks || {})) {
+      if (!ids.has(saved.id) && progress.statuses && progress.statuses[saved.id])
+        candidates.push(Object.assign({}, saved, {trackedOnly:true, origin:"task"}));
+    }
+    const all = candidates.map(function(item) {
       const saved = progress.statuses && progress.statuses[item.id];
       const status = saved ? saved.status : (item.status || "pending");
-      const input = Object.assign({}, item, {status});
+      const input = Object.assign({}, item, saved || {}, {status});
       // Las tareas del servicio ya llegan contrastadas; no se renombran dos veces.
       const named = namesContext && !input.named ? window.PriorityNames.rename(input, namesContext) : input;
       const analyzed = window.PriorityDecisions
         ? window.PriorityDecisions.decorate(named,decisionContext) : named;
       return window.PriorityWorkflow.decorate(analyzed, progress);
+    });
+    all.forEach(item=>{
+      if(item.scope!=="UGPA" || String(item.processNumber)!=="60" || !["guia","rgi3"].includes(item.documentId))return;
+      const waiting=all.filter(other=>other.id!==item.id && other.scope===item.scope && other.processNumber===item.processNumber &&
+        val(other.careerKey||other.careerName)===val(item.careerKey||item.careerName) && other.periodLabel===item.periodLabel &&
+        ["acta","ficha","rgi1","rgi2"].includes(other.documentId) &&
+        ["signing","review","blocked","correction","done","signed"].includes(other.status));
+      if(waiting.length)item.blockedBy=Array.from(new Set((item.blockedBy||[]).concat(waiting.map(x=>(x.officialName||x.title)+" pendiente de aprobación/verificación"))));
     });
     const pool = all.filter(eligible);
     const ranked = pool.slice().sort(function(a, b) {
@@ -148,13 +162,36 @@
     ranked.filter(item=>block(item)===1 || independent(item)).forEach(item=>{
       if(selected.length<MAX&&!selected.some(x=>x.id===item.id))selected.push(item);
     });
+    const focus = {}, focusIds = {};
+    const available = ranked.filter(item => (block(item)===1 || independent(item)) && (!item.trackedOnly || ["doing","correction","signed"].includes(item.status)));
+    for (const tab of ["documents", "folders"]) {
+      const members = available.filter(item=>tabOf(item)===tab);
+      const pinned = progress.focus && progress.focus[tab];
+      const current = members.find(x=>x.id===pinned) || members.find(x=>["doing","correction","signed"].includes(x.status)) || members[0];
+      if (current) { focus[tab] = current; focusIds[tab] = current.id; }
+    }
+    all.forEach(item=>{
+      item.waitingForStructure = block(item)!==1 && !independent(item);
+      item.priorityReason = item.status === "signed" ? "Recibido: archivar y comprobar el documento definitivo." :
+        item.status === "correction" ? "Devuelto con observaciones: corregir antes de reenviar." :
+        item.status === "doing" ? "Continuar el trabajo iniciado." :
+        item.sourceFileName ? "Hay un archivo candidato: comprobarlo antes de elaborar otro." :
+        item.dueDate ? "Fecha de referencia: " + String(item.dueDate).slice(0,10) + ". " + val(item.reason) :
+        val(item.reason) || "Prioridad por tipo de trabajo, nivel y proceso; sin vencimiento institucional confirmado.";
+    });
     return {
+      focus, focusIds,
       items: selected, all, queueIds: selected.map(item => item.id),
       openCount: pool.length,
       completedToday: window.PriorityStorage.completedToday(progress)
     };
   }
 
-  window.PriorityQueue = { build, score, block };
+  function tabOf(item) {
+    return item.workType === "document" || item.large || item.resolvedDocumentId ||
+      (item.workType === "review" && /firma|pdf|document|archivo|evidencia|elaborar|informe|acta|reporte/i.test(val(item.title)))
+      ? "documents" : "folders";
+  }
+  window.PriorityQueue = { build, score, block, eligible, tabOf };
 })(window);
 

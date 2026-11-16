@@ -19,6 +19,13 @@ function safeText(value) {
 }
 
 contextBridge.exposeInMainWorld("api", {
+  workspace: {
+    load: () => ipcRenderer.invoke("workspace:load"),
+    verifyEvidence: filePath => ipcRenderer.invoke("workspace:verify-evidence", filePath),
+    save: data => ipcRenderer.invoke("workspace:save", data),
+    export: () => ipcRenderer.invoke("workspace:export"),
+    import: () => ipcRenderer.invoke("workspace:import")
+  },
   archive: {
     pickFolder: function pickFolder(type) {
       return ipcRenderer.invoke("archive:pick-folder", {
