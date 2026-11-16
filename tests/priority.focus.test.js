@@ -74,15 +74,17 @@ test("diferencia de escaneo distingue archivos nuevos y rutas desaparecidas",()=
  const w=boot();assert.equal(w.PriorityStorage.compareScan(["a","b"]),null);
  const delta=w.PriorityStorage.compareScan(["b","c"]);assert.equal(delta.added,1);assert.equal(delta.removed,1);
 });
-test("la pantalla usa exclusivamente el documento elegido por el motor",()=>{
+test("la nueva lista muestra todos los pendientes y advierte dependencias",()=>{
  const elements=new Map();const document={getElementById(id){if(!elements.has(id))elements.set(id,{value:"all",innerHTML:"",textContent:"",style:{}});return elements.get(id);},addEventListener(){}};
  document.getElementById("filterSearch").value="";
  const w=boot();vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../screens/priority/priority.ui.js"),"utf8"),{window:w,document});
  const selected=task("selected"),blocked=task("blocked",{level:"max",blockedBy:["Acta"]});
  w.PriorityUI.render({processes:[]},{all:[blocked,selected],items:[blocked],focus:{documents:selected}});
  const html=elements.get("priorityList").innerHTML;
- assert.match(html,/Documento selected/);assert.doesNotMatch(html,/Documento blocked/);assert.equal((html.match(/class="task-card"/g)||[]).length,1);
- assert.match(html,/Ya está en firma/);
+ assert.match(html,/Documento selected/);assert.match(html,/Documento blocked/);
+ assert.equal((html.match(/class="task-card work-item"/g)||[]).length,2);
+ assert.match(html,/Necesita un paso previo/);
+ assert.match(html,/Empezar/);
 });
 test("si ambas copias fallan, no sobrescribe y permite restaurar un respaldo válido",async()=>{
  let writes=0;const restored=boot().PriorityStorage.load();

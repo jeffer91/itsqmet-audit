@@ -14,8 +14,8 @@
     <header class="page-header">
       <div>
         <p class="eyebrow">Trabajo pendiente</p>
-        <h1>Mi documento actual</h1>
-        <p class="subtitle">Un documento a la vez. Registra cuándo está en firma y continúa con el siguiente disponible.</p>
+        <h1>Gestión de documentos</h1>
+        <p class="subtitle">Selecciona una sección, trabaja tus pendientes y mueve cada documento a la siguiente etapa. Los cambios se guardan automáticamente.</p>
       </div>
       <div class="page-header__count">
         <strong id="todayCompleted">0</strong>
@@ -25,13 +25,13 @@
     <div id="globalMessage" class="global-message" role="status" aria-live="polite"></div>
     <div id="noScanNotice" class="notice" hidden></div>
 
-    <nav class="work-tabs" role="tablist" aria-label="Tipo de gestión">
-      <button id="tabDocuments" class="work-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="priorityList">
-        Documentos por crear <span id="documentsCount">0</span>
-      </button>
-      <button id="tabFolders" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">
-        Carpetas por corregir <span id="foldersCount">0</span>
-      </button>
+    <nav class="work-tabs" role="tablist" aria-label="Etapas de gestión documental">
+      <button id="tabPending" class="work-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="priorityList">Pendientes <span id="pendingCount">0</span></button>
+      <button id="tabDoing" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">En elaboración <span id="doingCount">0</span></button>
+      <button id="tabSigning" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">Por firmar <span id="signingCount">0</span></button>
+      <button id="tabArchive" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">Por archivar <span id="archiveCount">0</span></button>
+      <button id="tabCompleted" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">Completados <span id="completedCount">0</span></button>
+      <button id="tabCorrections" class="work-tab" type="button" role="tab" aria-selected="false" aria-controls="priorityList">Correcciones <span id="correctionsCount">0</span></button>
     </nav>
     <p id="periodsStatus" class="periods-status" role="status">
       UTET: períodos regulares y PVC. UGPA: periodicidad propia del proceso.
@@ -39,27 +39,22 @@
 
     <section class="main-board" aria-labelledby="workHeading">
       <div class="section-head">
-        <div><h2 id="workHeading">Qué hacer ahora</h2><p id="queueSummary">Seleccionando prioridades…</p></div>
+        <div><h2 id="workHeading">Pendientes</h2><p id="queueSummary">Documentos que todavía no has comenzado.</p></div>
         <button id="btnRefreshPriority" class="btn btn-light" type="button">Actualizar</button>
       </div>
-      <div class="queue-overview" aria-label="Estado de la cola">
-        <div class="queue-metric"><strong id="quickQueueCount">0</strong><span>Correcciones rápidas</span></div>
-        <div class="queue-metric"><strong id="reviewQueueCount">0</strong><span>Verificaciones</span></div>
+      <div class="queue-overview" aria-label="Avance de documentos">
         <div class="queue-progress">
-          <div class="queue-progress__label"><strong>Avance registrado</strong><span id="queueProgressText">Sin actividad registrada hoy</span></div>
+          <div class="queue-progress__label"><strong>Documentos completados</strong><span id="queueProgressText">Sin documentos completados todavía</span></div>
           <div class="queue-progress__track" aria-hidden="true"><div id="queueProgressFill" class="queue-progress__fill"></div></div>
         </div>
       </div>
       <div id="priorityList" class="priority-list"></div>
-      <p class="board-hint">Los documentos se proponen según el manual y la evidencia escaneada. Las correcciones de carpetas son sugerencias: nunca se renombran automáticamente. «Realizado» no equivale a evidencia validada.</p>
+      <button id="btnMoreSection" class="btn btn-light" type="button" hidden>Mostrar más documentos</button>
+      <p class="board-hint">Mover una tarjeta solo cambia su seguimiento; no mueve ni firma archivos automáticamente. Para completar un documento se revisa su PDF definitivo. Las carpetas corregidas se confirman manualmente.</p>
     </section>
 
-    <details class="secondary-panel" id="trackingPanel" open>
-      <summary>En firma y seguimiento <span id="trackingCount">0</span></summary>
-      <div id="trackingList" class="panel-body"></div>
-    </details>
     <details id="backlogPanel" class="secondary-panel">
-      <summary>Ver todos los pendientes <span id="backlogCount"></span></summary>
+      <summary>Todos los registros, incluidos pospuestos y descartados <span id="backlogCount"></span></summary>
       <div class="panel-body">
         <div class="filters">
           <label>Unidad
@@ -121,7 +116,7 @@
       <label>Responsable / personas pendientes de firma<input id="statusResponsible" maxlength="300" /></label>
       <label>Observaciones / motivo<textarea id="statusNote" rows="3" maxlength="2000"></textarea></label>
       <label id="evidenceField">Ruta local del archivo definitivo<input id="statusEvidence" maxlength="2000" /></label>
-      <label id="verificationField"><input type="checkbox" id="statusVerify" /> He revisado contenido, período, aprobación y firmas del archivo. Esta confirmación es manual.</label>
+      <label id="verificationField"><input type="checkbox" id="statusVerify" /> <span id="verificationText">He revisado contenido, período, aprobación y firmas del archivo. Esta confirmación es manual.</span></label>
       <div class="task-actions"><button type="submit" class="btn">Guardar y continuar</button><button type="button" id="statusCancel" class="btn btn-light">Cancelar</button></div>
     </form>
   </dialog>

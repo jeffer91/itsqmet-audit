@@ -66,7 +66,7 @@
     const data = load();
     const previous=data.statuses[id] || {};
     details = details || {};
-    if (status === "verified" && !String(details.evidencePath || "").trim())
+    if (status === "verified" && !String(details.evidencePath || "").trim() && details.structureConfirmed !== true)
       throw new Error("Indica el archivo definitivo revisado.");
     if (["blocked", "correction", "dismissed"].includes(status) && !String(note || "").trim())
       throw new Error("Indica el motivo o las observaciones.");
@@ -76,7 +76,8 @@
     data.statuses[id] = Object.assign({}, data.statuses[id], {
       responsible: String(details.responsible !== undefined ? details.responsible : previous.responsible || ""),
       evidencePath: String(details.evidencePath || previous.evidencePath || ""),
-      evidenceVerified: status === "verified",
+      evidenceVerified: status === "verified" && details.structureConfirmed !== true,
+      structureVerified: status === "verified" && details.structureConfirmed === true,
       signatureSentAt: status === "signing" ? new Date().toISOString() : previous.signatureSentAt || null
     });
     Object.keys(data.focus).forEach(tab => { if (data.focus[tab] === id && !["doing", "pending", "correction", "signed"].includes(status)) delete data.focus[tab]; });

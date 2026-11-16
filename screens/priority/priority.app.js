@@ -192,7 +192,7 @@
           details=await window.PriorityUI.requestDetails(task,status);
           if(details===null)return;
         }
-        if(status==="verified"){
+        if(status==="verified" && !details.structureConfirmed){
           const result=await window.api.workspace.verifyEvidence(details.evidencePath);
           if(!result||!result.ok)throw new Error(result&&result.error||"No se pudo localizar el PDF definitivo.");
         }
@@ -201,9 +201,9 @@
         } else window.PriorityStorage.setStatus(id,status,details.note,details);
         window.PriorityStorage.remember([task],window.PriorityStorage.load().focus);
         await window.PriorityStorage.flush();
-        refresh(status==="signing"?"Documento en firma. Puedes trabajar en el siguiente; el anterior permanece en seguimiento.":
-          status==="verified"?"Cierre registrado mediante revisión manual del PDF. No equivale a validación criptográfica automática.":
-          status==="done"?"Gestión realizada; falta verificar la evidencia final.":"Avance guardado.");
+        const target=window.PriorityQueue.sectionOf({...task,status});
+        refresh(status==="signing"?"Guardado en Por firmar.":"El estado se guardó en su sección correspondiente.");
+        if(target!=="other")window.PriorityUI.setTab(target);
       }),
       onStep:id=>perform(async()=>{
         const task=getTask(id);
@@ -218,6 +218,7 @@
         window.PriorityStorage.resetTask(id);
         await window.PriorityStorage.flush();
         refresh("La tarea se reactivó.");
+        window.PriorityUI.setTab(window.PriorityQueue.sectionOf({...getTask(id),status:"pending"}));
       }),
       onCreateFolder:id=>perform(async()=>{
         const task=getTask(id);

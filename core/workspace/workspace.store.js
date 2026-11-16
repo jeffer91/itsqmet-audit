@@ -15,7 +15,7 @@ function validate(data) {
   if(Object.values(data.stages).some(x=>!Number.isInteger(x)||x<0))throw new Error("Etapas del respaldo inválidas.");
   for (const entry of Object.values(data.statuses)) {
     if (!entry || !STATES.has(entry.status)) throw new Error("El respaldo contiene estados no válidos.");
-    if (entry.status === "verified" && !String(entry.evidencePath || "").trim())
+    if (entry.status === "verified" && !String(entry.evidencePath || "").trim() && entry.structureVerified !== true)
       throw new Error("Falta la referencia de evidencia del documento completado.");
   }
   if (Buffer.byteLength(JSON.stringify(data)) > 8 * 1024 * 1024) throw new Error("Respaldo demasiado grande (máximo 8 MB).");

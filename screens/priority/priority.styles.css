@@ -218,3 +218,25 @@ a.btn{text-decoration:none}
 .tracking-item { padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
 .tracking-item .task-meta { display: block; }
 .priority-reason { padding: 12px; background: #eff6ff; border-left: 3px solid #2563eb; }
+
+/* Seis etapas: tarjetas compactas con acción principal siempre visible. */
+.work-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0 0}
+.work-tab{justify-content:space-between;text-align:left;min-width:0;padding:14px 15px;line-height:1.3}
+.work-tab span{font-variant-numeric:tabular-nums}
+.queue-overview{display:block}
+.queue-progress{background:#f8fbff}
+.work-item{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 16px;margin:11px 0}
+.work-item__top{display:flex;gap:12px;align-items:flex-start}
+.work-item__intro{min-width:0;flex:1}
+.work-item__intro h3{margin:0;font-size:14px;line-height:1.45}
+.work-item__intro .task-meta{display:block;margin:5px 0;font-size:11px;color:var(--muted)}
+.work-item__intro .task-next{margin:4px 0 8px;line-height:1.5;font-size:12px;color:var(--text)}
+.work-item__primary{padding:5px 0 4px 42px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.work-item__warning{font-size:12px;color:#9a6108}
+.work-item__detail{border-top:1px solid var(--line);margin-top:11px}
+.work-item__detail>summary{cursor:pointer;padding:11px 0 2px;font-size:12px;color:var(--primary);font-weight:650}
+.work-item__detail .task-detail{padding:12px 0 3px;display:grid;gap:11px}
+.work-item__detail .task-actions{display:flex;flex-wrap:wrap;gap:7px}
+#btnMoreSection{margin:14px 0 4px}
+@media(max-width:720px){.work-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.work-item__primary{padding-left:0}}
+@media(max-width:450px){.work-tabs{grid-template-columns:1fr 1fr}.work-tab{font-size:12px;padding:10px}.work-item{padding:11px}}

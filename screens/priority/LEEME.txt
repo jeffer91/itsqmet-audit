@@ -1,9 +1,25 @@
-PRIORIZACIÓN · MI DOCUMENTO ACTUAL
+PRIORIZACIÓN · SEIS SECCIONES CON GUARDADO AUTOMÁTICO
 
-La pantalla principal muestra un documento abierto por vez. La vista Carpetas
-muestra una corrección por vez. La selección procede de PriorityQueue.focus;
-la interfaz no vuelve a ordenar todos los hallazgos. El documento se conserva
-al actualizar y al reiniciar, mientras siga disponible y no tenga dependencias.
+La pantalla organiza todos los documentos y correcciones en seis secciones:
+Pendientes → En elaboración → Por firmar → Por archivar → Completados.
+Correcciones recibe carpetas, nombres incorrectos y documentos devueltos.
+Al seleccionar una acción, su estado se guarda y la tarjeta pasa a su sección.
+
+Por firmar conserva fecha, responsable y observaciones; Por archivar conserva
+las tareas firmadas o realizadas aún pendientes de revisar el PDF definitivo.
+Completados solo incluye revisiones manuales acreditadas. Para correcciones
+de estructura se requiere la confirmación expresa de un nuevo escaneo; no se
+inventa un PDF. Las tareas pospuestas, bloqueadas y descartadas permanecen
+en «Todos los registros», con opción de reactivar.
+
+Los documentos se consultan en sus carpetas originales y SharePoint:
+cambiar el estado no mueve archivos ni firma documentos. El estado persistente
+sigue en priority-workspace.json y su copia .bak; restaurar un respaldo no
+reemplaza la carpeta de origen.
+
+El motor de auditoría sigue considerando urgencia, período, dependencias,
+hallazgos y evidencias, pero la interfaz muestra la prioridad en detalles.
+Los grupos de correcciones no se renombran automáticamente.
 
 GESTIÓN
 - En proceso: mantiene la tarea actual.

@@ -9,34 +9,62 @@
   let board = {items:[],all:[]};
   let vm = {processes:[]};
   let limit = 40;
-  let activeTab = "documents";
-  const isInactive=item=>["done","blocked","snoozed","signing","review","verified","dismissed"].includes(item.status);
+  let activeTab = "pending";
+  let sectionLimit = 12;
+  const SECTIONS = [
+    ["pending", "tabPending", "pendingCount", "Pendientes", "Documentos detectados que aún no has comenzado."],
+    ["doing", "tabDoing", "doingCount", "En elaboración", "Documentos que estás preparando."],
+    ["signing", "tabSigning", "signingCount", "Por firmar", "Documentos enviados a firma o en revisión."],
+    ["archive", "tabArchive", "archiveCount", "Por archivar", "Documentos recibidos o realizados: comprobar el PDF definitivo."],
+    ["completed", "tabCompleted", "completedCount", "Completados", "Documentos y correcciones revisados manualmente."],
+    ["corrections", "tabCorrections", "correctionsCount", "Correcciones", "Nombres, carpetas y documentos devueltos para corregir."]
+  ];
   function tabOf(item) {
     if (window.PriorityQueue && window.PriorityQueue.tabOf) return window.PriorityQueue.tabOf(item);
     if (item.workType==="document" || item.large || item.resolvedDocumentId ||
-      (item.workType==="review" && /firma|pdf|document|archivo|evidencia|elaborar|informe|acta|reporte/i.test(val(item.title))))
-      return "documents";
+      (item.workType==="review" && /firma|pdf|document|archivo|evidencia|elaborar|informe|acta|reporte/i.test(val(item.title)))) return "documents";
     return "folders";
   }
+  function sectionOf(item) {
+    if (window.PriorityQueue && window.PriorityQueue.sectionOf) return window.PriorityQueue.sectionOf(item);
+    const status=item.status||"pending";
+    if(status==="verified")return "completed";
+    if(["blocked","snoozed","dismissed"].includes(status))return "other";
+    if(status==="correction" || tabOf(item)==="folders")return "corrections";
+    if(["signing","review"].includes(status))return "signing";
+    if(["signed","done"].includes(status))return "archive";
+    return status==="doing"?"doing":"pending";
+  }
   function tabItems() {
-    return (board.all || []).filter(item=>tabOf(item)===activeTab);
+    return (board.all||[]).filter(item=>sectionOf(item)===activeTab);
   }
   function rankedItems(items) {
     const score=window.PriorityQueue && window.PriorityQueue.score;
-    return items.filter(item=>!isInactive(item) && !(item.blockedBy||[]).length && !item.waitingForStructure).slice().sort((a,b)=>
-      (score?score(b)-score(a):0) || val(a.title).localeCompare(val(b.title),"es"));
+    return items.slice().sort((a,b)=>{
+      const blockedA=(a.blockedBy||[]).length||a.waitingForStructure?1:0;
+      const blockedB=(b.blockedBy||[]).length||b.waitingForStructure?1:0;
+      return blockedA-blockedB || (a.status==="doing"?-1:0)-(b.status==="doing"?-1:0) ||
+        (score?score(b)-score(a):0) || val(a.title).localeCompare(val(b.title),"es");
+    });
   }
   function updateTabs() {
-    for (const [id,type] of [["tabDocuments","documents"],["tabFolders","folders"]]) {
+    for (const [section,id,count] of SECTIONS) {
       const el=byId(id);
-      if (!el) continue;
-      el.className="work-tab"+(activeTab===type?" is-active":"");
-      if (typeof el.setAttribute==="function")
-        el.setAttribute("aria-selected",String(activeTab===type));
-      else el.ariaSelected=String(activeTab===type);
+      if (el) {
+        el.className="work-tab"+(activeTab===section?" is-active":"");
+        if (typeof el.setAttribute==="function") el.setAttribute("aria-selected",String(activeTab===section));
+        else el.ariaSelected=String(activeTab===section);
+      }
+      const metric=byId(count);
+      if(metric)metric.textContent=String((board.all||[]).filter(x=>sectionOf(x)===section).length);
     }
-    byId("documentsCount").textContent=String((board.all||[]).filter(x=>tabOf(x)==="documents").length);
-    byId("foldersCount").textContent=String((board.all||[]).filter(x=>tabOf(x)==="folders").length);
+    // Old test and external link compatibility: no legacy controls in the new page.
+    for(const [id,section,count] of [["tabDocuments","pending","documentsCount"],["tabFolders","corrections","foldersCount"]]){
+      const el=byId(id);
+      if(el)el["aria-selected"]=String(activeTab===section);
+      const metric=byId(count);
+      if(metric)metric.textContent=String((board.all||[]).filter(x=>sectionOf(x)===section).length);
+    }
   }
   function renderPeriods() {
     const module=window.PriorityPeriods;
@@ -164,55 +192,63 @@
           '</div></article>';
       }).join("")+'</div></section>';
   }
-  function card(item, index) {
+  function primaryAction(item) {
+    const status=item.status||"pending";
+    if((item.blockedBy||[]).length || item.waitingForStructure)
+      return '<span class="work-item__warning">Necesita un paso previo; revisa los detalles</span>';
+    if(status==="verified")return "";
+    if(status==="correction")return statusButton(item,"doing","Reanudar corrección");
+    if(tabOf(item)==="folders"){
+      if(status==="done")return statusButton(item,"verified","Confirmar corrección revisada");
+      if(status==="doing")return statusButton(item,"done","Corrección realizada");
+      return statusButton(item,"doing","Empezar corrección");
+    }
+    if(status==="pending")return statusButton(item,"doing","Empezar");
+    if(status==="doing" && item.large && item.stepIndex<item.stepCount)
+      return '<button class="btn js-step" type="button" data-id="'+esc(item.id)+'">Registrar paso '+(item.stepIndex+1)+' de '+item.stepCount+'</button>';
+    if(status==="doing")return statusButton(item,"signing","Enviar a firma");
+    if(status==="signing" || status==="review")return statusButton(item,"signed","Ya está firmado");
+    if(status==="signed" || status==="done")return statusButton(item,"verified","Archivar y completar");
+    return "";
+  }
+  function card(item,index) {
+    const status=item.status||"pending";
     const title=esc(item.displayTitle||item.projectTitle||item.title);
     const decision=item.decision||{};
-    const meta=esc([item.scope,item.processNumber?"PRO-"+item.processNumber:"",
-      kind(item)].filter(Boolean).join(" · "));
-    const canCreate=!!(item.parentPath && item.proposedFolderName &&
-      item.workType==="quick" && (!item.decision || decision.action==="CREAR"));
-    const action=item.status === "signed"
-      ? statusButton(item,"verified","Registrar archivo revisado y completar")
-      : item.large && item.stepIndex < item.stepCount
-      ? '<button class="btn js-step" type="button" data-id="'+esc(item.id)+'">Registrar este paso</button>'
-      : '<button class="btn js-status" type="button" data-status="done" data-id="'+esc(item.id)+'">Registrar gestión · por verificar</button>';
-    const certainty=decision.certainty
-      ? '<span class="decision-certainty">Certeza '+esc(decision.certainty)+
-        (decision.needsConfirmation?" · Confirmar antes de cambiar":"")+'</span>' : "";
-    return '<details open class="task-card" data-id="'+esc(item.id)+'">'+
-      '<summary><span class="task-number">'+String(index+1).padStart(2,"0")+'</span>'+
-      '<span class="task-main"><span class="task-heading"><span class="task-title">'+title+'</span>'+
-        actionChip(decision)+'</span>'+
-      '<span class="task-next">'+esc(taskSummary(item))+'</span>'+
-      '<span class="task-meta">'+meta+(item.status==="doing"?" · En proceso":"")+'</span>'+
-      '</span><span class="task-chevron" aria-hidden="true">›</span></summary>'+
+    const meta=esc([item.scope,item.processNumber?"PRO-"+item.processNumber:"",item.periodLabel,STATUS[status]||"Pendiente"].filter(Boolean).join(" · "));
+    const canCreate=!!(item.parentPath && item.proposedFolderName && item.workType==="quick" &&
+      (!item.decision || decision.action==="CREAR"));
+    const followup=["signing","review","correction","signed","done","doing"].includes(status);
+    return '<article class="task-card work-item" data-id="'+esc(item.id)+'">'+
+      '<div class="work-item__top"><span class="task-number">'+String(index+1).padStart(2,"0")+'</span>'+
+      '<div class="work-item__intro"><h3 class="task-title">'+title+'</h3>'+
+      '<p class="task-meta">'+meta+'</p>'+
+      '<p class="task-next">'+esc(taskSummary(item))+'</p></div></div>'+
+      '<div class="work-item__primary">'+primaryAction(item)+'</div>'+
+      '<details class="work-item__detail"><summary>Ver detalles y otras opciones</summary>'+
       '<div class="task-detail">'+
-        (item.large?'<span class="task-step">Paso '+Math.min(item.stepIndex+1,item.stepCount)+' de '+item.stepCount+
+      (item.large?'<span class="task-step">Paso '+Math.min(item.stepIndex+1,item.stepCount)+' de '+item.stepCount+
           ' · '+esc(item.nextAction||"")+'</span>':"")+
-        '<div class="decision-summary"><span class="decision-title">'+actionChip(decision)+
-          '<span>Acción recomendada</span></span>'+
-          '<p>'+esc(taskSummary(item))+'</p>'+certainty+'</div>'+
-        (item.levelLabel?'<span class="task-meta"><strong>Prioridad:</strong> '+esc(item.levelLabel)+'</span>':"")+
-        periodMeta(item)+
-        '<p class="priority-reason"><strong>Por qué ahora:</strong> '+esc(item.priorityReason||item.reason||"Prioridad del inventario")+'</p>'+
-        (item.note?'<p><strong>Observaciones:</strong> '+esc(item.note)+'</p>':"")+
-        (item.pathLabel?'<p class="group-path"><strong>Destino / ubicación:</strong> '+esc(item.pathLabel)+'</p>':"")+
-        (item.origin!=="group"?comparisonBox(item):"")+
-        itemDetails(item)+
-        decisionSteps(decision)+
-        ((item.preparation||[]).length?'<details class="evidence-details"><summary>Insumos y comprobaciones sugeridas</summary><ol>'+item.preparation.map(step=>'<li>'+esc(step)+'</li>').join("")+'</ol></details>':"")+
-        evidenceDetails(item)+
-        '<p class="decision-disclaimer">Las acciones son recomendaciones; confirma el destino, no sobrescribas evidencias y vuelve a escanear para comprobar el resultado.</p>'+
-        '<div class="task-actions">'+sharePointButton(item)+
-          (item.actionPath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.actionPath)+'">Abrir carpeta local</button>':"")+
-          (canCreate?'<button class="btn btn-soft js-mkdir" type="button" data-id="'+esc(item.id)+'">Crear carpeta (confirmar)</button>':"")+
-          action+
-          (tabOf(item)==="documents" && item.status!=="signed" ? statusButton(item,"signing","Ya está en firma") + statusButton(item,"signed","Ya recibí el documento firmado") : "")+
-          statusButton(item,"dismissed","Ya existe / no aplica / duplicado")+
-          (item.status!=="doing"?'<button class="btn btn-light js-status" type="button" data-id="'+esc(item.id)+'" data-status="doing">En proceso</button>':"")+
-          '<button class="btn btn-light js-status" type="button" data-status="blocked" data-id="'+esc(item.id)+'">Bloquear</button>'+
-          '<button class="btn btn-light js-status" type="button" data-status="snoozed" data-id="'+esc(item.id)+'">Posponer</button>'+
-        '</div></div></details>';
+      (item.levelLabel?'<p class="task-meta"><strong>Prioridad:</strong> '+esc(item.levelLabel)+'</p>':"")+
+      periodMeta(item)+
+      (item.priorityReason||item.reason?'<p class="priority-reason"><strong>Por qué:</strong> '+esc(item.priorityReason||item.reason)+'</p>':"")+
+      (item.note?'<p><strong>Observaciones:</strong> '+esc(item.note)+'</p>':"")+
+      (item.pathLabel?'<p class="group-path"><strong>Ubicación:</strong> '+esc(item.pathLabel)+'</p>':"")+
+      (item.origin!=="group"?comparisonBox(item):"")+
+      itemDetails(item)+decisionSteps(decision)+
+      ((item.preparation||[]).length?'<details class="evidence-details"><summary>Insumos y comprobaciones</summary><ol>'+item.preparation.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ol></details>':"")+
+      evidenceDetails(item)+
+      '<p class="decision-disclaimer">La confirmación es manual; no se renombran ni firman archivos automáticamente.</p>'+
+      '<div class="task-actions">'+sharePointButton(item)+
+      (item.actionPath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.actionPath)+'">Abrir carpeta local</button>':"")+
+      (canCreate?'<button class="btn btn-soft js-mkdir" type="button" data-id="'+esc(item.id)+'">Crear carpeta (confirmar)</button>':"")+
+      (status==="signing"||status==="review"?statusButton(item,"correction","Devuelto para corregir"):"")+
+      (status==="signed"||status==="done"?statusButton(item,"correction","Necesita corrección"):"")+
+      (followup?statusButton(item,"note","Registrar seguimiento"):"")+
+      (status==="verified"?'<button class="btn btn-light js-reopen" type="button" data-id="'+esc(item.id)+'">Reabrir</button>':
+       statusButton(item,"snoozed","Posponer")+statusButton(item,"blocked","Bloquear")+
+       statusButton(item,"dismissed","Ya existe / no aplica / duplicado"))+
+      '</div></div></details></article>';
   }
   function statusButton(item,status,label) {
     return '<button class="btn btn-light js-status" type="button" data-id="'+esc(item.id)+'" data-status="'+status+'">'+esc(label)+'</button>';
@@ -243,7 +279,7 @@
     const work = byId("filterWork").value;
     const query = val(byId("filterSearch").value).toLowerCase();
     const status = byId("filterStatus") ? byId("filterStatus").value : "all";
-    return tabItems().filter(function (item) {
+    return (board.all||[]).filter(function (item) {
       if (status && status !== "all" && item.status !== status) return false;
       if (unit !== "all" && item.scope !== unit) return false;
       if (work !== "all" && item.workType !== work) return false;
@@ -291,38 +327,30 @@
       search:val(byId("filterSearch").value)
     };
   }
-  function render(nextVm, nextBoard) {
-    vm = nextVm || {};
-    board = nextBoard || {items:[],all:[]};
-    byId("todayCompleted").textContent = String(board.completedToday || 0);
+  function render(nextVm,nextBoard) {
+    vm=nextVm||{};
+    board=nextBoard||{items:[],all:[]};
+    byId("todayCompleted").textContent=String(board.completedToday||0);
     updateTabs();
-    const selected=board.focus ? (board.focus[activeTab]?[board.focus[activeTab]]:[]) :
-      (board.items||[]).filter(x=>tabOf(x)===activeTab&&!isInactive(x)).slice(0,1);
-    byId("workHeading").textContent=activeTab==="documents"?"Mi documento actual":"Mi corrección actual";
-    byId("queueSummary").textContent=selected.length ? "Una tarea a la vez. Al enviarla a firma, bloquearla o finalizar la gestión, aparece la siguiente." : "No hay trabajo disponible en esta vista. Consulta En firma y seguimiento o las correcciones de carpetas.";
+    const def=SECTIONS.find(x=>x[0]===activeTab)||SECTIONS[0];
+    const selected=rankedItems(tabItems());
+    byId("workHeading").textContent=def[3];
+    byId("queueSummary").textContent=selected.length+" registro(s). "+def[4];
+    const docs=(board.all||[]).filter(x=>tabOf(x)==="documents" && x.status!=="dismissed");
+    const verified=docs.filter(x=>x.status==="verified").length;
     const progress=byId("queueProgressFill");
-    const completed=Number(board.completedToday||0),open=rankedItems(tabItems()).length;
-    const documents=(board.all||[]).filter(x=>tabOf(x)==="documents" && x.status!=="dismissed");
-    const verified=documents.filter(x=>x.status==="verified").length;
-    const ratio=documents.length ? Math.round(100*verified/documents.length) : 0;
-    if(progress && progress.style)progress.style.width=ratio+"%";
+    if(progress&&progress.style)progress.style.width=(docs.length?Math.round(verified*100/docs.length):0)+"%";
     const info=byId("queueProgressText");
-    if(info)info.textContent=verified+" de "+documents.length+" documentos en seguimiento completados mediante revisión manual · "+documents.filter(x=>x.status==="signing").length+" en firma · "+open+" acciones activas. No es el cumplimiento institucional total.";
-    const quick=selected.filter(x=>x.workType==="quick").length;
-    const review=selected.filter(x=>x.workType==="review").length;
-    const quickBox=byId("quickQueueCount"),reviewBox=byId("reviewQueueCount");
-    if(quickBox)quickBox.textContent=String(quick);
-    if(reviewBox)reviewBox.textContent=String(review);
-    byId("priorityList").innerHTML = selected.map(card).join("") ||
-      '<div class="empty-state">No hay acciones activas. Revisa los pendientes o ejecuta un nuevo escaneo.</div>';
-    byId("backlogCount").textContent = "(" + tabItems().length + ")";
-    byId("scanLabel").textContent = vm.scansLabel || "";
-    byId("noScanNotice").hidden = !vm.noScan;
-    byId("noScanNotice").textContent = vm.noScan ? "No hay escaneos. Selecciona UGPA o UTET en Escaneo." : "";
-    renderBacklog();
-    renderTracking();
-    renderProcesses();
-    renderPeriods();
+    if(info)info.textContent=verified+" de "+docs.length+" documentos revisados manualmente. No representa el cumplimiento institucional.";
+    byId("priorityList").innerHTML=selected.slice(0,sectionLimit).map(card).join("")||
+      '<div class="empty-state">No hay registros en esta sección.</div>';
+    const more=byId("btnMoreSection");
+    if(more)more.hidden=selected.length<=sectionLimit;
+    byId("backlogCount").textContent="("+((board.all||[]).length)+")";
+    byId("scanLabel").textContent=vm.scansLabel||"";
+    byId("noScanNotice").hidden=!vm.noScan;
+    byId("noScanNotice").textContent=vm.noScan?"No hay escaneos. Selecciona UGPA o UTET en Escaneo.":"";
+    renderBacklog();renderProcesses();renderPeriods();
   }
   function bindEvents(handlers) {
     const settings = window.PrioritySharePoint.load();
@@ -331,8 +359,15 @@
     byId("btnSaveSharePoint").addEventListener("click", () => handlers.onSaveSharePoint({
       UGPA: byId("sharePointUGPA").value, UTET: byId("sharePointUTET").value
     }));
-    byId("tabDocuments").addEventListener("click",()=>{activeTab="documents";limit=40;render(vm,board);});
-    byId("tabFolders").addEventListener("click",()=>{activeTab="folders";limit=40;render(vm,board);});
+    for(const [section,id] of SECTIONS){
+      const el=byId(id);
+      if(el)el.addEventListener("click",()=>setTab(section));
+    }
+    const oldDocs=byId("tabDocuments"),oldFolders=byId("tabFolders");
+    if(oldDocs)oldDocs.addEventListener("click",()=>setTab("pending"));
+    if(oldFolders)oldFolders.addEventListener("click",()=>setTab("corrections"));
+    const moreSection=byId("btnMoreSection");
+    if(moreSection)moreSection.addEventListener("click",()=>{sectionLimit+=12;render(vm,board);});
     byId("btnSyncPeriods").addEventListener("click",handlers.onSyncPeriods);
     byId("btnRefreshPriority").addEventListener("click",handlers.onRefresh);
     byId("btnExportBackup").addEventListener("click",()=>handlers.onExportBackup());
@@ -366,8 +401,9 @@
     box.className="global-message" + (type ? " is-"+type : "");
   }
   function setTab(next) {
-    if (!["documents","folders"].includes(next)) return;
-    activeTab=next;limit=40;render(vm,board);
+    const mapped=next==="documents"?"pending":next==="folders"?"corrections":next;
+    if(!SECTIONS.some(s=>s[0]===mapped))return;
+    activeTab=mapped;limit=40;sectionLimit=12;render(vm,board);
   }
   function requestDetails(task,status) {
     return new Promise(resolve=>{
@@ -378,8 +414,13 @@
       byId("statusNote").required=["blocked","correction","dismissed","note"].includes(status);
       byId("statusResponsible").value=task.responsible||"";
       byId("statusEvidence").value=task.evidencePath||task.sourceFilePath||"";
-      byId("statusEvidence").required=status==="verified";
-      byId("evidenceField").hidden=status!=="verified";
+      const isFolder=tabOf(task)==="folders";
+      byId("statusEvidence").required=status==="verified" && !isFolder;
+      byId("evidenceField").hidden=status!=="verified" || isFolder;
+      const verifyText=byId("verificationText");
+      if(verifyText)verifyText.textContent=isFolder
+        ?"He corregido y comprobado manualmente la estructura después de volver a escanear. No se ha validado un PDF."
+        :"He revisado contenido, período, aprobación y firmas del PDF definitivo. Esta confirmación es manual.";
       byId("statusVerify").checked=false;
       byId("statusVerify").required=status==="verified";
       byId("verificationField").hidden=status!=="verified";
@@ -389,7 +430,9 @@
       form.onsubmit=event=>{
         event.preventDefault();
         if (!form.reportValidity())return;
-        const result={note:val(byId("statusNote").value),responsible:val(byId("statusResponsible").value),evidencePath:val(byId("statusEvidence").value)};
+        const result={note:val(byId("statusNote").value),responsible:val(byId("statusResponsible").value),
+          evidencePath:status==="verified" && isFolder?"":val(byId("statusEvidence").value),
+          structureConfirmed:status==="verified" && isFolder};
         form.onsubmit=null;dialog.close();resolve(result);
       };
       dialog.showModal();

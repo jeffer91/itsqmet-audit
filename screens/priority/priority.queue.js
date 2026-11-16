@@ -192,6 +192,18 @@
       (item.workType === "review" && /firma|pdf|document|archivo|evidencia|elaborar|informe|acta|reporte/i.test(val(item.title)))
       ? "documents" : "folders";
   }
-  window.PriorityQueue = { build, score, block, eligible, tabOf };
+  // Every record belongs to one visible section. Paused/discarded items remain in "Todos los registros".
+  function sectionOf(item) {
+    if (!item) return "other";
+    const status = item.status || "pending";
+    if (status === "verified") return "completed";
+    if (["blocked", "snoozed", "dismissed"].includes(status)) return "other";
+    if (status === "correction" || tabOf(item) === "folders") return "corrections";
+    if (status === "signing" || status === "review") return "signing";
+    if (status === "signed" || status === "done") return "archive";
+    if (status === "doing") return "doing";
+    return "pending";
+  }
+  window.PriorityQueue = { build, score, block, eligible, tabOf, sectionOf };
 })(window);
 
