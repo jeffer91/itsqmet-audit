@@ -202,7 +202,11 @@
         window.PriorityStorage.remember([task],window.PriorityStorage.load().focus);
         await window.PriorityStorage.flush();
         const target=window.PriorityQueue.sectionOf({...task,status});
-        refresh(status==="signing"?"Guardado en Por firmar.":"El estado se guardó en su sección correspondiente.");
+        refresh(target==="other"?"Guardado en Todos los registros; puedes reactivar desde allí.":
+          status==="signing"?"Guardado en Por firmar.":"Guardado en "+({
+            pending:"Pendientes",doing:"En elaboración",archive:"Por archivar",
+            completed:"Completados",corrections:"Correcciones",signing:"Por firmar"
+          }[target]||"su sección")+".");
         if(target!=="other")window.PriorityUI.setTab(target);
       }),
       onStep:id=>perform(async()=>{
@@ -210,9 +214,9 @@
         if(!task||!task.large)throw new Error("Esta tarea no tiene etapas.");
         window.PriorityStorage.completeStep(id,task.stepIndex,task.stepCount);
         await window.PriorityStorage.flush();
-        refresh(task.stepIndex+1===task.stepCount
-          ?"Se completaron las etapas; la evidencia debe validarse."
-          :"Paso registrado. Ya puedes continuar con la siguiente etapa.");
+        const finished=task.stepIndex+1===task.stepCount;
+        refresh(finished?"Etapas realizadas; pasa a Por archivar para verificar el PDF definitivo.":"Paso registrado. Continúa con la siguiente etapa.");
+        if(finished)window.PriorityUI.setTab(window.PriorityQueue.sectionOf({...task,status:"done"}));
       }),
       onReopen:id=>perform(async()=>{
         window.PriorityStorage.resetTask(id);
