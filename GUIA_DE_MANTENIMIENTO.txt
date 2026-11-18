@@ -13,3 +13,6 @@ ITSQMET AUDIT — GUÍA DE MANTENIMIENTO
 
 ESTADO DE LA DOCUMENTACIÓN
 Documentación técnica descriptiva. No acredita una prueba integral del instalador ni de los certificados ecuatorianos.
+
+CORRECCIONES DE SEGURIDAD Y CONTEXTO (18/11/2026)
+workspace:verify-evidence exige que el PDF real se encuentre dentro de una raíz institucional autorizada por el historial; comprobar existencia no equivale a validar contenido, firmas o aprobación. El contexto documental no inventa códigos de proceso cuando faltan y controla el límite de 8192 caracteres del portapapeles. Pendiente: ejecutar npm test, pruebas Electron en Windows, integración con OneDrive y revisar exhaustivamente el repositorio antes de declarar estabilidad completa.
