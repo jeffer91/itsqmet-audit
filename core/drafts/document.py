@@ -125,6 +125,16 @@ def write_draft(data, path):
         p.paragraph_format.space_before = Pt(12)
         p.add_run(item["label"]).bold = True
         doc.add_paragraph(item["text"] or "[Pendiente de completar]")
+    for source_table in data.get("tables", []):
+        doc.add_paragraph(source_table["label"]).runs[0].bold = True
+        rows = source_table["rows"]
+        grid = doc.add_table(rows=0, cols=max(map(len, rows)))
+        grid.style = "Table Grid"
+        for index, row in enumerate(rows):
+            cells = grid.add_row().cells
+            for cell, value in zip(cells, row):
+                run = cell.paragraphs[0].add_run(str(value))
+                run.bold = index == 0
     with tempfile.NamedTemporaryFile(dir=Path(path).parent, suffix=".docx", delete=False) as tmp:
         temp = tmp.name
     try:
@@ -137,7 +147,13 @@ def write_draft(data, path):
 if __name__ == "__main__":
     try:
         data = json.loads(sys.stdin.buffer.read())
-        result = read_reference(sys.argv[2]) if sys.argv[1] == "read" else write_draft(data, sys.argv[2])
+        if sys.argv[1] == "input":
+            from inputs import read_input
+            result = read_input(sys.argv[2])
+        elif sys.argv[1] == "read":
+            result = read_reference(sys.argv[2])
+        else:
+            result = write_draft(data, sys.argv[2])
         sys.stdout.buffer.write(json.dumps(result or {}, ensure_ascii=True).encode())
     except ModuleNotFoundError as exc:
         sys.exit("Falta la dependencia Python " + exc.name + ". Instale core/signatures/requirements.txt.")

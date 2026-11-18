@@ -17,6 +17,11 @@ function run(operation, file, data = {}) {
   });
 }
 function registerDraftsIpc() {
+  ipcMain.handle("drafts:input", async () => {
+    const picked = await dialog.showOpenDialog({properties:["openFile"],filters:[
+      {name:"Insumos para el documento",extensions:["docx","xlsx","txt","pdf"]}]});
+    return picked.canceled ? null : run("input", picked.filePaths[0]);
+  });
   ipcMain.handle("drafts:reference", async () => {
     const picked = await dialog.showOpenDialog({properties:["openFile"],filters:[{name:"Referencia",extensions:["docx","pdf"]}]});
     return picked.canceled ? null : run("read", picked.filePaths[0]);

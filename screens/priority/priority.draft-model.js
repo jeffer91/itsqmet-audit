@@ -72,6 +72,7 @@
   function output(draft) {
     const fields = draft.fields.filter(f=>f.decision !== "no");
     return {kind:draft.kind,title:draft.title,scope:draft.scope,period:draft.period,
+      tables:draft.tables || [],
       values:Object.fromEntries(fields.map(f=>[f.label,f.text])),
       sections:[{label:"Presentación",text:draft.intro}, ...fields.map(f=>({label:f.label,text:f.text}))]};
   }

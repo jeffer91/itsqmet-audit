@@ -113,6 +113,18 @@
   <dialog id="draftDialog" class="draft-dialog">
     <header><h2 id="draftTitle">Preparar borrador</h2><button type="button" id="draftClose" class="btn btn-light">Cerrar</button></header>
     <label>Período del borrador <select id="draftPeriod"></select></label>
+    <section aria-labelledby="inputsTitle">
+      <h3 id="inputsTitle">Insumos del documento</h3>
+      <button type="button" id="inputUpload" class="btn">Agregar archivo</button>
+      <label>Información adicional<textarea id="inputNote" rows="3" maxlength="350000" placeholder="Pegue texto, datos o instrucciones del expediente"></textarea></label>
+      <button type="button" id="inputAdd" class="btn btn-light">Agregar texto</button>
+      <p id="inputStatus" role="status"></p><div id="inputSources"></div>
+      <details id="scheduleDetails"><summary>Cronograma de Universitarias 1</summary>
+        <p id="scheduleQuestion"></p><div id="scheduleRows"></div>
+        <button id="scheduleYes" type="button" class="btn">Sí, usar en este período</button>
+        <button id="scheduleNo" type="button" class="btn btn-light">No corresponde</button>
+      </details>
+    </section>
     <button id="draftReference" class="btn btn-light">Comparar con Word o PDF</button>
     <p id="draftSource"></p><p id="draftMessage" role="status"></p>
     <details id="draftExtract" hidden><summary>Leer el texto de referencia</summary><pre id="draftExcerpt"></pre></details>
@@ -155,6 +167,8 @@
   <script src="./priority.service.js"></script>
   <script src="./priority.ui.js"></script>
   <script src="./priority.draft-model.js"></script>
+  <script src="./priority.inputs-model.js"></script>
+  <script src="./priority.inputs.js"></script>
   <script src="./priority.draft.js"></script>
   <script src="./priority.app.js"></script>
 </body>

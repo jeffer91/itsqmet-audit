@@ -135,6 +135,7 @@ contextBridge.exposeInMainWorld("api", {
     }
   },
   drafts: {
+    input: () => ipcRenderer.invoke("drafts:input"),
     reference: () => ipcRenderer.invoke("drafts:reference"),
     export: data => ipcRenderer.invoke("drafts:export", data)
   },

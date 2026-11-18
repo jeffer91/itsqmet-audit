@@ -22,7 +22,7 @@
   }
   function preview() {
     const data = model.output(draft);
-    el("draftText").textContent = [data.title,data.period,...data.sections.map(s=>s.label+"\n"+(s.text || "[Pendiente de completar]"))].join("\n\n");
+    el("draftText").textContent = [data.title,data.period,...data.sections.map(s=>s.label+"\n"+(s.text || "[Pendiente de completar]")), ...data.tables.map(t=>t.label+"\n"+t.rows.map(row=>row.join(" | ")).join("\n"))].join("\n\n");
   }
   function button(label, action, selected) {
     const b = document.createElement("button");
@@ -109,6 +109,7 @@
     el("draftNew").value = "";
     el("draftMessage").textContent = "";
     render();
+    window.InputTray.open(draftKey,draft,()=>{persist(); render();});
   }
   function open(item) {
     if (!item) throw new Error("Actualice la tarea antes de elaborar el documento.");

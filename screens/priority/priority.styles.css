@@ -250,3 +250,6 @@ a.btn{text-decoration:none}
 .draft-dialog section button[aria-pressed=true] {outline:2px solid #126493}
 .draft-dialog label,.draft-dialog details {display:block;margin:10px 0}
 .draft-dialog pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;background:#f4f7fa;padding:12px}
+.input-table {max-width:100%;overflow:auto;margin:12px 0}
+.input-table table {border-collapse:collapse;width:100%}
+.input-table th,.input-table td {padding:5px 8px;border:1px solid #ced6df;text-align:left}

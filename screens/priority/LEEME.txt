@@ -91,3 +91,14 @@ independiente del respaldo JSON de seguimiento. El Word se guarda como borrador.
 La lectura y exportación usan el mismo Python que la revisión de portadas
 (AUDIT_PYTHON si está configurado). Para actualizar las dependencias:
 python -m pip install -r core/signatures/requirements.txt
+
+INSUMOS DEL DOCUMENTO
+En Preparar borrador se pueden adjuntar varios Word (.docx), libros Excel (.xlsx),
+TXT o PDF con texto, y pegar notas. Se guardan en IndexedDB de este equipo por
+tarea y período. El respaldo del seguimiento no incluye esta bandeja.
+Las propuestas muestran su origen. Si dos fuentes sugieren valores diferentes,
+el editor pregunta cuál incorporar. El texto libre se puede seleccionar y enviar
+a un apartado. Las hojas visibles de Excel se leen con los valores guardados en
+el libro; para fórmulas sin resultado guardado, recalcule y guarde en Excel.
+El cronograma de Universitarias 1 conserva el título recibido y sus 17 fechas.
+Confirme el período del borrador para incorporar la tabla al Word.
