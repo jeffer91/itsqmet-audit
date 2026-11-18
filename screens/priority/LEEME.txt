@@ -102,3 +102,18 @@ a un apartado. Las hojas visibles de Excel se leen con los valores guardados en
 el libro; para fórmulas sin resultado guardado, recalcule y guarde en Excel.
 El cronograma de Universitarias 1 conserva el título recibido y sus 17 fechas.
 Confirme el período del borrador para incorporar la tabla al Word.
+
+REVISIÓN DOCUMENTAL E IA LOCAL
+La revisión se ejecuta con el catálogo, los criterios guardados y las tablas
+incluidas. Los totales cuentan filas de cada tabla. Los criterios confirmados
+se migran y se incluyen en el respaldo de seguimiento; al cambiar Sí/No para
+un caso se conserva la regla previa hasta que se vuelva a marcar «Recordar».
+Los borradores y los insumos siguen en el almacenamiento local del editor.
+
+En el borrador, «Consultar IA local» invoca Python y llama.cpp directamente
+en el equipo. Instale el motor opcional en el mismo Python de AUDIT:
+python -m pip install -r core/drafts/requirements-ai.txt --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --prefer-binary
+Seleccione un modelo GGUF de instrucciones con soporte para español compatible
+con la versión instalada. Para preparar la consulta, revise el contexto editable
+y escriba la instrucción. Puede cancelar la generación y editar la respuesta
+antes de incorporarla. Actualice el contexto tras modificar el borrador.

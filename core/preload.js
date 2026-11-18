@@ -134,6 +134,12 @@ contextBridge.exposeInMainWorld("api", {
       });
     }
   },
+  localAi: {
+    status: () => ipcRenderer.invoke("local-ai:status"),
+    choose: () => ipcRenderer.invoke("local-ai:choose"),
+    generate: request => ipcRenderer.invoke("local-ai:generate",request),
+    cancel: () => ipcRenderer.invoke("local-ai:cancel")
+  },
   drafts: {
     input: () => ipcRenderer.invoke("drafts:input"),
     reference: () => ipcRenderer.invoke("drafts:reference"),

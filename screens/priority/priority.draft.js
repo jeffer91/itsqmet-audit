@@ -16,11 +16,17 @@
     const next = rules.filter(rule=>rule.label !== field.label);
     if (enabled && field.decision) next.push({label:field.label,decision:field.decision,alias:field.alias || ""});
     try {
-      window.localStorage.setItem(ruleKey,JSON.stringify(next));
+      window.PriorityStorage.saveCriteria(ruleKey,next);
+      window.PriorityStorage.flush().catch(error=>{el("draftMessage").textContent=error.message;});
       rules = next;
     } catch { el("draftMessage").textContent = "No se pudo guardar el criterio para próximos documentos."; }
   }
   function preview() {
+    const audit=model.review(draft);
+    el("brainTables").textContent=model.tableFindings(draft).join("\n");
+    el("brainReview").textContent="Apartados con contenido: "+audit.filled+". "+
+      (audit.missing.length?"Pendientes: "+audit.missing.join(", ")+". ":"")+
+      (audit.historical.length?"Revise las menciones a otros períodos en "+audit.historical.join(", ")+".":"");
     const data = model.output(draft);
     el("draftText").textContent = [data.title,data.period,...data.sections.map(s=>s.label+"\n"+(s.text || "[Pendiente de completar]")), ...data.tables.map(t=>t.label+"\n"+t.rows.map(row=>row.join(" | ")).join("\n"))].join("\n\n");
   }
@@ -52,16 +58,19 @@
       for (const [value,label] of [["sí","Sí"],["no","No"]]) {
         section.append(button(label,()=>{
           field.decision = value;
-          if (prior) remember(field,true);
           persist(); render();
         },field.decision === value));
       }
       const memory = document.createElement("label");
       const check = document.createElement("input");
-      check.type = "checkbox"; check.checked = !!prior; check.disabled = !field.decision;
+      check.type = "checkbox"; check.checked = prior?.decision===field.decision && (prior?.alias || "")===(field.alias || ""); check.disabled = !field.decision;
       check.onchange = ()=>{ remember(field,check.checked); render(); };
       memory.append(check," Recordar este criterio para futuros documentos del mismo proceso y tipo");
       section.append(memory);
+      if(prior && !check.checked){
+        section.append(document.createTextNode("Criterio guardado para próximos documentos: "+prior.decision+". "),
+          button("Olvidar criterio",()=>{remember(field,false);render();}));
+      }
       if (field.decision !== "no") {
         const input = document.createElement("textarea");
         input.rows = 2; input.maxLength = 20000; input.value = field.text;
@@ -77,7 +86,7 @@
           }));
         }
         section.append(input);
-        for (const period of model.periodsIn(field.text).filter(p=>model.normalize(p)!==model.normalize(draft.period))) {
+        for (const period of model.periodsIn(field.text).filter(p=>model.periodKey(p)!==model.periodKey(draft.period))) {
           section.append(button("Cambiar «"+period+"» por «"+draft.period+"» en este apartado",()=>{
             field.text = field.text.replace(period,draft.period); persist(); render();
           }));
@@ -91,7 +100,6 @@
         detail.append(summary,alias,button("Aplicar equivalencia",()=>{
           field.alias = alias.value.trim();
           if (sourceText) model.analyze(draft,sourceText);
-          if (prior) remember(field,true);
           persist(); render();
         }));
         section.append(detail);
@@ -109,13 +117,14 @@
     el("draftNew").value = "";
     el("draftMessage").textContent = "";
     render();
+    window.LocalWriter.open(draft,()=>{persist(); render();});
     window.InputTray.open(draftKey,draft,()=>{persist(); render();});
   }
   function open(item) {
     if (!item) throw new Error("Actualice la tarea antes de elaborar el documento.");
     task = item;
     ruleKey = "audit-draft-rules-v1:"+model.identity(task);
-    rules = read(ruleKey,[]);
+    rules = window.PriorityStorage.criteria(ruleKey);
     const periods = [...new Set([task.periodLabel,...window.PriorityPeriods.getItems().map(p=>p.label)].filter(Boolean))];
     const selector = el("draftPeriod");
     selector.replaceChildren();

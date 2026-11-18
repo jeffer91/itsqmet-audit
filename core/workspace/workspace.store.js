@@ -7,6 +7,14 @@ function validate(data) {
       typeof data.statuses !== "object" || Array.isArray(data.statuses) || !Array.isArray(data.activity) ||
       !Array.isArray(data.queue) || !data.stages || typeof data.stages !== "object")
     throw new Error("El archivo no es un respaldo de seguimiento válido.");
+  if (data.documentCriteria !== undefined) {
+    const groups=data.documentCriteria;
+    if (!groups || typeof groups!=="object" || Array.isArray(groups) ||
+        Object.entries(groups).some(([key,entries])=>!key.startsWith("audit-draft-rules-v1:") ||
+          !Array.isArray(entries) || entries.some(r=>!r || typeof r.label!=="string" ||
+            !["sí","no"].includes(r.decision) || (r.alias!==undefined && typeof r.alias!=="string"))))
+      throw new Error("Criterios documentales inválidos en el respaldo.");
+  }
   for(const key of ["tasks","focus"])
     if(data[key]!==undefined && (!data[key] || typeof data[key]!=="object" || Array.isArray(data[key])))
       throw new Error("Estructura de seguimiento inválida: "+key);

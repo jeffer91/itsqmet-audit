@@ -128,6 +128,18 @@
     <button id="draftReference" class="btn btn-light">Comparar con Word o PDF</button>
     <p id="draftSource"></p><p id="draftMessage" role="status"></p>
     <details id="draftExtract" hidden><summary>Leer el texto de referencia</summary><pre id="draftExcerpt"></pre></details>
+    <h3>Revisión documental local</h3><p id="brainReview"></p><pre id="brainTables"></pre>
+    <details><summary>Consultar IA local</summary>
+      <p id="aiModel" role="status"></p><button id="aiChoose" class="btn btn-light">Seleccionar modelo GGUF</button>
+      <details><summary>Preparar el motor en este equipo</summary>
+      <p>Instale el componente opcional en el mismo Python que usa AUDIT. Desde la carpeta del proyecto ejecute <code>python -m pip install -r core/drafts/requirements-ai.txt --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --prefer-binary</code>. Después seleccione un modelo de instrucciones GGUF compatible con llama.cpp. El modelo se conserva en su ubicación.</p></details>
+      <label>Instrucción<textarea id="aiQuestion" rows="2" maxlength="2000" placeholder="Redacta una conclusión con los resultados confirmados"></textarea></label>
+      <label>Contexto para el modelo (editable)<textarea id="aiContext" rows="5" maxlength="16000"></textarea></label>
+      <button id="aiRefresh" class="btn btn-light">Actualizar desde el borrador</button>
+      <button id="aiAsk" class="btn">Consultar modelo</button><button id="aiStop" class="btn btn-light" hidden>Cancelar consulta</button>
+      <p id="aiStatus" role="status"></p><label>Propuesta editable<textarea id="aiAnswer" rows="4" maxlength="20000"></textarea></label>
+      <label>Apartado de destino<select id="aiTarget"></select></label><button id="aiApply" class="btn btn-light">Incorporar propuesta</button>
+    </details>
     <label>Presentación del borrador<textarea id="draftIntro" rows="3" maxlength="8000"></textarea></label>
     <div id="draftFields"></div>
     <label>Otro apartado <input id="draftNew" maxlength="80" placeholder="Ej. Resultados por sede"></label>
@@ -169,6 +181,7 @@
   <script src="./priority.draft-model.js"></script>
   <script src="./priority.inputs-model.js"></script>
   <script src="./priority.inputs.js"></script>
+  <script src="./priority.local-writer.js"></script>
   <script src="./priority.draft.js"></script>
   <script src="./priority.app.js"></script>
 </body>

@@ -32,3 +32,15 @@ test("detecta referencias a rangos históricos sin reescribirlas",()=>{
   assert.deepEqual(draft.referencePeriods,["octubre de 2025 – marzo de 2026"]);
   assert.match(draft.fields.find(f=>f.label==="Resultados").candidate,/2025/);
 });
+test("el motor propio distingue un informe de cumplimiento de una ficha individual",()=>{
+  const compliance=model.create({scope:"UGPA",processNumber:"70",documentId:"rgi3",title:"Informe",expectedTemplate:"UGPA-RGI3"},"2026");
+  const individual=model.create({scope:"UTET",processNumber:"58",documentId:"rgi1",title:"Verificación",expectedTemplate:"UTET-RGI1"},"2026");
+  assert.ok(model.review(compliance).missing.includes("Plan aprobado"));
+  assert.ok(model.review(individual).missing.includes("Estudiante"));
+  assert.equal(model.review(individual).missing.includes("Plan aprobado"),false);
+  assert.equal(model.periodKey("mayo de 2026 – noviembre de 2026"),model.periodKey("Mayo 2026 a Noviembre 2026"));
+});
+test("calcula la distribución por tabla y conserva las filas sin dato",()=>{
+  const draft={tables:[{label:"Registro",rows:[["Sede"],["Matriz"],[""],["Matriz"]]}]};
+  assert.match(model.tableFindings(draft)[0],/Matriz \(2\).*sin dato.*3 filas/);
+});

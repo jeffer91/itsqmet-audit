@@ -153,7 +153,19 @@
       window.localStorage.setItem(KEY, JSON.stringify(disk));
       window.localStorage.setItem(LEGACY, "{}");
     }
-    persist(load()); await flush();
+    const merged=load();
+    const migrated=[];
+    for(let i=0;i<window.localStorage.length;i++){
+      const key=window.localStorage.key(i);
+      if(!key || !key.startsWith("audit-draft-rules-v1:"))continue;
+      const entries=readJson(key,null);
+      if(!Array.isArray(entries))continue;
+      merged.documentCriteria ||= {};
+      if(!Object.hasOwn(merged.documentCriteria,key))merged.documentCriteria[key]=entries;
+      migrated.push(key);
+    }
+    persist(merged); await flush();
+    for(const key of migrated)window.localStorage.removeItem(key);
     return response.recovered;
   }
   function trackingKey(item) {
@@ -214,6 +226,20 @@
     const delta = previous ? {added:current.filter(x=>!before.has(x)).length, removed:previous.filter(x=>!after.has(x)).length} : null;
     data.scanFiles = current; persist(data); return delta;
   }
+  function criteria(key) {
+    const data=load();
+    if (Array.isArray(data.documentCriteria?.[key])) return data.documentCriteria[key];
+    const legacy=readJson(key,[]);
+    if (Array.isArray(legacy) && legacy.length) saveCriteria(key,legacy);
+    return Array.isArray(legacy)?legacy:[];
+  }
+  function saveCriteria(key,entries) {
+    if (backupLocked) throw new Error("Restaure el seguimiento antes de guardar criterios.");
+    const data=load();
+    data.documentCriteria={...data.documentCriteria,[key]:entries};
+    persist(data);
+    window.localStorage.removeItem(key);
+  }
   async function exportBackup() { await flush(); return window.api.workspace.export(); }
   async function importBackup() {
     await saving;
@@ -226,6 +252,6 @@
     return response;
   }
   window.PriorityStorage = { load: load, setStatus: setStatus, resetTask: resetTask, completeStep: completeStep,
-    initialize, flush, remember, addNote, reconcile, compareScan, exportBackup, importBackup,
+    criteria, saveCriteria, initialize, flush, remember, addNote, reconcile, compareScan, exportBackup, importBackup,
     setQueue: setQueue, completedToday: completedToday };
 })(window);

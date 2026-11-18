@@ -62,6 +62,7 @@ function registerAppIpc() {
   registerSignaturesIpc();
   registerPeriodsIpc();
   require("./ipc/drafts.ipc").registerDraftsIpc();
+  require("./ipc/local-ai.ipc").registerLocalAiIpc();
   registerWorkspaceIpc();
 }
 
