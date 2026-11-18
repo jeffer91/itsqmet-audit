@@ -3,6 +3,27 @@ const {app,ipcMain,dialog} = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const {createStore,validate} = require("../workspace/workspace.store");
+const historyStore = require("../history/history.store");
+function within(root,candidate) {
+  const rel=path.relative(root,candidate);
+  return rel==="" || (rel!==".." && !rel.startsWith(".."+path.sep) && !path.isAbsolute(rel));
+}
+async function verifyEvidence(file) {
+  if(typeof file!=="string" || !path.isAbsolute(file) || path.extname(file).toLowerCase()!==".pdf")
+    throw new Error("Indica la ruta absoluta de un PDF existente.");
+  const actual=await fs.promises.realpath(file);
+  if(path.extname(actual).toLowerCase()!==".pdf" || !(await fs.promises.stat(actual)).isFile())
+    throw new Error("La evidencia debe ser un PDF real.");
+  const history=await historyStore.loadHistory();
+  const roots=[history.ugpaSourcePath,history.utetSourcePath,
+    history.ugpaResult&&history.ugpaResult.rootPath,
+    history.utetResult&&history.utetResult.rootPath].filter(Boolean);
+  for(const root of roots) {
+    try {if(within(await fs.promises.realpath(root),actual))return {};}
+    catch(error) {if(error.code!=="ENOENT" && error.code!=="ENOTDIR")throw error;}
+  }
+  throw new Error("El PDF está fuera de las carpetas institucionales seleccionadas.");
+}
 function registerWorkspaceIpc() {
   const store = createStore(path.join(app.getPath("userData"),"priority-workspace.json"));
   const handle = (channel,action) => ipcMain.handle(channel,async(_event,payload)=>{
@@ -10,11 +31,7 @@ function registerWorkspaceIpc() {
     catch(error) { return {ok:false,error:error.message}; }
   });
   handle("workspace:load",()=>store.load());
-  handle("workspace:verify-evidence",file=>{
-    if(typeof file!=="string" || !path.isAbsolute(file) || path.extname(file).toLowerCase()!==".pdf" || !fs.statSync(file).isFile())
-      throw new Error("Indica la ruta absoluta de un PDF existente.");
-    return {};
-  });
+  handle("workspace:verify-evidence",verifyEvidence);
   handle("workspace:save",data=>{ store.save(data); return {}; });
   handle("workspace:export",async()=>{
     const {data} = store.load();
