@@ -76,3 +76,6 @@ python -m unittest discover -s tests -p 'test_cover_review.py'
 Prueba funcional recomendada en Windows con las carpetas reales:
 abrir Priorización → En firma → siguiente documento → cerrar/reabrir → recibir o
 devolver → verificar PDF → exportar/restaurar respaldo → volver a escanear.
+
+ASISTENTE DE CONTEXTO DOCUMENTAL (18/11/2026)
+En tarjetas documentales, «Copiar contexto para elaborar» prepara instrucciones basadas en los datos de la tarea: unidad, proceso, período, hallazgo, insumos y referencias disponibles. Copia el texto al portapapeles; no crea archivos ni acredita obligaciones nuevas. Exige verificar fuentes y deja explícitos los datos no confirmados. La creación de carpetas existente sigue requiriendo confirmación y reescaneo. Renombrado, movimientos y consolidaciones automáticas todavía no están habilitados.
