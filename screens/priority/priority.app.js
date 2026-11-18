@@ -250,6 +250,7 @@
         refresh("La tarea se reactivó.");
         window.PriorityUI.setTab(window.PriorityQueue.sectionOf({...getTask(id),status:"pending"}));
       }),
+      onDraft:id=>perform(()=>window.PriorityDraft.open(getTask(id))),
       onCopyContext:id=>perform(async()=>{
         const task=getTask(id);
         if(!task)throw new Error("La tarea ya no está disponible.");

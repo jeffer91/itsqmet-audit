@@ -110,6 +110,19 @@
     </details>
   </main>
 
+  <dialog id="draftDialog" class="draft-dialog">
+    <header><h2 id="draftTitle">Preparar borrador</h2><button type="button" id="draftClose" class="btn btn-light">Cerrar</button></header>
+    <label>Período del borrador <select id="draftPeriod"></select></label>
+    <button id="draftReference" class="btn btn-light">Comparar con Word o PDF</button>
+    <p id="draftSource"></p><p id="draftMessage" role="status"></p>
+    <details id="draftExtract" hidden><summary>Leer el texto de referencia</summary><pre id="draftExcerpt"></pre></details>
+    <label>Presentación del borrador<textarea id="draftIntro" rows="3" maxlength="8000"></textarea></label>
+    <div id="draftFields"></div>
+    <label>Otro apartado <input id="draftNew" maxlength="80" placeholder="Ej. Resultados por sede"></label>
+    <button id="draftAdd" class="btn btn-light">Agregar apartado</button>
+    <details id="draftPreview"><summary>Vista previa del contenido</summary><pre id="draftText"></pre></details>
+    <button id="draftExport" class="btn">Guardar borrador en Word</button>
+  </dialog>
   <dialog id="statusDialog" class="status-dialog">
     <form id="statusForm">
       <h2 id="statusTitle"></h2><p id="statusDocument"></p>
@@ -141,6 +154,8 @@
   <script src="./priority.sharepoint.js"></script>
   <script src="./priority.service.js"></script>
   <script src="./priority.ui.js"></script>
+  <script src="./priority.draft-model.js"></script>
+  <script src="./priority.draft.js"></script>
   <script src="./priority.app.js"></script>
 </body>
 </html>

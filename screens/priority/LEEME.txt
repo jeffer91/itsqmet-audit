@@ -79,3 +79,15 @@ devolver → verificar PDF → exportar/restaurar respaldo → volver a escanear
 
 ASISTENTE DE CONTEXTO DOCUMENTAL (18/11/2026)
 En tarjetas documentales, «Copiar contexto para elaborar» prepara instrucciones basadas en los datos de la tarea: unidad, proceso, período, hallazgo, insumos y referencias disponibles. Copia el texto al portapapeles; no crea archivos ni acredita obligaciones nuevas. Exige verificar fuentes y deja explícitos los datos no confirmados. La creación de carpetas existente sigue requiriendo confirmación y reescaneo. Renombrado, movimientos y consolidaciones automáticas todavía no están habilitados.
+
+BORRADORES ASISTIDOS
+En una tarjeta documental, abra «Ver detalles y otras opciones» → «Preparar borrador».
+Elija el período, compare un Word o PDF con texto y confirme cada apartado.
+Los datos del ejemplo se incorporan únicamente al elegir «Usar texto de referencia».
+Puede editar la presentación, los apartados y los encabezados equivalentes. «Recordar
+este criterio» guarda la decisión por unidad, proceso y tipo para próximos borradores.
+Los borradores y criterios se conservan en el almacenamiento local de esta pantalla,
+independiente del respaldo JSON de seguimiento. El Word se guarda como borrador.
+La lectura y exportación usan el mismo Python que la revisión de portadas
+(AUDIT_PYTHON si está configurado). Para actualizar las dependencias:
+python -m pip install -r core/signatures/requirements.txt

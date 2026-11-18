@@ -134,6 +134,10 @@ contextBridge.exposeInMainWorld("api", {
       });
     }
   },
+  drafts: {
+    reference: () => ipcRenderer.invoke("drafts:reference"),
+    export: data => ipcRenderer.invoke("drafts:export", data)
+  },
   periods: {
     list: function listPeriods() { return ipcRenderer.invoke("periods:list"); }
   },
