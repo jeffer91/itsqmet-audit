@@ -238,6 +238,7 @@
       itemDetails(item)+decisionSteps(decision)+
       ((item.preparation||[]).length?'<details class="evidence-details"><summary>Insumos y comprobaciones</summary><ol>'+item.preparation.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ol></details>':"")+
       evidenceDetails(item)+
+      (tabOf(item)==="documents"?'<button class="btn btn-light js-context" type="button" data-id="'+esc(item.id)+'">Copiar contexto para elaborar</button>':"")+
       '<p class="decision-disclaimer">La confirmación es manual; no se renombran ni firman archivos automáticamente.</p>'+
       '<div class="task-actions">'+sharePointButton(item)+
       (item.actionPath?'<button class="btn btn-light js-open" type="button" data-path="'+esc(item.actionPath)+'">Abrir carpeta local</button>':"")+
@@ -389,6 +390,7 @@
         handlers.onOpenPath(button.dataset.path);
       }
       else if(button.classList.contains("js-copy-sharepoint")) handlers.onCopySharePoint(button.dataset.url);
+      else if(button.classList.contains("js-context")) handlers.onCopyContext(id);
       else if(button.classList.contains("js-mkdir")) handlers.onCreateFolder(id);
       else if(button.classList.contains("js-status")) handlers.onStatus(id,button.dataset.status);
       else if(button.classList.contains("js-step")) handlers.onStep(id);
