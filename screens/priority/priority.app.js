@@ -108,11 +108,14 @@
     return count;
   }
   function buildDocumentContext(task) {
+    const processId=safe(task.processNumber);
+    const scope=safe(task.scope);
+    const processLabel=processId ? scope+"-PRO-"+processId : (scope||"Proceso por confirmar");
     const lines=[
       "CONTEXTO PARA ELABORACIÓN DOCUMENTAL — ITSQMET AUDIT",
       "Este texto es una guía de preparación, no un documento aprobado ni evidencia de incumplimiento.",
       "Unidad: "+safe(task.scope),
-      "Proceso: "+[safe(task.scope)+"-PRO-"+safe(task.processNumber),safe(task.processName)].filter(Boolean).join(" · "),
+      "Proceso: "+[processLabel,safe(task.processName)].filter(Boolean).join(" · "),
       "Período: "+(safe(task.periodLabel)||"Pendiente de confirmar"),
       "Documento solicitado: "+safe(task.officialName||task.documentLabel||task.displayTitle||task.title),
       "Ubicación prevista o detectada: "+(safe(task.pathLabel)||"Pendiente de confirmar"),
@@ -122,7 +125,13 @@
       "Referencia disponible: "+(safe(task.referenceFileName||task.candidateFileName)||"Ninguna verificada"),
       "INSTRUCCIONES: Redactar únicamente con información verificable del expediente. Distinguir hechos confirmados, datos pendientes y recomendaciones. No inventar fechas, responsables, firmas, aprobaciones, códigos ni normas. Verificar vigencia y aplicabilidad de los requisitos en el manual institucional. Proponer objetivo, antecedentes, desarrollo, evidencias, conclusiones y anexos según el tipo documental. Respetar la plantilla institucional aprobada; no crear un documento definitivo sin revisión."
     ];
-    return lines.join("\n\n");
+    const text=lines.join("\n\n");
+    if(text.length>8192) {
+      const required=lines.slice(0,7).join("\n\n");
+      const tail="\n\nEl resto de los detalles supera el límite del portapapeles. Abre la ficha y consulta los antecedentes originales.";
+      return required.slice(0,8192-tail.length)+tail;
+    }
+    return text;
   }
   async function initialize() {
     window.AppNav && window.AppNav.render("priority");
