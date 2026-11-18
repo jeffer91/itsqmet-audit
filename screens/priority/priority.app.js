@@ -107,6 +107,23 @@
     if(errors.length)throw new Error(errors.join(" · "));
     return count;
   }
+  function buildDocumentContext(task) {
+    const lines=[
+      "CONTEXTO PARA ELABORACIÓN DOCUMENTAL — ITSQMET AUDIT",
+      "Este texto es una guía de preparación, no un documento aprobado ni evidencia de incumplimiento.",
+      "Unidad: "+safe(task.scope),
+      "Proceso: "+[safe(task.scope)+"-PRO-"+safe(task.processNumber),safe(task.processName)].filter(Boolean).join(" · "),
+      "Período: "+(safe(task.periodLabel)||"Pendiente de confirmar"),
+      "Documento solicitado: "+safe(task.officialName||task.documentLabel||task.displayTitle||task.title),
+      "Ubicación prevista o detectada: "+(safe(task.pathLabel)||"Pendiente de confirmar"),
+      "Situación observada: "+(safe(task.reason)||"Verificar el hallazgo contra el expediente original"),
+      "Acción sugerida: "+(safe(task.suggestedAction||task.nextAction)||"Revisar aplicabilidad y reunir evidencias"),
+      "Insumos y verificaciones: "+((task.preparation||[]).map(safe).filter(Boolean).join("; ")||"Revisar manual vigente, actas, matrices, cronogramas y antecedentes del proceso"),
+      "Referencia disponible: "+(safe(task.referenceFileName||task.candidateFileName)||"Ninguna verificada"),
+      "INSTRUCCIONES: Redactar únicamente con información verificable del expediente. Distinguir hechos confirmados, datos pendientes y recomendaciones. No inventar fechas, responsables, firmas, aprobaciones, códigos ni normas. Verificar vigencia y aplicabilidad de los requisitos en el manual institucional. Proponer objetivo, antecedentes, desarrollo, evidencias, conclusiones y anexos según el tipo documental. Respetar la plantilla institucional aprobada; no crear un documento definitivo sin revisión."
+    ];
+    return lines.join("\n\n");
+  }
   async function initialize() {
     window.AppNav && window.AppNav.render("priority");
     window.AppNav && window.AppNav.setLoading && window.AppNav.setLoading(true,"Cargando prioridades…");
@@ -223,6 +240,13 @@
         await window.PriorityStorage.flush();
         refresh("La tarea se reactivó.");
         window.PriorityUI.setTab(window.PriorityQueue.sectionOf({...getTask(id),status:"pending"}));
+      }),
+      onCopyContext:id=>perform(async()=>{
+        const task=getTask(id);
+        if(!task)throw new Error("La tarea ya no está disponible.");
+        const result=await window.api.shell.copyText(buildDocumentContext(task));
+        if(!result||!result.ok)throw new Error(result&&result.error||"No se pudo copiar el contexto.");
+        window.PriorityUI.setGlobalMessage("Contexto documental copiado. Verifica los antecedentes antes de elaborar.","success");
       }),
       onCreateFolder:id=>perform(async()=>{
         const task=getTask(id);
